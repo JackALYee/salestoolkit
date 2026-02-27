@@ -853,7 +853,7 @@ html_tail = r"""
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast">Copied to Clipboard!</div>
+    <div id="toast" style="visibility: hidden; min-width: 250px; background-color: var(--primary-green); color: #050810; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-weight: bold; box-shadow: 0 0 20px rgba(42, 245, 152, 0.4); opacity: 0; transition: opacity 0.3s;">Copied to Clipboard!</div>
 
     <script>
         // --- ICONS INITIALIZATION ---
@@ -921,8 +921,9 @@ html_tail = r"""
             document.execCommand('copy'); // Fallback for iFrame usage
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const toast = document.getElementById("toast");
-                toast.className = "show";
-                setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+                toast.style.visibility = "visible";
+                toast.style.opacity = "1";
+                setTimeout(function(){ toast.style.opacity = "0"; toast.style.visibility = "hidden"; }, 3000);
             }).catch(err => {
                 // If navigator clipboard fails (often does in Streamlit iframe without secure context)
                 const textArea = document.createElement("textarea");
@@ -932,8 +933,9 @@ html_tail = r"""
                 try {
                     document.execCommand('copy');
                     const toast = document.getElementById("toast");
-                    toast.className = "show";
-                    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+                    toast.style.visibility = "visible";
+                    toast.style.opacity = "1";
+                    setTimeout(function(){ toast.style.opacity = "0"; toast.style.visibility = "hidden"; }, 3000);
                 } catch (err) {
                     console.error('Fallback: Oops, unable to copy', err);
                 }
@@ -961,10 +963,10 @@ html_tail = r"""
             }
             
             // Init Visual Loop
-            initLoopVisual();
+            if (typeof initLoopVisual === 'function') initLoopVisual();
 
             // Initialize TCO Calculator on load
-            calculateROI();
+            if (typeof calculateROI === 'function') calculateROI();
         });
 
         // --- VALUE CALCULATOR JS LOGIC ---
@@ -1179,5 +1181,5 @@ html_code = (
 )
 
 # Render the HTML toolkit natively inside Streamlit
-# We use a large viewport height and enable scrolling so all sections are accessible
-components.html(html_code, height=1500, scrolling=True)
+# Setting a large height to prevent cutoff of content within the iframe.
+components.html(html_code, height=1800, scrolling=True)
