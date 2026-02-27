@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # Import the HTML contents from the modular section files
+from streamaxpedia_app import content as streamaxpedia_content
 from prospecting_flow import content as prospecting_flow_content
 from discovery_meeting import content as discovery_meeting_content
 from presentation import content as presentation_content
@@ -825,7 +826,7 @@ html_head = r"""<!DOCTYPE html>
     <div class="container">
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
-            <button class="nav-btn" onclick="window.open('https://streamaxpedia.streamlit.app/?q=ad+plus', '_blank')">
+            <button class="nav-btn" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
             </button>
             <button class="nav-btn active" onclick="switchTab('prospecting-flow', this)">
@@ -917,10 +918,26 @@ html_tail = r"""
         // --- COPY TO CLIPBOARD ---
         function copyText(btnElement) {
             const textToCopy = btnElement.closest('.script-header').nextElementSibling.innerText;
+            document.execCommand('copy'); // Fallback for iFrame usage
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const toast = document.getElementById("toast");
                 toast.className = "show";
                 setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+            }).catch(err => {
+                // If navigator clipboard fails (often does in Streamlit iframe without secure context)
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const toast = document.getElementById("toast");
+                    toast.className = "show";
+                    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
             });
         }
 
@@ -1148,6 +1165,7 @@ html_tail = r"""
 # Reconstruct the entire HTML by appending all the modular pieces
 html_code = (
     html_head + "\n" +
+    streamaxpedia_content + "\n" +
     prospecting_flow_content + "\n" +
     discovery_meeting_content + "\n" +
     presentation_content + "\n" +
