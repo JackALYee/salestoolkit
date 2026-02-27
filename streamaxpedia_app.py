@@ -1,7 +1,4 @@
-import streamlit as st
-import streamlit.components.v1 as components
 import json
-
 from terminology_db import TERMINOLOGY_DB
 
 # Process Bidirectional Links Programmatically
@@ -17,7 +14,6 @@ for item in TERMINOLOGY_DB:
 
 db_json = json.dumps(TERMINOLOGY_DB)
 
-# --- FULL NATIVE WEB COMPONENT STRING ---
 css_and_html = r"""
         <!-- SECTION: STREAMAXPEDIA -->
         <div id="streamaxpedia" class="content-section hidden">
@@ -40,11 +36,7 @@ css_and_html = r"""
 
                 @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
                 @keyframes heartBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-20px) scale(1.15); } }
-                
-                @keyframes spediaFadeUp { 
-                    0% { opacity: 0; transform: translateY(10px); }
-                    100% { opacity: 1; transform: translateY(0); } 
-                }
+                @keyframes spediaFadeUp { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
 
                 .brand-title { font-size: 3rem; font-weight: 700; text-align: center; letter-spacing: -1px; margin: 0; }
 
@@ -102,15 +94,14 @@ css_and_html = r"""
                 .flow-arrow { color: var(--text-grey); display: flex; flex-direction: column; align-items: center; font-size: 1rem; }
                 .flow-arrow small { font-size: 0.65rem; margin-top: 4px; }
 
-                /* --- FIX: GRAPH MODAL FULL-HEIGHT OVERLAY & AUTO-CENTERING --- */
+                /* --- FIX: GRAPH MODAL DYNAMIC POSITIONING --- */
                 .modal-overlay { 
-                    position: absolute; /* Allows overlay to cover the entire scrollable document inside the iframe */
-                    top: 0; left: 0; 
-                    width: 100%; 
+                    position: absolute; 
+                    top: 0; left: 0; right: 0; bottom: 0; 
+                    min-height: 100vh;
                     background: rgba(5, 8, 16, 0.85); 
                     backdrop-filter: blur(8px); 
                     z-index: 1000; 
-                    display: block; 
                     opacity: 0; 
                     visibility: hidden; 
                     transition: var(--transition); 
@@ -122,13 +113,12 @@ css_and_html = r"""
                     border: var(--glass-border); 
                     border-radius: var(--card-radius); 
                     width: 950px; 
-                    max-width: 95vw; 
-                    min-width: 400px; 
+                    max-width: 95%; 
                     height: 600px; 
-                    min-height: 400px; 
                     position: absolute; 
-                    left: 50%; /* Center Horizontally */
-                    transform: translateX(-50%) translateY(20px); 
+                    left: 50%;
+                    transform: translateX(-50%) scale(0.95); 
+                    opacity: 0;
                     padding: 20px; 
                     display: flex; 
                     flex-direction: column; 
@@ -136,11 +126,10 @@ css_and_html = r"""
                     overflow: hidden; 
                     box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
                     resize: both; 
-                    opacity: 0;
-                    transition: transform 0.3s ease, opacity 0.3s ease;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
-                .modal-overlay.active .modal-box {
-                    transform: translateX(-50%) translateY(0);
+                .modal-overlay.active .modal-box { 
+                    transform: translateX(-50%) scale(1); 
                     opacity: 1;
                 }
                 
@@ -341,7 +330,8 @@ js_part_2 = r""";
                         if (item.file) downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
                         if (item.files) item.files.forEach(f => { downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`; });
                         
-                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', event)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        // FIX: Pass the clicked button ('this') so we can dynamically calculate Y position!
+                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
@@ -364,10 +354,37 @@ js_part_2 = r""";
                     searchInput.value = ''; searchInput.focus(); performSearch();
                 });
 
+                // --- FIXED: GET CENTER ANIMATION SAFE ---
+                // Navigates the DOM hierarchy to find the exact relative center of a node without relying on the animated bounding box.
+                function getCenterSafe(node) {
+                    let x = node.offsetWidth / 2;
+                    let y = node.offsetHeight / 2;
+                    let current = node;
+                    while (current && current.id !== 'graphContainer') {
+                        x += current.offsetLeft;
+                        y += current.offsetTop;
+                        current = current.offsetParent;
+                    }
+                    return { x, y };
+                }
+
                 // --- GRAPH LOGIC ---
-                window.openRelevanceGraph = function(termName, event) {
+                window.openRelevanceGraph = function(termName, btnElement) {
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
+
+                    const modalBox = document.querySelector('.modal-box');
+                    
+                    // FIX: Dynamically anchor the modal perfectly to where the user scrolled/clicked!
+                    if (btnElement) {
+                        const rect = btnElement.getBoundingClientRect();
+                        // Get absolute Y position in the Streamlit Iframe and center the 600px box
+                        let boxTop = rect.top + window.scrollY - 300; 
+                        if (boxTop < 20) boxTop = 20; // Keep it from clipping the ceiling
+                        modalBox.style.top = boxTop + 'px';
+                    } else {
+                        modalBox.style.top = '100px';
+                    }
 
                     document.getElementById('modalChildExplanation').classList.remove('active');
                     document.getElementById('graphMasterNode').innerText = termData.term;
@@ -416,62 +433,37 @@ js_part_2 = r""";
                         relatedNodesContainer.appendChild(n);
                     });
 
-                    const modal = document.getElementById('relevanceModal');
-                    const modalBox = modal.querySelector('.modal-box');
-                    
-                    // Set overlay height to dynamically cover the whole scrollable document inside the iframe
-                    const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, window.innerHeight);
-                    modal.style.height = docHeight + 'px';
+                    document.getElementById('relevanceModal').classList.add('active');
 
-                    // FIX: Dynamically position the modal vertically based on where the user clicked!
-                    if (event) {
-                        let clickY = event.pageY;
-                        let targetY = clickY - 300; // Center the 600px tall modal box
-                        
-                        if (targetY < 20) targetY = 20; // Don't overflow the top edge
-                        
-                        modalBox.style.top = targetY + 'px';
-                    } else {
-                        modalBox.style.top = '100px';
-                    }
-
-                    modal.classList.add('active');
-
-                    // FIX: Force the parent browser to scroll and center the newly generated modal perfectly
+                    // FIX: Calculate Auto-Pan using offset geometry to ignore CSS scale animations
                     setTimeout(() => {
-                        modalBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const vp = document.getElementById('graphViewport');
+                        const ct = document.getElementById('graphContainer');
+                        const mn = document.getElementById('graphMasterNode');
                         
-                        const vp = document.getElementById('graphViewport').getBoundingClientRect();
-                        const ct = document.getElementById('graphContainer').getBoundingClientRect();
-                        const mn = document.getElementById('graphMasterNode').getBoundingClientRect();
+                        ct.style.transform = 'translate(0,0)';
                         
-                        document.getElementById('graphContainer').style.transform = 'translate(0,0)';
+                        const vpWidth = vp.offsetWidth;
+                        const vpHeight = vp.offsetHeight;
+                        const masterCenter = getCenterSafe(mn);
                         
-                        graphTranslateX = (vp.width * 0.3) - (mn.left - ct.left + mn.width/2);
-                        graphTranslateY = (vp.height * 0.5) - (mn.top - ct.top + mn.height/2);
+                        graphTranslateX = (vpWidth * 0.3) - masterCenter.x;
+                        graphTranslateY = (vpHeight * 0.5) - masterCenter.y;
                         
-                        document.getElementById('graphContainer').style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
+                        ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
                         drawLines();
                         
                         if (document.fonts) document.fonts.ready.then(() => drawLines());
                     }, 50);
                 };
 
-                // Close Modal when clicking on the background overlay
-                document.getElementById('relevanceModal').addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeModal();
-                    }
-                });
-
+                // FIX: drawLines completely bypasses getBoundingClientRect for animation immunity
                 function drawLines() {
                     const svg = document.getElementById('graphLines');
                     svg.innerHTML = '';
-                    const cRect = document.getElementById('graphContainer').getBoundingClientRect();
-                    const getCenter = (node) => { const r = node.getBoundingClientRect(); return { x: r.left - cRect.left + r.width/2, y: r.top - cRect.top + r.height/2 }; };
                     
                     const mNode = document.getElementById('graphMasterNode');
-                    const mCenter = getCenter(mNode);
+                    const mCenter = getCenterSafe(mNode);
                     const mData = terminologyDB.find(t => t.term === mNode.innerText);
                     const d1Terms = mData?.related || [];
                     const nodes = Array.from(document.querySelectorAll('.node-related'));
@@ -479,7 +471,7 @@ js_part_2 = r""";
 
                     nodes.forEach(n => {
                         if (d1Terms.includes(n.dataset.term)) {
-                            const nc = getCenter(n);
+                            const nc = getCenterSafe(n);
                             const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                             l.setAttribute('x1', mCenter.x); l.setAttribute('y1', mCenter.y);
                             l.setAttribute('x2', nc.x); l.setAttribute('y2', nc.y);
@@ -497,7 +489,7 @@ js_part_2 = r""";
                                     const key = [na.dataset.term, tb].sort().join('|');
                                     if (!drawn.has(key)) {
                                         drawn.add(key);
-                                        const ca = getCenter(na), cb = getCenter(nb);
+                                        const ca = getCenterSafe(na), cb = getCenterSafe(nb);
                                         const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                                         const midX = Math.max(ca.x, cb.x) + (Math.abs(ca.y - cb.y) * 0.35);
                                         const midY = (ca.y + cb.y) / 2;
@@ -515,18 +507,23 @@ js_part_2 = r""";
                     const d = terminologyDB.find(t => t.term === name);
                     if (!d) return;
                     const b = document.getElementById('modalChildExplanation');
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px;">${d.term}</div><div style="font-size:0.95rem; color:#A0AEC0;">${d.desc}</div><button class="see-details-btn" onclick="masterSearch('${d.term}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
+                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${d.term}</div><div style="font-size:0.95rem; color:#A0AEC0;">${d.desc}</div><button class="see-details-btn" onclick="masterSearch('${d.term}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
                     b.classList.add('active');
                 };
 
                 window.closeModal = function() { document.getElementById('relevanceModal').classList.remove('active'); };
                 
+                // --- COMPLETELY FIXED "SEE DETAILS" LOGIC ---
+                // Instead of reloading the parent URL and breaking the Streamlit iframe,
+                // it seamlessly updates the internal text box and live searches instantly!
                 window.masterSearch = function(name) {
                     closeModal();
                     const searchInput = document.getElementById('searchInput');
                     searchInput.value = name;
                     performSearch();
-                    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scrolls back to the top to see results
+                    
+                    // Native smooth scroll back to the search bar!
+                    document.getElementById('searchWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 };
 
                 // Mascot mouse tracking
