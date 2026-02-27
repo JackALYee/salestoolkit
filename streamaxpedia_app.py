@@ -1,5 +1,16 @@
+import streamlit as st
+import streamlit.components.v1 as components
 import json
+
 from terminology_db import TERMINOLOGY_DB
+
+# --- PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Streamaxpedia",
+    page_icon="🤖",
+    layout="wide", # Uses full width so the interactive web component can span perfectly
+    initial_sidebar_state="collapsed"
+)
 
 # Process Bidirectional Links Programmatically
 for item in TERMINOLOGY_DB:
@@ -14,6 +25,26 @@ for item in TERMINOLOGY_DB:
 
 db_json = json.dumps(TERMINOLOGY_DB)
 
+# --- 2. STREAMLIT GLOBAL CSS ---
+# This hides standard padding so our interactive HTML component can take the full screen
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+.block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+iframe {
+    border: none;
+    width: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# --- 3. FULL NATIVE WEB COMPONENT STRING ---
 css_and_html = r"""
         <!-- SECTION: STREAMAXPEDIA -->
         <div id="streamaxpedia" class="content-section hidden">
@@ -37,7 +68,6 @@ css_and_html = r"""
                 @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
                 @keyframes heartBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-20px) scale(1.15); } }
                 
-                /* --- MISSING ANIMATION FIXED HERE --- */
                 @keyframes spediaFadeUp { 
                     0% { opacity: 0; transform: translateY(10px); }
                     100% { opacity: 1; transform: translateY(0); } 
@@ -59,10 +89,7 @@ css_and_html = r"""
 
                 /* --- RESULTS AREA --- */
                 .results-container { width: 100%; max-width: 800px; padding: 0 20px 40px; display: flex; flex-direction: column; gap: 16px; }
-                
-                /* FIXED ANIMATION PROPERTY */
                 .result-card { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--card-radius); padding: 24px; transition: var(--transition); opacity: 0; transform: translateY(10px); animation: spediaFadeUp 0.4s ease-out forwards; position: relative; overflow: hidden; }
-                
                 .result-card::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: var(--gradient-text); opacity: 0.7; }
                 .result-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(42, 245, 152, 0.3); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
                 
@@ -103,7 +130,8 @@ css_and_html = r"""
                 .flow-arrow small { font-size: 0.65rem; margin-top: 4px; }
 
                 /* --- GRAPH MODAL --- */
-                .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 8, 16, 0.85); backdrop-filter: blur(8px); z-index: 1000; display: flex; justify-content: center; align-items: flex-start; padding-top: 80px; opacity: 0; visibility: hidden; transition: var(--transition); }
+                /* Fix: Change to absolute position so it spans the entire scrollable iframe rather than getting cut off */
+                .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; min-height: 100vh; background: rgba(5, 8, 16, 0.85); backdrop-filter: blur(8px); z-index: 1000; display: flex; justify-content: center; align-items: flex-start; opacity: 0; visibility: hidden; transition: var(--transition); }
                 .modal-overlay.active { opacity: 1; visibility: visible; }
                 
                 /* Modal Window Design with Resizing Enabled */
@@ -324,7 +352,9 @@ js_part_2 = r""";
                         let downHTML = '';
                         if (item.file) downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
                         if (item.files) item.files.forEach(f => { downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`; });
-                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}')"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        
+                        // FIX: Pass 'event' explicitly here to capture the Y coordinate
+                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', event)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
@@ -348,7 +378,7 @@ js_part_2 = r""";
                 });
 
                 // --- GRAPH LOGIC ---
-                window.openRelevanceGraph = function(termName) {
+                window.openRelevanceGraph = function(termName, event) {
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
 
@@ -399,7 +429,23 @@ js_part_2 = r""";
                         relatedNodesContainer.appendChild(n);
                     });
 
-                    document.getElementById('relevanceModal').classList.add('active');
+                    const modal = document.getElementById('relevanceModal');
+                    
+                    // FIX: Dynamic Positioning
+                    // Places the modal directly relative to where the mouse clicked to bypass iframe limitations
+                    if (event) {
+                        const docHeight = Math.max(document.body.scrollHeight, window.innerHeight);
+                        let targetY = event.pageY - 300; // Center the 600px tall box around the click
+                        const maxPadding = docHeight - 650;
+                        
+                        if (targetY > maxPadding) targetY = maxPadding;
+                        if (targetY < 20) targetY = 20;
+                        
+                        modal.style.height = docHeight + 'px';
+                        modal.style.paddingTop = targetY + 'px';
+                    }
+
+                    modal.classList.add('active');
 
                     setTimeout(() => {
                         const vp = document.getElementById('graphViewport').getBoundingClientRect();
