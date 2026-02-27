@@ -10,8 +10,7 @@ from value_calculator import content as value_calculator_content
 
 # Configure the Streamlit page settings
 st.set_page_config(
-    page_title="Streamax Sales Toolkit",
-    page_icon="🧭",
+    page_title="Streamax Sales Toolkit | Aurora Flow",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
