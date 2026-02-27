@@ -97,17 +97,18 @@ css_and_html = r"""
                 /* --- FIX: GRAPH MODAL DYNAMIC POSITIONING --- */
                 .modal-overlay { 
                     position: absolute; 
-                    top: 0; left: 0; right: 0; bottom: 0; 
-                    min-height: 100vh;
+                    top: 0; left: 0; right: 0; 
+                    /* height dynamically set by JS to cover full doc */
                     background: rgba(5, 8, 16, 0.85); 
                     backdrop-filter: blur(8px); 
                     z-index: 1000; 
                     opacity: 0; 
                     visibility: hidden; 
-                    transition: var(--transition); 
+                    transition: opacity 0.3s ease-out, visibility 0.3s ease-out; 
                 }
                 .modal-overlay.active { opacity: 1; visibility: visible; }
                 
+                /* Modal Window Design with Resizing Enabled */
                 .modal-box { 
                     background: var(--glass-bg); 
                     border: var(--glass-border); 
@@ -115,6 +116,8 @@ css_and_html = r"""
                     width: 950px; 
                     max-width: 95%; 
                     height: 600px; 
+                    min-height: 400px; 
+                    max-height: 90vh; 
                     position: absolute; 
                     left: 50%;
                     transform: translateX(-50%) scale(0.95); 
@@ -126,7 +129,8 @@ css_and_html = r"""
                     overflow: hidden; 
                     box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
                     resize: both; 
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    /* Notice we isolate transform and opacity so the JS 'top' positioning doesn't animate */
+                    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
                 }
                 .modal-overlay.active .modal-box { 
                     transform: translateX(-50%) scale(1); 
@@ -374,16 +378,33 @@ js_part_2 = r""";
                     if (!termData || !termData.related) return;
 
                     const modalBox = document.querySelector('.modal-box');
+                    const overlay = document.querySelector('.modal-overlay');
+                    
+                    // Match the overlay height to the full document height dynamically
+                    const docHeight = Math.max(
+                        document.body.scrollHeight, document.documentElement.scrollHeight,
+                        document.body.offsetHeight, document.documentElement.offsetHeight,
+                        document.documentElement.clientHeight
+                    );
+                    overlay.style.height = docHeight + 'px';
                     
                     // FIX: Dynamically anchor the modal perfectly to where the user scrolled/clicked!
                     if (btnElement) {
                         const rect = btnElement.getBoundingClientRect();
-                        // Get absolute Y position in the Streamlit Iframe and center the 600px box
-                        let boxTop = rect.top + window.scrollY - 300; 
-                        if (boxTop < 20) boxTop = 20; // Keep it from clipping the ceiling
+                        // Get absolute Y position in the document
+                        const absoluteY = rect.top + window.scrollY; 
+                        
+                        // Center the modal over the button (Modal defaults to ~600px tall)
+                        let boxHeight = modalBox.offsetHeight || 600;
+                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
+                        
+                        // Boundaries
+                        if (boxTop < 20) boxTop = 20; 
+                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
+                        
                         modalBox.style.top = boxTop + 'px';
                     } else {
-                        modalBox.style.top = '100px';
+                        modalBox.style.top = (window.scrollY + 100) + 'px';
                     }
 
                     document.getElementById('modalChildExplanation').classList.remove('active');
