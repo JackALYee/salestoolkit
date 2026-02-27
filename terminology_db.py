@@ -375,7 +375,7 @@ TERMINOLOGY_DB = [
     { "term": "Kalman Filter", "category": "Data & Metrics", "desc": "An algorithm that estimates the internal state of a linear dynamic system from a series of noisy measurements. Widely used in telematics to smooth GPS trajectories, fuse sensor data, and precisely estimate vehicle position and velocity.", "related": ["Dead Reckoning GPS"] },
     
     # Team
-    { "term": "Jerry Li", "category": "TEAM", "desc": "Jerry Li，6爷，产品市场总监", "exact": True },
+    { "term": "Jerry Li", "category": "TEAM", "desc": "Jerry Li，6爷，产品市场总监。<br><br>名言：“这里有一把野生的枪🥰”", "exact": True },
     { "term": "Ryan He", "category": "TEAM", "desc": "堃哥，全国熬夜加班总冠军，货运产品线总监。<br><br>名言：“干就完了！”", "related": ["Jerry Li"], "exact": True },
-    { "term": "Jack Yi", "category": "TEAM", "desc": "不正经程序员，理工科市场推广员，PPT做的贼烂销售员", "related": ["Jerry Li"], "exact": True }
+    { "term": "Jack Yi", "category": "TEAM", "desc": "不太正经程序员，梦想做一名理工科市场推广大师，尽量别找我写PPT。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry Li"], "exact": True }
 ]
