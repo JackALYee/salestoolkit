@@ -953,8 +953,12 @@ html_tail = r"""
 
         document.addEventListener('DOMContentLoaded', () => {
             observeElements();
-            // Since Streamaxpedia is the default, trigger its fade-up elements
-            setTimeout(() => { document.querySelectorAll('#streamaxpedia .fade-up').forEach(el => el.classList.add('visible')); }, 100);
+            
+            // Set Streamaxpedia as the initial active tab automatically
+            const defaultTabBtn = document.querySelector('.nav-tabs button:first-child');
+            if (defaultTabBtn) {
+                switchTab('streamaxpedia', defaultTabBtn);
+            }
             
             // Init Visual Loop
             initLoopVisual();
