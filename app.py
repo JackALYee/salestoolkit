@@ -826,10 +826,10 @@ html_head = r"""<!DOCTYPE html>
     <div class="container">
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
-            <button class="nav-btn" onclick="switchTab('streamaxpedia', this)">
+            <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
             </button>
-            <button class="nav-btn active" onclick="switchTab('prospecting-flow', this)">
+            <button class="nav-btn" onclick="switchTab('prospecting-flow', this)">
                 <i data-lucide="git-merge"></i> Prospecting Flow
             </button>
             <button class="nav-btn" onclick="switchTab('discovery', this)">
@@ -953,7 +953,8 @@ html_tail = r"""
 
         document.addEventListener('DOMContentLoaded', () => {
             observeElements();
-            setTimeout(() => { document.querySelectorAll('#prospecting-flow .fade-up').forEach(el => el.classList.add('visible')); }, 100);
+            // Since Streamaxpedia is the default, trigger its fade-up elements
+            setTimeout(() => { document.querySelectorAll('#streamaxpedia .fade-up').forEach(el => el.classList.add('visible')); }, 100);
             
             // Init Visual Loop
             initLoopVisual();
