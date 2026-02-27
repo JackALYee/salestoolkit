@@ -10,8 +10,7 @@ from value_calculator import content as value_calculator_content
 
 # Configure the Streamlit page settings
 st.set_page_config(
-    page_title="Streamax Sales Toolkit",
-    page_icon="💡",
+    page_title="Streamax Sales Toolkit | Aurora Flow",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -41,7 +40,7 @@ html_head = r"""<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streamax Sales Toolkit | Aurora Flow</title>
     
-    <!-- Tailwind CSS (for TCO Calculator) -->
+    <!-- Tailwind CSS (for TCO & IFTA Calculators) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Fonts -->
@@ -53,7 +52,7 @@ html_head = r"""<!DOCTYPE html>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- MathJax for LaTeX Rendering (TCO Calculator) -->
+    <!-- MathJax for LaTeX Rendering (TCO & IFTA Calculators) -->
     <script>
         window.MathJax = {
             loader: {load: ['[tex]/html']},
@@ -774,13 +773,13 @@ html_head = r"""<!DOCTYPE html>
         .delay-2 { animation-delay: 0.2s; }
         .delay-3 { animation-delay: 0.3s; }
         .delay-4 { animation-delay: 0.4s; }
-        input[type="number"] {
+        input[type="number"], input[type="text"] {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-white);
             transition: all 0.3s ease;
         }
-        input[type="number"]:focus {
+        input[type="number"]:focus, input[type="text"]:focus {
             border-color: var(--primary-green);
             box-shadow: 0 0 12px rgba(42, 245, 152, 0.2);
             outline: none;
@@ -820,8 +819,7 @@ html_head = r"""<!DOCTYPE html>
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version BETA 1.0 • Trucking BU • Mar 2026</div>
-             <div class="header-meta fade-up">* Recommended Browser: Google Chrome</div>
+            <div class="header-meta fade-up">Version 1.0 • Trucking BU • Jan 2026</div>
         </div>
     </header>
 
@@ -910,8 +908,8 @@ html_tail = r"""
                 });
                 observeElements();
 
-                // Ensure MathJax renders if they switch directly to the sub-tab
-                if (tabId === 'tco-calc' && window.MathJax && MathJax.typesetPromise) {
+                // Ensure MathJax renders if they switch directly to the sub-tab (now applies to both TCO and IFTA)
+                if ((tabId === 'tco-calc' || tabId === 'ifta-calc') && window.MathJax && MathJax.typesetPromise) {
                     MathJax.typesetPromise();
                 }
             }
@@ -969,6 +967,9 @@ html_tail = r"""
 
             // Initialize TCO Calculator on load
             if (typeof calculateROI === 'function') calculateROI();
+            
+            // Initialize IFTA Calculator on load
+            if (typeof initIfta === 'function') initIfta();
         });
 
         // --- VALUE CALCULATOR JS LOGIC ---
