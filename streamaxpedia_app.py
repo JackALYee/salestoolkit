@@ -25,7 +25,7 @@ css_and_html = r"""
                 .search-wrapper.active-search { margin-top: 1vh; }
 
                 .title-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 30px; }
-                .subtitle-box { text-align: center; margin-top: -15px; margin-bottom: 30px; padding: 0 20px; }
+                .subtitle-box { text-align: center; margin-top: -15px; margin-bottom: 30px; padding: 0 20px; animation: spediaFadeUp 0.5s ease-out forwards; }
                 .temp-note { color: var(--text-grey); font-size: 0.95rem; font-style: italic; margin-bottom: 5px; }
                 .credit-line { color: var(--primary-green); font-size: 0.85rem; font-weight: 600; margin-top: 0; letter-spacing: 0.5px; }
 
@@ -36,6 +36,12 @@ css_and_html = r"""
 
                 @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
                 @keyframes heartBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-20px) scale(1.15); } }
+                
+                /* --- MISSING ANIMATION FIXED HERE --- */
+                @keyframes spediaFadeUp { 
+                    0% { opacity: 0; transform: translateY(10px); }
+                    100% { opacity: 1; transform: translateY(0); } 
+                }
 
                 .brand-title { font-size: 3rem; font-weight: 700; text-align: center; letter-spacing: -1px; margin: 0; }
 
@@ -53,7 +59,10 @@ css_and_html = r"""
 
                 /* --- RESULTS AREA --- */
                 .results-container { width: 100%; max-width: 800px; padding: 0 20px 40px; display: flex; flex-direction: column; gap: 16px; }
-                .result-card { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--card-radius); padding: 24px; transition: var(--transition); opacity: 0; transform: translateY(10px); animation: fadeUp 0.3s forwards ease-out; position: relative; overflow: hidden; }
+                
+                /* FIXED ANIMATION PROPERTY */
+                .result-card { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--card-radius); padding: 24px; transition: var(--transition); opacity: 0; transform: translateY(10px); animation: spediaFadeUp 0.4s ease-out forwards; position: relative; overflow: hidden; }
+                
                 .result-card::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: var(--gradient-text); opacity: 0.7; }
                 .result-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(42, 245, 152, 0.3); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
                 
@@ -97,6 +106,7 @@ css_and_html = r"""
                 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5, 8, 16, 0.85); backdrop-filter: blur(8px); z-index: 1000; display: flex; justify-content: center; align-items: flex-start; padding-top: 80px; opacity: 0; visibility: hidden; transition: var(--transition); }
                 .modal-overlay.active { opacity: 1; visibility: visible; }
                 
+                /* Modal Window Design with Resizing Enabled */
                 .modal-box { 
                     background: var(--glass-bg); 
                     border: var(--glass-border); 
@@ -125,6 +135,7 @@ css_and_html = r"""
                 .graph-container { position: absolute; top: 0; left: 0; display: flex; align-items: center; gap: 120px; padding: 100px; transform-origin: 0 0; will-change: transform; }
                 .graph-col { display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 2; }
                 
+                /* TABLET NODE STYLING UPDATE */
                 .round-node { 
                     background: rgba(255, 255, 255, 0.05); 
                     border: 1px solid rgba(255, 255, 255, 0.1); 
@@ -165,7 +176,7 @@ css_and_html = r"""
                 
                 .graph-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
                 
-                #modalChildExplanation { position: absolute; top: 20px; left: 20px; width: 320px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: rgba(5, 8, 16, 0.95); border: 1px solid var(--secondary-blue); border-top: 4px solid var(--primary-green); padding: 16px 20px; border-radius: 8px; display: none; animation: fadeUp 0.3s ease-out forwards; }
+                #modalChildExplanation { position: absolute; top: 20px; left: 20px; width: 320px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: rgba(5, 8, 16, 0.95); border: 1px solid var(--secondary-blue); border-top: 4px solid var(--primary-green); padding: 16px 20px; border-radius: 8px; display: none; animation: spediaFadeUp 0.3s ease-out forwards; }
                 #modalChildExplanation.active { display: block; }
                 .see-details-btn { background: var(--secondary-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; margin-top: 15px; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
                 .see-details-btn:hover { background: var(--primary-green); color: var(--bg-deep); }
@@ -191,7 +202,7 @@ css_and_html = r"""
                 
                 <div class="search-box">
                     <!-- Native instant search keystroke input -->
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off" autofocus>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
                     <i class="fa-solid fa-xmark clear-icon" id="clearBtn"></i>
                 </div>
