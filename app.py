@@ -10,7 +10,8 @@ from value_calculator import content as value_calculator_content
 
 # Configure the Streamlit page settings
 st.set_page_config(
-    page_title="Streamax Sales Toolkit | Aurora Flow",
+    page_title="Streamax Sales Toolkit",
+    page_icon="💡",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -819,7 +820,8 @@ html_head = r"""<!DOCTYPE html>
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 1.0 • Trucking BU • Jan 2026</div>
+            <div class="header-meta fade-up">Version BETA 1.0 • Trucking BU • Mar 2026</div>
+             <div class="header-meta fade-up">Recommend Using Google Chrome</div>
         </div>
     </header>
 
