@@ -821,7 +821,7 @@ html_head = r"""<!DOCTYPE html>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
             <div class="header-meta fade-up">Version BETA 1.0 • Trucking BU • Mar 2026</div>
-             <div class="header-meta fade-up">*Recommended Browser: Google Chrome*</div>
+             <div class="header-meta fade-up">* Recommended Browser: Google Chrome</div>
         </div>
     </header>
 
