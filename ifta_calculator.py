@@ -155,4 +155,111 @@ content = r"""        <!-- TCO IFTA CALCULATOR SUB-SECTION -->
                         <input type="number" class="state-rate w-full bg-black/40 border border-[var(--primary-green)]/40 rounded px-2 py-1.5 text-sm text-[var(--primary-green)]" value="${data.rate}" step="0.001" oninput="calculateIFTA()">
                     </div>
                     <div class="flex-1 min-w-[80px]">
-                        <label class="block text-[10px] text-[var(--secondary-blue)] uppercase mb-1">Gal Bought</
+                        <label class="block text-[10px] text-[var(--secondary-blue)] uppercase mb-1">Gal Bought</label>
+                        <input type="number" class="state-purchased w-full bg-black/40 border border-[var(--secondary-blue)]/40 rounded px-2 py-1.5 text-sm text-[var(--secondary-blue)]" value="${data.bought}" step="1" oninput="calculateIFTA()">
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove(); calculateIFTA();" class="text-red-400 hover:text-red-300 mt-5 px-2 transition-colors">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <!-- Display calculated gallons used below row -->
+                    <div class="w-full text-right text-[10px] text-gray-500 mt-1">
+                        Est. Used: <span class="state-gal-used font-mono text-gray-300">0.00 gal</span>
+                    </div>
+                `;
+                container.appendChild(row);
+            }
+
+            function initIfta() {
+                const container = document.getElementById('ifta-states-container');
+                if (!container) return; // Prevent errors if tab not open
+                container.innerHTML = '';
+                initialIftaData.forEach(d => addIftaStateRow(d));
+                calculateIFTA();
+            }
+
+            function calculateIFTA() {
+                const mpg = parseFloat(document.getElementById('ifta-mpg').value) || 1;
+                const rows = document.querySelectorAll('.ifta-state-row');
+                
+                let totalPumpCost = 0;
+                let totalTaxOwed = 0;
+                let totalTaxPaid = 0;
+                let totalGalUsed = 0;
+                let totalGalBought = 0;
+                
+                let bestState = null;
+                let lowestBasePrice = Infinity;
+                
+                rows.forEach(row => {
+                    const stateName = row.querySelector('.state-name').value || 'Unknown';
+                    const miles = parseFloat(row.querySelector('.state-miles').value) || 0;
+                    const pumpPrice = parseFloat(row.querySelector('.state-price').value) || 0;
+                    const iftaRate = parseFloat(row.querySelector('.state-rate').value) || 0;
+                    const galPurchased = parseFloat(row.querySelector('.state-purchased').value) || 0;
+                    
+                    const galUsed = miles / mpg;
+                    
+                    totalPumpCost += (galPurchased * pumpPrice);
+                    totalTaxOwed += (galUsed * iftaRate);
+                    totalTaxPaid += (galPurchased * iftaRate);
+                    
+                    totalGalUsed += galUsed;
+                    totalGalBought += galPurchased;
+                    
+                    // Optimization Logic: Find lowest (Pump Price - IFTA Rate)
+                    const basePrice = pumpPrice - iftaRate;
+                    if (pumpPrice > 0 && iftaRate > 0 && basePrice < lowestBasePrice) {
+                        lowestBasePrice = basePrice;
+                        bestState = stateName;
+                    }
+                    
+                    // Update local row UI
+                    const usedSpan = row.querySelector('.state-gal-used');
+                    if(usedSpan) usedSpan.innerText = galUsed.toFixed(2) + ' gal';
+                });
+                
+                const netBalance = totalTaxOwed - totalTaxPaid;
+                const netCost = totalPumpCost + netBalance;
+                
+                // Update Main Outputs
+                const elPump = document.getElementById('ifta-out-pump');
+                const elOwed = document.getElementById('ifta-out-owed');
+                const elPaid = document.getElementById('ifta-out-paid');
+                const elBalance = document.getElementById('ifta-out-balance');
+                const elNet = document.getElementById('ifta-out-net');
+                
+                if(elPump) elPump.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalPumpCost);
+                if(elOwed) elOwed.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalTaxOwed);
+                if(elPaid) elPaid.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalTaxPaid);
+                if(elNet) elNet.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netCost);
+                
+                if (elBalance) {
+                    if (netBalance > 0) {
+                        elBalance.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netBalance) + " (Owed)";
+                        elBalance.style.color = "#ff4757"; // Red for owed
+                    } else {
+                        elBalance.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(netBalance)) + " (Refund)";
+                        elBalance.style.color = "var(--primary-green)"; // Green for refund
+                    }
+                }
+                
+                // Update Optimization Insight
+                const insightEl = document.getElementById('ifta-opt-insight');
+                if (insightEl) {
+                    if (bestState && lowestBasePrice !== Infinity) {
+                        insightEl.innerHTML = `To minimize your overall Net Cost after IFTA reconciliation, shift as much purchasing volume as possible into <strong>${bestState}</strong>. Its effective untaxed base price is only <strong>$${lowestBasePrice.toFixed(3)}/gal</strong>.`;
+                    } else {
+                        insightEl.innerHTML = "Add valid state pricing and tax data to generate routing insights.";
+                    }
+                    
+                    // Warning if gal bought doesn't match gal used
+                    if (Math.abs(totalGalUsed - totalGalBought) > (totalGalUsed * 0.05) && totalGalBought > 0) {
+                        insightEl.innerHTML += `<br><br><span style="color:#f59e0b; font-size:0.8rem;"><i class="fas fa-exclamation-triangle"></i> Note: Total gallons purchased (${totalGalBought.toFixed(0)}) significantly differs from estimated gallons used (${totalGalUsed.toFixed(0)}).</span>`;
+                    }
+                }
+            }
+            
+            // Run initialization if script is loaded
+            document.addEventListener('DOMContentLoaded', initIfta);
+        </script>
+"""
