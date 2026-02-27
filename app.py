@@ -1181,5 +1181,5 @@ html_code = (
 )
 
 # Render the HTML toolkit natively inside Streamlit
-# Setting a large height to prevent cutoff of content within the iframe.
+# We use a large viewport height and enable scrolling so all sections are accessible
 components.html(html_code, height=1800, scrolling=True)
