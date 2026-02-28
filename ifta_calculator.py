@@ -1,4 +1,6 @@
-content = r"""        <!-- TCO IFTA CALCULATOR SUB-SECTION -->
+content = r"""        </div> <!-- FIX: Close previous tco-calc section -->
+        
+        <!-- TCO IFTA CALCULATOR SUB-SECTION -->
         <div id="ifta-calc" class="sub-content">
             <div class="max-w-6xl w-full mx-auto glass-card overflow-visible fade-up delay-1">
                 <!-- Header -->
