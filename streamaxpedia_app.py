@@ -241,7 +241,7 @@ css_and_html = r"""
 
             <!-- SECURITY WARNING MODAL -->
             <div class="modal-overlay" id="securityModal" style="align-items: center; position: fixed;">
-                <div class="modal-box" style="width: 450px; height: auto; min-height: unset; padding: 30px; text-align: center;">
+                <div class="modal-box" style="width: 450px; height: auto; min-height: unset; padding: 30px; text-align: center; background: rgba(5, 8, 16, 0.98); border: 1px solid rgba(255, 71, 87, 0.3); box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
                     <button class="close-modal" onclick="document.getElementById('securityModal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
                     <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #ff4757; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.4));"></i>
                     <h3 style="color: var(--text-white); font-size: 1.3rem; margin-bottom: 15px;">Access Denied</h3>
