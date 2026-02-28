@@ -96,40 +96,45 @@ css_and_html = r"""
 
                 /* --- GRAPH MODAL --- */
                 .modal-overlay { 
-                    position: fixed; 
-                    top: 0; left: 0; width: 100vw; height: 100vh; 
+                    position: absolute; 
+                    top: 0; left: 0; right: 0; 
+                    /* height dynamically set by JS to cover full doc */
                     background: rgba(5, 8, 16, 0.85); 
                     backdrop-filter: blur(8px); 
                     z-index: 1000; 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center; /* PERFECTLY CENTERED VERTICALLY AND HORIZONTALLY */
                     opacity: 0; 
                     visibility: hidden; 
-                    transition: var(--transition); 
+                    transition: opacity 0.3s ease-out, visibility 0.3s ease-out; 
                 }
                 .modal-overlay.active { opacity: 1; visibility: visible; }
                 
+                /* Modal Window Design with Resizing Enabled */
                 .modal-box { 
                     background: var(--glass-bg); 
                     border: var(--glass-border); 
                     border-radius: var(--card-radius); 
                     width: 950px; 
-                    max-width: 95vw; 
+                    max-width: 95%; 
                     height: 600px; 
-                    max-height: 90vh; /* Prevents overflow off screen */
-                    position: relative; 
+                    min-height: 400px; 
+                    max-height: 90vh; 
+                    position: absolute; 
+                    left: 50%;
+                    transform: translateX(-50%) scale(0.95); 
+                    opacity: 0;
                     padding: 20px; 
                     display: flex; 
                     flex-direction: column; 
                     align-items: center; 
                     overflow: hidden; 
                     box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
-                    transform: scale(0.95);
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                    resize: both; 
+                    /* Notice we isolate transform and opacity so the JS 'top' positioning doesn't animate */
+                    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
                 }
                 .modal-overlay.active .modal-box { 
-                    transform: scale(1);
+                    transform: translateX(-50%) scale(1); 
+                    opacity: 1;
                 }
                 
                 .close-modal { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--text-grey); font-size: 1.5rem; cursor: pointer; z-index: 100; transition: var(--transition); }
@@ -205,6 +210,7 @@ css_and_html = r"""
                 </div>
                 
                 <div class="search-box">
+                    <!-- Native instant search keystroke input -->
                     <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
                     <i class="fa-solid fa-xmark clear-icon" id="clearBtn"></i>
@@ -240,6 +246,12 @@ js_part_1 = r"""
 """
 
 js_part_2 = r""";
+                // ==========================================
+                // MASTER SWITCH TO ENABLE/DISABLE DOWNLOADS
+                // ==========================================
+                const ENABLE_DOWNLOADS = false; // Change to true to enable "Spec" and "User Manual" downloads
+                // ==========================================
+
                 let currentMascotSrc = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; 
                 let isGraphDragging = false, graphStartX = 0, graphStartY = 0, graphTranslateX = 0, graphTranslateY = 0, hasGraphDragged = false;
 
@@ -260,6 +272,7 @@ js_part_2 = r""";
                     return text.replace(regex, '<span class="highlight">$1</span>');
                 }
 
+                // --- SEARCH ENGINE LOGIC ---
                 function performSearch() {
                     const rawQuery = searchInput.value.trim();
                     const query = rawQuery.toLowerCase();
@@ -324,10 +337,15 @@ js_part_2 = r""";
                     resultsContainer.innerHTML = results.map((item, index) => {
                         const delay = index * 0.05;
                         let downHTML = '';
-                        if (item.file) downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
-                        if (item.files) item.files.forEach(f => { downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`; });
                         
-                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}')"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        // Check the MASTER SWITCH before building the download buttons
+                        if (ENABLE_DOWNLOADS) {
+                            if (item.file) downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
+                            if (item.files) item.files.forEach(f => { downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`; });
+                        }
+                        
+                        // FIX: Pass the clicked button ('this') so we can dynamically calculate Y position!
+                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
@@ -343,13 +361,15 @@ js_part_2 = r""";
                     }).join('');
                 }
 
+                // Live Keystroke listener instead of waiting for "Enter"
                 searchInput.addEventListener('input', performSearch);
                 
                 clearBtn.addEventListener('click', () => {
                     searchInput.value = ''; searchInput.focus(); performSearch();
                 });
 
-                // Gets the exact pixel position of the element inside its scrolling container
+                // --- FIXED: GET CENTER ANIMATION SAFE ---
+                // Navigates the DOM hierarchy to find the exact relative center of a node without relying on the animated bounding box.
                 function getCenterSafe(node) {
                     let x = node.offsetWidth / 2;
                     let y = node.offsetHeight / 2;
@@ -363,9 +383,39 @@ js_part_2 = r""";
                 }
 
                 // --- GRAPH LOGIC ---
-                window.openRelevanceGraph = function(termName) {
+                window.openRelevanceGraph = function(termName, btnElement) {
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
+
+                    const modalBox = document.querySelector('.modal-box');
+                    const overlay = document.querySelector('.modal-overlay');
+                    
+                    // Match the overlay height to the full document height dynamically
+                    const docHeight = Math.max(
+                        document.body.scrollHeight, document.documentElement.scrollHeight,
+                        document.body.offsetHeight, document.documentElement.offsetHeight,
+                        document.documentElement.clientHeight
+                    );
+                    overlay.style.height = docHeight + 'px';
+                    
+                    // FIX: Dynamically anchor the modal perfectly to where the user scrolled/clicked!
+                    if (btnElement) {
+                        const rect = btnElement.getBoundingClientRect();
+                        // Get absolute Y position in the document
+                        const absoluteY = rect.top + window.scrollY; 
+                        
+                        // Center the modal over the button (Modal defaults to ~600px tall)
+                        let boxHeight = modalBox.offsetHeight || 600;
+                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
+                        
+                        // Boundaries
+                        if (boxTop < 20) boxTop = 20; 
+                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
+                        
+                        modalBox.style.top = boxTop + 'px';
+                    } else {
+                        modalBox.style.top = (window.scrollY + 100) + 'px';
+                    }
 
                     document.getElementById('modalChildExplanation').classList.remove('active');
                     document.getElementById('graphMasterNode').innerText = termData.term;
@@ -416,7 +466,7 @@ js_part_2 = r""";
 
                     document.getElementById('relevanceModal').classList.add('active');
 
-                    // Set up initial drag constraints
+                    // FIX: Calculate Auto-Pan using offset geometry to ignore CSS scale animations
                     setTimeout(() => {
                         const vp = document.getElementById('graphViewport');
                         const ct = document.getElementById('graphContainer');
@@ -438,6 +488,7 @@ js_part_2 = r""";
                     }, 50);
                 };
 
+                // FIX: drawLines completely bypasses getBoundingClientRect for animation immunity
                 function drawLines() {
                     const svg = document.getElementById('graphLines');
                     svg.innerHTML = '';
@@ -493,14 +544,20 @@ js_part_2 = r""";
 
                 window.closeModal = function() { document.getElementById('relevanceModal').classList.remove('active'); };
                 
+                // --- COMPLETELY FIXED "SEE DETAILS" LOGIC ---
+                // Instead of reloading the parent URL and breaking the Streamlit iframe,
+                // it seamlessly updates the internal text box and live searches instantly!
                 window.masterSearch = function(name) {
                     closeModal();
                     const searchInput = document.getElementById('searchInput');
                     searchInput.value = name;
                     performSearch();
+                    
+                    // Native smooth scroll back to the search bar!
                     document.getElementById('searchWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 };
 
+                // Mascot mouse tracking
                 document.addEventListener('mousemove', (e) => {
                     const mascotImg = document.getElementById('mascotImage');
                     if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
@@ -510,6 +567,7 @@ js_part_2 = r""";
                     mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
                 });
 
+                // Pan Logic
                 const vp = document.getElementById('graphViewport');
                 const ct = document.getElementById('graphContainer');
                 if (vp) {
@@ -519,6 +577,7 @@ js_part_2 = r""";
                     vp.onclick = (e) => { if(!hasGraphDragged && !e.target.closest('.node-related') && !document.getElementById('modalChildExplanation').contains(e.target)) document.getElementById('modalChildExplanation').classList.remove('active'); };
                 }
 
+                // Observe modal resize to redraw lines dynamically
                 if (typeof ResizeObserver !== 'undefined') {
                     const modalBox = document.querySelector('.modal-box');
                     if (modalBox) {
