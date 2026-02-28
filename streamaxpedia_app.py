@@ -264,7 +264,7 @@ js_part_2 = r""";
                 // ==========================================
                 // MASTER SWITCH TO ENABLE/DISABLE DOWNLOADS
                 // ==========================================
-                const ENABLE_DOWNLOADS = false; // Change to true to enable "Spec" and "User Manual" downloads
+                const ENABLE_DOWNLOADS = true; // Change to true to enable "Spec" and "User Manual" downloads
                 // ==========================================
 
                 let currentMascotSrc = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; 
