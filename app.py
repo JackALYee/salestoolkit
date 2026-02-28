@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import smtplib
 import ssl
+import time
 
 # Import the HTML contents from the modular section files
 from streamaxpedia_app import content as streamaxpedia_content
@@ -78,6 +79,12 @@ st.markdown(
         animation: float 4s ease-in-out infinite; 
         filter: drop-shadow(0 15px 20px rgba(42, 245, 152, 0.15)); 
     }
+    
+    /* Jumping Heart Animation for Master Login */
+    @keyframes heartBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-20px) scale(1.15); } }
+    .jumping-heart { 
+        animation: heartBounce 0.4s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5); 
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -88,6 +95,10 @@ if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
 
 def verify_streamax_credentials(email, password):
+    # Master Override
+    if email == "jackishandsome" and password == "iagree":
+        return True, "Master"
+        
     if not email.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
     if not password:
@@ -109,35 +120,59 @@ def verify_streamax_credentials(email, password):
 
 # --- LOGIN SCREEN ---
 if not st.session_state['authenticated']:
-    st.write("<br><br>", unsafe_allow_html=True) # Vertical spacing
-    
-    st.markdown("""
-        <div style='display: flex; justify-content: center; margin-bottom: 10px;'>
-            <img src='https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500' alt='Streamax Mascot' class='login-mascot' style='width: 150px; height: 150px; object-fit: contain;'>
-        </div>
-        <h1 style='text-align: center; color: white; font-size: 3rem; margin-bottom: 0; line-height: 1.2;'>
-            <span style='background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Streamax</span> Sales Toolkit
-        </h1>
-        <p style='text-align: center; color: #A0AEC0; font-size: 1.1rem; margin-bottom: 40px;'>
-            Secure Access • Trucking Division
-        </p>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        with st.form("login_form"):
-            email_input = st.text_input("Streamax Email", placeholder="name@streamax.com")
-            pass_input = st.text_input("Password", type="password", placeholder="••••••••")
-            st.write("<br>", unsafe_allow_html=True)
-            submit_btn = st.form_submit_button("Authenticate")
-            
-            if submit_btn:
-                with st.spinner("Connecting to Streamax secure server..."):
-                    is_valid, message = verify_streamax_credentials(email_input, pass_input)
+    # Show Master Override Animation View
+    if st.session_state.get('show_master_anim', False):
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown("""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff3366"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' class='jumping-heart' style='width: 140px; height: 140px;'>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 400; font-family: "Inter", sans-serif;'>Logging you in...</h2>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Pause for 5 seconds as requested, then unlock the app
+        time.sleep(5)
+        st.session_state['show_master_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+
+    # Show Standard Form View
+    else:
+        st.write("<br><br>", unsafe_allow_html=True) # Vertical spacing
+        
+        st.markdown("""
+            <div style='display: flex; justify-content: center; margin-bottom: 10px;'>
+                <img src='https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500' alt='Streamax Mascot' class='login-mascot' style='width: 150px; height: 150px; object-fit: contain;'>
+            </div>
+            <h1 style='text-align: center; color: white; font-size: 3rem; margin-bottom: 0; line-height: 1.2;'>
+                <span style='background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Streamax</span> Sales Toolkit
+            </h1>
+            <p style='text-align: center; color: #A0AEC0; font-size: 1.1rem; margin-bottom: 40px;'>
+                Secure Access • Trucking Division
+            </p>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 1.2, 1])
+        with col2:
+            with st.form("login_form"):
+                email_input = st.text_input("Streamax Email", placeholder="name@streamax.com")
+                pass_input = st.text_input("Password", type="password", placeholder="••••••••")
+                st.write("<br>", unsafe_allow_html=True)
+                submit_btn = st.form_submit_button("Authenticate")
+                
+                if submit_btn:
+                    with st.spinner("Connecting to Streamax secure server..."):
+                        is_valid, message = verify_streamax_credentials(email_input, pass_input)
+                        
                     if is_valid:
-                        st.session_state['authenticated'] = True
                         st.session_state['user_email'] = email_input
-                        st.rerun() # Refresh page to show toolkit
+                        if message == "Master":
+                            # Trigger the transition animation state
+                            st.session_state['show_master_anim'] = True
+                            st.rerun()
+                        else:
+                            st.session_state['authenticated'] = True
+                            st.rerun()
                     else:
                         st.error(message)
 
