@@ -238,6 +238,21 @@ css_and_html = r"""
                     </div>
                 </div>
             </div>
+
+            <!-- SECURITY WARNING MODAL -->
+            <div class="modal-overlay" id="securityModal" style="align-items: center; position: fixed;">
+                <div class="modal-box" style="width: 450px; height: auto; min-height: unset; padding: 30px; text-align: center;">
+                    <button class="close-modal" onclick="document.getElementById('securityModal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
+                    <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #ff4757; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.4));"></i>
+                    <h3 style="color: var(--text-white); font-size: 1.3rem; margin-bottom: 15px;">Access Denied</h3>
+                    <p style="color: var(--text-grey); font-size: 0.95rem; line-height: 1.6; margin-bottom: 0;">
+                        Due to Company IT Security Policy, downloading the selected document is prohibited.
+                        <br><br>
+                        根据公司网络安全法规，该文件的下载已被禁止。
+                    </p>
+                    <button class="see-details-btn" style="margin: 25px auto 0;" onclick="document.getElementById('securityModal').classList.remove('active')">Acknowledge / 确认</button>
+                </div>
+            </div>
 """
 
 js_part_1 = r"""
@@ -339,9 +354,22 @@ js_part_2 = r""";
                         let downHTML = '';
                         
                         // Check the MASTER SWITCH before building the download buttons
-                        if (ENABLE_DOWNLOADS) {
-                            if (item.file) downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
-                            if (item.files) item.files.forEach(f => { downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`; });
+                        if (item.file) {
+                            if (ENABLE_DOWNLOADS) {
+                                downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
+                            } else {
+                                downHTML += `<button onclick="showSecurityWarning()" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</button>`;
+                            }
+                        }
+                        
+                        if (item.files) {
+                            item.files.forEach(f => {
+                                if (ENABLE_DOWNLOADS) {
+                                    downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`;
+                                } else {
+                                    downHTML += `<button onclick="showSecurityWarning()" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</button>`;
+                                }
+                            });
                         }
                         
                         // FIX: Pass the clicked button ('this') so we can dynamically calculate Y position!
@@ -367,6 +395,11 @@ js_part_2 = r""";
                 clearBtn.addEventListener('click', () => {
                     searchInput.value = ''; searchInput.focus(); performSearch();
                 });
+
+                // Function to pop up the security warning modal
+                window.showSecurityWarning = function() {
+                    document.getElementById('securityModal').classList.add('active');
+                };
 
                 // --- FIXED: GET CENTER ANIMATION SAFE ---
                 // Navigates the DOM hierarchy to find the exact relative center of a node without relying on the animated bounding box.
