@@ -71,6 +71,13 @@ st.markdown(
         box-shadow: 0 4px 15px rgba(42, 245, 152, 0.4);
         transform: translateY(-2px);
     }
+    
+    /* Mascot Animation for Login Screen */
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+    .login-mascot { 
+        animation: float 4s ease-in-out infinite; 
+        filter: drop-shadow(0 15px 20px rgba(42, 245, 152, 0.15)); 
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -102,11 +109,14 @@ def verify_streamax_credentials(email, password):
 
 # --- LOGIN SCREEN ---
 if not st.session_state['authenticated']:
-    st.write("<br><br><br><br>", unsafe_allow_html=True) # Vertical spacing
+    st.write("<br><br>", unsafe_allow_html=True) # Vertical spacing
     
     st.markdown("""
-        <h1 style='text-align: center; color: white; font-size: 3rem; margin-bottom: 0;'>
-            <span style='background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Streamax</span> Toolkit
+        <div style='display: flex; justify-content: center; margin-bottom: 10px;'>
+            <img src='https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500' alt='Streamax Mascot' class='login-mascot' style='width: 150px; height: 150px; object-fit: contain;'>
+        </div>
+        <h1 style='text-align: center; color: white; font-size: 3rem; margin-bottom: 0; line-height: 1.2;'>
+            <span style='background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Streamax</span> Sales Toolkit
         </h1>
         <p style='text-align: center; color: #A0AEC0; font-size: 1.1rem; margin-bottom: 40px;'>
             Secure Access • Trucking Division
@@ -874,13 +884,13 @@ else:
             .delay-2 { animation-delay: 0.2s; }
             .delay-3 { animation-delay: 0.3s; }
             .delay-4 { animation-delay: 0.4s; }
-            input[type="number"], input[type="text"] {
+            input[type="number"] {
                 background: rgba(0, 0, 0, 0.3);
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 color: var(--text-white);
                 transition: all 0.3s ease;
             }
-            input[type="number"]:focus, input[type="text"]:focus {
+            input[type="number"]:focus {
                 border-color: var(--primary-green);
                 box-shadow: 0 0 12px rgba(42, 245, 152, 0.2);
                 outline: none;
