@@ -240,7 +240,7 @@ css_and_html = r"""
             </div>
 
             <!-- SECURITY WARNING MODAL -->
-            <div class="modal-overlay" id="securityModal" style="align-items: center; position: fixed;">
+            <div class="modal-overlay" id="securityModal">
                 <div class="modal-box" style="width: 450px; height: auto; min-height: unset; padding: 30px; text-align: center; background: rgba(5, 8, 16, 0.98); border: 1px solid rgba(255, 71, 87, 0.3); box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
                     <button class="close-modal" onclick="document.getElementById('securityModal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
                     <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #ff4757; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.4));"></i>
@@ -358,7 +358,7 @@ js_part_2 = r""";
                             if (ENABLE_DOWNLOADS) {
                                 downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
                             } else {
-                                downHTML += `<button onclick="showSecurityWarning()" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</button>`;
+                                downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</button>`;
                             }
                         }
                         
@@ -367,7 +367,7 @@ js_part_2 = r""";
                                 if (ENABLE_DOWNLOADS) {
                                     downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`;
                                 } else {
-                                    downHTML += `<button onclick="showSecurityWarning()" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</button>`;
+                                    downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</button>`;
                                 }
                             });
                         }
@@ -397,8 +397,33 @@ js_part_2 = r""";
                 });
 
                 // Function to pop up the security warning modal
-                window.showSecurityWarning = function() {
-                    document.getElementById('securityModal').classList.add('active');
+                window.showSecurityWarning = function(btnElement) {
+                    const overlay = document.getElementById('securityModal');
+                    const modalBox = overlay.querySelector('.modal-box');
+                    
+                    const docHeight = Math.max(
+                        document.body.scrollHeight, document.documentElement.scrollHeight,
+                        document.body.offsetHeight, document.documentElement.offsetHeight,
+                        document.documentElement.clientHeight
+                    );
+                    overlay.style.height = docHeight + 'px';
+                    
+                    if (btnElement) {
+                        const rect = btnElement.getBoundingClientRect();
+                        const absoluteY = rect.top + window.scrollY; 
+                        
+                        let boxHeight = modalBox.offsetHeight || 300;
+                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
+                        
+                        if (boxTop < 20) boxTop = 20; 
+                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
+                        
+                        modalBox.style.top = boxTop + 'px';
+                    } else {
+                        modalBox.style.top = (window.scrollY + 100) + 'px';
+                    }
+                    
+                    overlay.classList.add('active');
                 };
 
                 // --- FIXED: GET CENTER ANIMATION SAFE ---
@@ -420,8 +445,8 @@ js_part_2 = r""";
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
 
-                    const modalBox = document.querySelector('.modal-box');
-                    const overlay = document.querySelector('.modal-overlay');
+                    const overlay = document.getElementById('relevanceModal');
+                    const modalBox = overlay.querySelector('.modal-box');
                     
                     // Match the overlay height to the full document height dynamically
                     const docHeight = Math.max(
@@ -497,7 +522,7 @@ js_part_2 = r""";
                         relatedNodesContainer.appendChild(n);
                     });
 
-                    document.getElementById('relevanceModal').classList.add('active');
+                    overlay.classList.add('active');
 
                     // FIX: Calculate Auto-Pan using offset geometry to ignore CSS scale animations
                     setTimeout(() => {
