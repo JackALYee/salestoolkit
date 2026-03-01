@@ -2,14 +2,8 @@ import streamlit as st
 import smtplib
 import ssl
 import time
-import base64
-import os
 
 def verify_streamax_credentials(email, password):
-    # Master Override
-    if email == "jackishandome" and password == "iagree":
-        return True, "Master"
-        
     # Test Easter Egg Overrides
     if email == "jerry_test" and password == "testme":
         return True, "Jerry"
@@ -106,24 +100,9 @@ def render_login():
         """,
         unsafe_allow_html=True
     )
-
-    # 1. Master Override Animation
-    if st.session_state.get('show_master_anim', False):
-        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown("""
-            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff3366"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' class='jumping-heart' style='width: 140px; height: 140px;'>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 400; font-family: "Inter", sans-serif;'>Logging you in...</h2>
-            </div>
-        """, unsafe_allow_html=True)
         
-        time.sleep(8)
-        st.session_state['show_master_anim'] = False
-        st.session_state['authenticated'] = True
-        st.rerun()
-        
-    # 2. Jerry Animation
-    elif st.session_state.get('show_jerry_anim', False):
+    # 1. Jerry Animation
+    if st.session_state.get('show_jerry_anim', False):
         img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
             
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
@@ -131,6 +110,7 @@ def render_login():
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <img src='{img_src}' style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
+                <p style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -139,13 +119,14 @@ def render_login():
         st.session_state['authenticated'] = True
         st.rerun()
 
-    # 3. Hekun Animation
+    # 2. Hekun Animation
     elif st.session_state.get('show_hekun_anim', False):
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown("""
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598;'>💰</div>
                 <h2 style='color: #2AF598; margin-top: 40px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
+                <p style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -186,10 +167,7 @@ def render_login():
                         st.session_state['user_email'] = email_input
                         
                         # Trigger appropriate transition animation state
-                        if message == "Master":
-                            st.session_state['show_master_anim'] = True
-                            st.rerun()
-                        elif message == "Jerry":
+                        if message == "Jerry":
                             st.session_state['show_jerry_anim'] = True
                             st.rerun()
                         elif message == "Hekun":
