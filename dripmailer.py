@@ -169,17 +169,29 @@ Best regards,</textarea>
 
                         <div id="send_progress_container" class="hidden mt-8 space-y-4">
                             <div class="w-full bg-black/50 rounded-full h-4 border border-white/10 overflow-hidden">
-                                <div id="send_progress_bar" class="bg-gradient-to-r from-[var(--primary-green)] to-[var(--secondary-blue)] h-full rounded-full transition-all duration-300 relative" style="width: 0%">
+                                <div id="send_progress_bar" class="bg-gradient-to-r from-[var(--primary-green)] to-[var(--secondary-blue)] h-full rounded-full transition-all duration-300 relative" style="width: 100%">
                                     <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                                 </div>
                             </div>
-                            <div class="bg-black/60 border border-white/10 rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm text-gray-300 whitespace-pre-wrap shadow-inner" id="send_logs"></div>
+                            <div class="bg-black/60 border border-white/10 rounded-lg p-4 h-32 overflow-y-auto font-mono text-sm text-[var(--primary-green)] whitespace-pre-wrap shadow-inner" id="send_logs">Transmitting data to secure Python backend...</div>
                         </div>
                     </div>
                 </div>
             </div>
             
+            <!-- IMPORT STREAMLIT COMPONENT LIB TO BRIDGE HTML TO PYTHON -->
+            <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
+
             <script>
+                // --- STREAMLIT COMPONENT BRIDGE ---
+                function onRender(event) {
+                    // Force the iframe height so nothing gets cut off
+                    Streamlit.setFrameHeight(1800);
+                }
+                Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+                Streamlit.setComponentReady();
+                setInterval(() => { Streamlit.setFrameHeight(1800); }, 1000); // Failsafe interval
+
                 // --- DRIP MAILER JS LOGIC ---
                 const authMode = "__AUTH_MODE__";
                 const userEmail = "__USER_EMAIL__";
@@ -332,46 +344,33 @@ Best regards,</textarea>
                     
                     isSending = true;
                     document.getElementById('btn_send').disabled = true;
+                    document.getElementById('btn_send').innerText = "Processing via Secure Python Backend...";
+                    
                     const container = document.getElementById('send_progress_container');
-                    const bar = document.getElementById('send_progress_bar');
                     const logs = document.getElementById('send_logs');
                     
                     container.classList.remove('hidden');
-                    bar.style.width = '0%';
-                    logs.innerText = 'Initializing SMTP Connection to mail.streamax.com...\n';
+                    logs.innerText = 'Transmitting batch payload to Python secure backend...\nPlease check the Streamlit status bar at the top of your screen for live sending logs!';
                     
-                    let i = 0;
-                    const total = currentCsvData.length;
+                    // Bundle all UI inputs into a payload for Python
+                    const payload = {
+                        action: "send_batch",
+                        csvData: currentCsvData,
+                        subjectTemplate: document.getElementById('email_subject').value,
+                        bodyTemplate: document.getElementById('email_body').value,
+                        sigHtml: getSignatureHtml(),
+                        sigName: document.getElementById('sig_name').value
+                    };
                     
-                    // Simulate processing delay for the UI since true SMTP is blocked in frontend browser context
-                    const interval = setInterval(() => {
-                        if(i >= total) {
-                            clearInterval(interval);
-                            isSending = false;
-                            logs.innerText += `\n✨ Batch Processing Complete! All ${total} emails processed successfully.`;
-                            logs.scrollTop = logs.scrollHeight;
-                            return;
-                        }
-                        
-                        const row = currentCsvData[i];
-                        const email = row.email;
-                        
-                        const now = new Date();
-                        const timeStr = now.toTimeString().split(' ')[0];
-                        
-                        if(email) {
-                            logs.innerText += `✅ [${timeStr}] Sent successfully to ${email}\n`;
-                        } else {
-                            logs.innerText += `❌ [${timeStr}] Failed to send: Missing email address in row ${i+1}\n`;
-                        }
-                        
-                        logs.scrollTop = logs.scrollHeight;
-                        
-                        i++;
-                        const pct = (i / total) * 100;
-                        bar.style.width = pct + '%';
-                        
-                    }, 600); // Realistic network delay simulation
+                    // Fire the payload across the bridge to app.py!
+                    Streamlit.setComponentValue(payload);
+                    
+                    // Re-enable button after a short delay so users can send again if needed
+                    setTimeout(() => {
+                        isSending = false;
+                        document.getElementById('btn_send').disabled = false;
+                        document.getElementById('btn_send').innerText = "🚀 Initiate Batch Send";
+                    }, 8000);
                 }
             </script>
         </div>
