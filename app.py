@@ -1,13 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import smtplib
-import ssl
-import time
-import re
-import os
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.utils import make_msgid
 
 # Import modular components
 from login import render_login
@@ -16,24 +8,7 @@ from prospecting_flow import content as prospecting_flow_content
 from discovery_meeting import content as discovery_meeting_content
 from presentation import content as presentation_content
 from value_calculator import content as value_calculator_content
-from dripmailer import content as dripmailer_content
-
-# --- SMTP PYTHON HELPERS ---
-def render_template(template_str, row):
-    def replace_var(match):
-        key = match.group(1).lower().strip()
-        val = row.get(key, "")
-        return str(val) if val else f"[{match.group(1)}]"
-    return re.sub(r'\{([^}]+)\}', replace_var, template_str)
-
-def create_message(subject, html_body, to_addr, from_name, from_email):
-    msg = MIMEMultipart("alternative")
-    msg["From"] = f"{from_name} <{from_email}>"
-    msg["To"] = to_addr
-    msg["Subject"] = subject
-    msg["Message-ID"] = make_msgid(domain=from_email.split("@")[-1])
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
-    return msg
+from dripmailer import render_dripmailer
 
 # --- CONFIG & LAYOUT ---
 st.set_page_config(
@@ -69,8 +44,14 @@ if 'authenticated' not in st.session_state:
 if not st.session_state['authenticated']:
     render_login()
 else:
-    # 1. HTML Head & CSS (Restored to exact original index.html style)
-    html_head = r"""<!DOCTYPE html>
+    # URL Parameter Routing - This natively separates the views!
+    current_tab = st.query_params.get("tab", "toolkit")
+    
+    if current_tab == "dripmailer":
+        render_dripmailer()
+    else:
+        # 1. HTML Head & CSS (Restored entirely to original index.html)
+        html_head = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -89,9 +70,6 @@ else:
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- IMPORT STREAMLIT COMPONENT LIB TO BRIDGE HTML TO PYTHON FOR EMAILS -->
-    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
-
     <!-- MathJax for LaTeX Rendering (TCO Calculator) -->
     <script>
         window.MathJax = {
@@ -881,14 +859,15 @@ else:
             <button class="nav-btn" onclick="switchTab('value-calculator', this)">
                 <i data-lucide="calculator"></i> Value Calculator
             </button>
-            <button class="nav-btn" onclick="switchTab('dripmailer', this)">
+            <!-- REPLACED: Navigates cleanly within Streamlit using URL Parameter instead of Custom Components -->
+            <button class="nav-btn" onclick="window.open('?tab=dripmailer', '_top')">
                 <i data-lucide="mail"></i> Email Tool
             </button>
         </nav>
 """
 
-    # 2. Base HTML closing tags + Original Logic + Bridge Listener
-    html_tail = r"""
+        # 2. Base HTML closing tags
+        html_tail = r"""
         <div style="height: 100px;"></div>
     </div>
 
@@ -896,14 +875,6 @@ else:
     <div id="toast">Copied to Clipboard!</div>
 
     <script>
-        // --- Initialize Streamlit Component Bridge ---
-        function onRender(event) {
-            Streamlit.setFrameHeight(1800);
-        }
-        Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
-        Streamlit.setComponentReady();
-        setInterval(() => { Streamlit.setFrameHeight(1800); }, 1000);
-
         // --- ICONS INITIALIZATION ---
         lucide.createIcons();
 
@@ -972,7 +943,6 @@ else:
                 toast.className = "show";
                 setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
             }).catch(err => {
-                // If navigator clipboard fails (often does in Streamlit iframe without secure context)
                 const textArea = document.createElement("textarea");
                 textArea.value = textToCopy;
                 document.body.appendChild(textArea);
@@ -1211,90 +1181,16 @@ else:
 </html>
 """
 
-    # Fetch variables to inject into the Drip Mailer Javascript
-    current_email = st.session_state.get('user_email', 'your.email@streamax.com')
-    auth_mode = st.session_state.get('auth_mode', 'Success')
-    
-    customized_dripmailer = dripmailer_content.replace("__USER_EMAIL__", current_email).replace("__AUTH_MODE__", auth_mode)
+        # 3. ASSEMBLE HTML EXACTLY AS ORIGINAL
+        html_code = (
+            html_head + "\n" +
+            streamaxpedia_content + "\n" +
+            prospecting_flow_content + "\n" +
+            discovery_meeting_content + "\n" +
+            presentation_content + "\n" +
+            value_calculator_content + "\n" +
+            html_tail
+        )
 
-    # 3. ASSEMBLE HTML exactly as the original index.html
-    html_code = (
-        html_head + "\n" +
-        prospecting_flow_content + "\n" +
-        discovery_meeting_content + "\n" +
-        presentation_content + "\n" +
-        value_calculator_content + "\n" +
-        customized_dripmailer + "\n" +
-        html_tail
-    )
-
-    # 4. DECLARE AS CUSTOM COMPONENT 
-    # To use a bidirectional component, Streamlit requires a file path rather than an inline HTML string.
-    # We create a temporary folder and write our assembled HTML into an index.html file to serve it.
-    frontend_dir = "toolkit_frontend"
-    os.makedirs(frontend_dir, exist_ok=True)
-    with open(os.path.join(frontend_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html_code)
-
-    ToolkitComponent = components.declare_component("streamax_toolkit", path=frontend_dir)
-    
-    # 5. RENDER & CAPTURE
-    result = ToolkitComponent(key="main_toolkit")
-
-    # 6. PYTHON SMTP PROCESSOR
-    # When the Javascript sends back the 'send_batch' payload, Python catches it and handles the real sending.
-    if result and isinstance(result, dict) and result.get("action") == "send_batch":
-        csv_data = result.get("csvData", [])
-        subj_tmpl = result.get("subjectTemplate", "")
-        body_tmpl = result.get("bodyTemplate", "")
-        sig_html = result.get("sigHtml", "")
-        sig_name = result.get("sigName", "Streamax Sales")
-        
-        user_email = st.session_state.get('user_email')
-        user_pass = st.session_state.get('user_password')
-        
-        if not user_email or not user_pass:
-            st.error("Missing secure credentials. Please refresh the page and re-authenticate on the login screen.")
-        else:
-            with st.status(f"Transmitting {len(csv_data)} emails securely via mail.streamax.com...", expanded=True) as status:
-                try:
-                    context = ssl.create_default_context()
-                    server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=30, context=context)
-                    server.login(user_email, user_pass)
-                    
-                    success_count = 0
-                    for index, row in enumerate(csv_data):
-                        # Ensure keys are lowercase strings for matching
-                        row_lower = {str(k).lower(): v for k, v in row.items()}
-                        row_lower["your_name"] = sig_name
-                        
-                        target_email = row_lower.get('email', '')
-                        if not target_email:
-                            st.write(f"⚠️ Row {index+1}: Missing email address, skipping.")
-                            continue
-                            
-                        rendered_subj = render_template(subj_tmpl, row_lower)
-                        rendered_body = render_template(body_tmpl, row_lower).replace('\n', '<br>')
-                        html_content = rendered_body + f"<br><br>{sig_html}"
-                        
-                        msg = create_message(rendered_subj, html_content, target_email, sig_name, user_email)
-                        
-                        try:
-                            server.send_message(msg)
-                            st.write(f"✅ Sent to **{target_email}**")
-                            success_count += 1
-                        except Exception as e:
-                            st.write(f"❌ Failed to send to **{target_email}**: {str(e)}")
-                            
-                        time.sleep(0.5) # Prevent overloading the Streamax SMTP server
-                        
-                    server.quit()
-                    status.update(label=f"Batch complete! Successfully dispatched {success_count} emails.", state="complete", expanded=False)
-                    st.balloons()
-                    
-                except smtplib.SMTPAuthenticationError:
-                    status.update(label="Authentication Failed.", state="error")
-                    st.error("Email or password incorrect. Please refresh and re-authenticate.")
-                except Exception as e:
-                    status.update(label="SMTP Error", state="error")
-                    st.error(f"SMTP Connection Error: {str(e)}")
+        # 4. RENDER
+        components.html(html_code, height=1800, scrolling=True)
