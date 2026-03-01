@@ -117,21 +117,14 @@ def render_login():
             </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(5)
+        time.sleep(8)
         st.session_state['show_master_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
         
     # 2. Jerry Animation
     elif st.session_state.get('show_jerry_anim', False):
-        img_path = "2A61CDB6-C2A5-4D6F-9291-11F2BD14CD60_1_105_c.jpeg"
-        if os.path.exists(img_path):
-            with open(img_path, "rb") as f:
-                b64_img = base64.b64encode(f.read()).decode()
-            img_src = f"data:image/jpeg;base64,{b64_img}"
-        else:
-            # Fallback if image isn't found in directory
-            img_src = "https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500"
+        img_src = "https://drive.google.com/thumbnail?id=1_SVNqm-arGLkyhdNGU_yrVlCp7Fj9-5y&sz=w800"
             
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -141,7 +134,7 @@ def render_login():
             </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(5)
+        time.sleep(8)
         st.session_state['show_jerry_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
@@ -156,7 +149,7 @@ def render_login():
             </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(5)
+        time.sleep(8)
         st.session_state['show_hekun_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
