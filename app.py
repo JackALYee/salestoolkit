@@ -792,13 +792,13 @@ else:
         .delay-2 { animation-delay: 0.2s; }
         .delay-3 { animation-delay: 0.3s; }
         .delay-4 { animation-delay: 0.4s; }
-        input[type="number"], input[type="text"], input[type="file"], textarea {
+        input[type="number"] {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-white);
             transition: all 0.3s ease;
         }
-        input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
+        input[type="number"]:focus {
             border-color: var(--primary-green);
             box-shadow: 0 0 12px rgba(42, 245, 152, 0.2);
             outline: none;
@@ -845,7 +845,6 @@ else:
     <div class="container">
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
-            <!-- Set Streamaxpedia as default internal tab -->
             <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
             </button>
