@@ -178,20 +178,8 @@ Best regards,</textarea>
                     </div>
                 </div>
             </div>
-            
-            <!-- IMPORT STREAMLIT COMPONENT LIB TO BRIDGE HTML TO PYTHON -->
-            <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
 
             <script>
-                // --- STREAMLIT COMPONENT BRIDGE ---
-                function onRender(event) {
-                    // Force the iframe height so nothing gets cut off
-                    Streamlit.setFrameHeight(1800);
-                }
-                Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
-                Streamlit.setComponentReady();
-                setInterval(() => { Streamlit.setFrameHeight(1800); }, 1000); // Failsafe interval
-
                 // --- DRIP MAILER JS LOGIC ---
                 const authMode = "__AUTH_MODE__";
                 const userEmail = "__USER_EMAIL__";
