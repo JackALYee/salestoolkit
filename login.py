@@ -124,7 +124,7 @@ def render_login():
         
     # 2. Jerry Animation
     elif st.session_state.get('show_jerry_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=1_SVNqm-arGLkyhdNGU_yrVlCp7Fj9-5y&sz=w800"
+        img_src = "https://drive.google.com/thumbnail?id=15rtoKfYyO3Ep6VIlwPuwKOuJjFwsfvlT&sz=w800"
             
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
