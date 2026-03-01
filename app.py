@@ -3,6 +3,8 @@ import streamlit.components.v1 as components
 import smtplib
 import ssl
 import time
+import base64
+import os
 
 # Import the HTML contents from the modular section files
 from streamaxpedia_app import content as streamaxpedia_content
@@ -96,7 +98,7 @@ if 'authenticated' not in st.session_state:
 
 def verify_streamax_credentials(email, password):
     # Master Override
-    if email == "jackishandsome" and password == "iagree":
+    if email == "jackishandome" and password == "iagree":
         return True, "Master"
         
     if not email.endswith("@streamax.com"):
@@ -109,6 +111,14 @@ def verify_streamax_credentials(email, password):
         server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=10, context=context)
         server.login(email, password)
         server.quit()
+        
+        # Special Easter Egg Logins (Must pass real SMTP Auth first!)
+        email_lower = email.lower()
+        if email_lower == "jerry@streamax.com":
+            return True, "Jerry"
+        elif email_lower == "hekun@streamax.com":
+            return True, "Hekun"
+            
         return True, "Success"
     except smtplib.SMTPAuthenticationError:
         return False, "Email or password incorrect."
@@ -120,7 +130,8 @@ def verify_streamax_credentials(email, password):
 
 # --- LOGIN SCREEN ---
 if not st.session_state['authenticated']:
-    # Show Master Override Animation View
+    
+    # 1. Master Override Animation
     if st.session_state.get('show_master_anim', False):
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown("""
@@ -130,9 +141,47 @@ if not st.session_state['authenticated']:
             </div>
         """, unsafe_allow_html=True)
         
-        # Pause for 5 seconds as requested, then unlock the app
         time.sleep(5)
         st.session_state['show_master_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+        
+    # 2. Jerry Animation
+    elif st.session_state.get('show_jerry_anim', False):
+        img_path = "2A61CDB6-C2A5-4D6F-9291-11F2BD14CD60_1_105_c.jpeg"
+        if os.path.exists(img_path):
+            with open(img_path, "rb") as f:
+                b64_img = base64.b64encode(f.read()).decode()
+            img_src = f"data:image/jpeg;base64,{b64_img}"
+        else:
+            # Fallback if image isn't found in directory
+            img_src = "https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500"
+            
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <img src='{img_src}' class='login-mascot' style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        time.sleep(5)
+        st.session_state['show_jerry_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+
+    # 3. Hekun Animation
+    elif st.session_state.get('show_hekun_anim', False):
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown("""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598;'>💰</div>
+                <h2 style='color: #2AF598; margin-top: 40px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        time.sleep(5)
+        st.session_state['show_hekun_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
 
@@ -166,9 +215,16 @@ if not st.session_state['authenticated']:
                         
                     if is_valid:
                         st.session_state['user_email'] = email_input
+                        
+                        # Trigger appropriate transition animation state
                         if message == "Master":
-                            # Trigger the transition animation state
                             st.session_state['show_master_anim'] = True
+                            st.rerun()
+                        elif message == "Jerry":
+                            st.session_state['show_jerry_anim'] = True
+                            st.rerun()
+                        elif message == "Hekun":
+                            st.session_state['show_hekun_anim'] = True
                             st.rerun()
                         else:
                             st.session_state['authenticated'] = True
@@ -919,13 +975,13 @@ else:
             .delay-2 { animation-delay: 0.2s; }
             .delay-3 { animation-delay: 0.3s; }
             .delay-4 { animation-delay: 0.4s; }
-            input[type="number"] {
+            input[type="number"], input[type="text"] {
                 background: rgba(0, 0, 0, 0.3);
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 color: var(--text-white);
                 transition: all 0.3s ease;
             }
-            input[type="number"]:focus {
+            input[type="number"]:focus, input[type="text"]:focus {
                 border-color: var(--primary-green);
                 box-shadow: 0 0 12px rgba(42, 245, 152, 0.2);
                 outline: none;
