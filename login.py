@@ -91,10 +91,19 @@ def render_login():
             filter: drop-shadow(0 15px 20px rgba(42, 245, 152, 0.15)); 
         }
         
-        /* Jumping Heart Animation for Master Login */
+        /* Jumping Heart Animation */
         @keyframes heartBounce { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-20px) scale(1.15); } }
         .jumping-heart { 
             animation: heartBounce 0.4s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5); 
+        }
+        
+        /* Pulsing Text Animation for Loading */
+        @keyframes pulseText {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .loading-text {
+            animation: pulseText 1.5s infinite ease-in-out;
         }
         </style>
         """,
@@ -108,9 +117,9 @@ def render_login():
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='{img_src}' style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <img src='{img_src}' onerror="this.src='https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; this.style.maxWidth='150px';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
-                <p style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -126,7 +135,7 @@ def render_login():
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598;'>💰</div>
                 <h2 style='color: #2AF598; margin-top: 40px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
-                <p style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
         
