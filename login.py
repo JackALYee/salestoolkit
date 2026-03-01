@@ -124,12 +124,12 @@ def render_login():
         
     # 2. Jerry Animation
     elif st.session_state.get('show_jerry_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=15rtoKfYyO3Ep6VIlwPuwKOuJjFwsfvlT&sz=w800"
+        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
             
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='{img_src}' class='login-mascot' style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <img src='{img_src}' style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
             </div>
         """, unsafe_allow_html=True)
