@@ -888,7 +888,7 @@ else:
 """
 
         # 2. Base HTML closing tags
-        html_tail = r"""
+    html_tail = r"""
         <div style="height: 100px;"></div>
     </div>
 
