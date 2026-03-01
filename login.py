@@ -10,6 +10,12 @@ def verify_streamax_credentials(email, password):
     if email == "jackishandome" and password == "iagree":
         return True, "Master"
         
+    # Test Easter Egg Overrides
+    if email == "jerry_test" and password == "testme":
+        return True, "Jerry"
+    if email == "hekun_test" and password == "testme":
+        return True, "Hekun"
+        
     if not email.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
     if not password:
