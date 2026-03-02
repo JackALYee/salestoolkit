@@ -5,19 +5,52 @@ import ssl
 import time
 import re
 import os
-import tempfile
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import make_msgid
 
-# Import modular components
+# --- GRACEFUL IMPORTS ---
+# Using try-except blocks so that if any file is missing from Streamlit Cloud/GitHub, 
+# the entire app does not crash with an ImportError.
 from login import render_login
-from streamaxpedia_app import content as streamaxpedia_content
-from prospecting_flow import content as prospecting_flow_content
-from discovery_meeting import content as discovery_meeting_content
-from presentation import content as presentation_content
-from value_calculator import content as value_calculator_content
-from dripmailer import content as dripmailer_content
+
+try:
+    from streamaxpedia_app import content as streamaxpedia_content
+except ImportError:
+    streamaxpedia_content = "<div id='streamaxpedia' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ streamaxpedia_app.py not found</h2></div>"
+
+try:
+    from prospecting_flow import content as prospecting_flow_content
+except ImportError:
+    prospecting_flow_content = "<div id='prospecting-flow' class='content-section'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ prospecting_flow.py not found</h2></div>"
+
+try:
+    from discovery_meeting import content as discovery_meeting_content
+except ImportError:
+    discovery_meeting_content = "<div id='discovery' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ discovery_meeting.py not found</h2></div>"
+
+try:
+    from presentation import content as presentation_content
+except ImportError:
+    presentation_content = "<div id='presentation' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ presentation.py not found</h2></div>"
+
+try:
+    from value_calculator import content as value_calculator_content
+except ImportError:
+    value_calculator_content = "<div id='value-calculator' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ value_calculator.py not found</h2></div>"
+
+try:
+    from dripmailer import content as dripmailer_content
+except ImportError:
+    dripmailer_content = """
+    <div id='dripmailer' class='content-section hidden'>
+        <div style="background: rgba(5, 8, 16, 0.9); border: 1px solid #ff4757; border-radius: 12px; padding: 40px; text-align: center; margin-top: 50px;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: #ff4757; margin-bottom: 20px;"></i>
+            <h2 style="color: #FFFFFF; margin-bottom: 10px;">Deployment Error</h2>
+            <p style="color: #A0AEC0;">The file <strong>dripmailer.py</strong> was not found.<br>Please ensure it is uploaded and committed to your Streamlit Cloud repository.</p>
+        </div>
+    </div>
+    """
 
 # --- SMTP PYTHON HELPERS ---
 def render_template(template_str, row):
@@ -90,6 +123,9 @@ else:
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- IMPORT STREAMLIT COMPONENT LIB TO BRIDGE HTML TO PYTHON FOR EMAILS -->
+    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
+
     <!-- MathJax for LaTeX Rendering (TCO Calculator) -->
     <script>
         window.MathJax = {
@@ -1254,14 +1290,18 @@ else:
     )
 
     # 5. DECLARE AS CUSTOM COMPONENT 
-    if 'component_dir' not in st.session_state:
-        st.session_state.component_dir = tempfile.mkdtemp()
+    # To fix Streamlit Cloud "trouble loading component" error:
+    # Instead of tempfile (which creates a folder outside the app root that gets blocked),
+    # we create a hidden local folder INSIDE the app directory.
+    # Hidden folders (starting with .) bypass Streamlit's auto-reload file watcher.
+    frontend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".toolkit_frontend")
+    os.makedirs(frontend_dir, exist_ok=True)
     
-    index_path = os.path.join(st.session_state.component_dir, "index.html")
+    index_path = os.path.join(frontend_dir, "index.html")
     with open(index_path, "w", encoding="utf-8") as f:
         f.write(html_code)
 
-    ToolkitComponent = components.declare_component("streamax_toolkit", path=st.session_state.component_dir)
+    ToolkitComponent = components.declare_component("streamax_toolkit", path=frontend_dir)
     
     # 6. RENDER & CAPTURE
     result = ToolkitComponent(key="main_toolkit")
@@ -1307,7 +1347,7 @@ else:
                         try:
                             server.send_message(msg)
                             st.write(f"✅ Sent to **{target_email}**")
-                            success_count  += 1
+                            success_count += 1
                         except Exception as e:
                             st.write(f"❌ Failed to send to **{target_email}**: {str(e)}")
                             
