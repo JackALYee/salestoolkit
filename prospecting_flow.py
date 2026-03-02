@@ -1,7 +1,7 @@
 content = r"""        <!-- SECTION: PROSPECTING FLOW -->
         <div id="prospecting-flow" class="content-section hidden">
             
-            <!-- Custom CSS for Horizontal Nested Tabs -->
+            <!-- Custom CSS for Horizontal Nested Tabs and Pipeline Diagram -->
             <style>
                 .nested-tab-btn {
                     background: rgba(255, 255, 255, 0.05);
@@ -26,6 +26,82 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                     border-color: var(--primary-green) !important;
                     color: var(--primary-green) !important;
                     box-shadow: var(--glow-shadow);
+                }
+
+                /* Sales Pipeline Diagram CSS */
+                .pipeline-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    position: relative;
+                    margin: 40px 0 20px 0;
+                    overflow-x: auto;
+                    padding-bottom: 15px;
+                }
+                .pipeline-line {
+                    position: absolute;
+                    top: 24px;
+                    left: 50px;
+                    right: 50px;
+                    height: 2px;
+                    background: rgba(255, 255, 255, 0.15);
+                    z-index: 1;
+                }
+                .pipeline-step {
+                    position: relative;
+                    z-index: 2;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    width: 130px;
+                    flex-shrink: 0;
+                }
+                .pipeline-icon {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    background: var(--bg-deep);
+                    border: 2px solid var(--primary-green);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    font-size: 1.2rem;
+                    color: var(--primary-green);
+                    margin-bottom: 12px;
+                    box-shadow: 0 0 15px rgba(42, 245, 152, 0.15);
+                    transition: all 0.3s ease;
+                }
+                .pipeline-step:hover .pipeline-icon {
+                    transform: scale(1.1);
+                    box-shadow: 0 0 25px rgba(42, 245, 152, 0.4);
+                }
+                .pipeline-title {
+                    color: var(--text-white);
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    margin-bottom: 5px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .pipeline-desc {
+                    color: var(--text-grey);
+                    font-size: 0.75rem;
+                    line-height: 1.3;
+                }
+                .pipeline-step:nth-child(even) .pipeline-icon {
+                    border-color: var(--secondary-blue);
+                    color: var(--secondary-blue);
+                    box-shadow: 0 0 15px rgba(0, 158, 253, 0.15);
+                }
+                .pipeline-step:nth-child(even):hover .pipeline-icon {
+                    box-shadow: 0 0 25px rgba(0, 158, 253, 0.4);
+                }
+                
+                /* Mobile adjustment for pipeline */
+                @media (max-width: 900px) {
+                    .pipeline-container { justify-content: flex-start; gap: 10px; padding-bottom: 20px; }
+                    .pipeline-line { right: auto; width: 850px; } /* Force line width to match scroll */
                 }
             </style>
 
@@ -67,12 +143,54 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                 }
             </script>
 
-            <div class="card fade-up">
-                <h2 class="gradient-text">The Sales Path: From Cold to Closed</h2>
-                <p>Follow this step-by-step workflow to guide your prospecting journey from identifying targets to securing and executing a discovery meeting. Select your target audience below.</p>
+            <!-- 1. SALES PROCESS DIAGRAM (From FigJam) -->
+            <div class="card fade-up" style="background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2)); border: 1px solid rgba(42, 245, 152, 0.2);">
+                <h2 class="gradient-text" style="margin-bottom: 5px;">Enterprise Sales Process</h2>
+                <p>The end-to-end journey from initial lead generation to deployment & customer success.</p>
+                
+                <div class="pipeline-container">
+                    <div class="pipeline-line"></div>
+                    
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                        <div class="pipeline-title">1. Prospecting</div>
+                        <div class="pipeline-desc">Lead Intake &<br>First Contact</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div class="pipeline-title">2. Discovery</div>
+                        <div class="pipeline-desc">Qualify Pain &<br>Map Requirements</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                        <div class="pipeline-title">3. Demo</div>
+                        <div class="pipeline-desc">Platform Deep Dive<br>& Tech Fit</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-truck-fast"></i></div>
+                        <div class="pipeline-title">4. Pilot (PoC)</div>
+                        <div class="pipeline-desc">Prep, Execution<br>& Review</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                        <div class="pipeline-title">5. Proposal</div>
+                        <div class="pipeline-desc">ROI Presentation<br>& Business Case</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-file-signature"></i></div>
+                        <div class="pipeline-title">6. Contracting</div>
+                        <div class="pipeline-desc">Procurement &<br>Legal Review</div>
+                    </div>
+                    <div class="pipeline-step">
+                        <div class="pipeline-icon"><i class="fa-solid fa-handshake"></i></div>
+                        <div class="pipeline-title">7. Closed Won</div>
+                        <div class="pipeline-desc">Handoff &<br>Deployment</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="sub-nav-tabs fade-up">
+            <!-- Target Audience Sub-Nav -->
+            <div class="sub-nav-tabs fade-up mt-6">
                 <button class="sub-nav-btn active" onclick="switchSubTab('flow-tsp', this)">
                     <i data-lucide="network"></i> TSP / Channel Partner
                 </button>
@@ -206,7 +324,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If we can show you an ops-friendly approach—deployment, diagnostics, escalation—would it be worth a quick 15–20 minute partner fit call next week?<br><br>
                                             <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great. I can do Tuesday 10:00 or Wednesday 2:00. Which is better?<br><br>
-                                            <em>If prospect says “Not interested”:</em><br>
+                                            <em>If prospect says “Not interested”:</em><br><br>
                                             <strong>Rep:</strong> Totally fair. Before I let you go, is video telematics simply not a focus for {company} this year, or is it more about timing?<br><br>
                                             <strong>Prospect:</strong> Timing.<br><br>
                                             <strong>Rep:</strong> Understood—what month should I circle back?
@@ -226,7 +344,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If I could show you how we handle edge AI and reduce noise while keeping the workflow simple, would a 15-minute call be worth it?<br><br>
                                             <strong>Prospect:</strong> Sure, send something.<br><br>
                                             <strong>Rep:</strong> Will do—what’s the best email? And should we just lock 15 minutes now so it doesn’t get lost?<br><br>
-                                            <em>If prospect says “Send info”:</em><br>
+                                            <em>If prospect says “Send info”:</em><br><br>
                                             <strong>Rep:</strong> Happy to. To make it relevant, are you selling video today or still evaluating partners?<br><br>
                                             <strong>Prospect:</strong> Selling.<br><br>
                                             <strong>Rep:</strong> Perfect—I’ll send a short overview and a couple of questions. Want to do a quick 15 minutes Thursday or Friday to see if it’s a fit?
@@ -248,7 +366,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If we did a 20-minute technical call, I’d like to map your flow—activation, diagnostics, escalation—and share how our partner toolset reduces ticket volume. Is next week reasonable?<br><br>
                                             <strong>Prospect:</strong> Possibly.<br><br>
                                             <strong>Rep:</strong> Great. Monday 3:00 or Wednesday 11:00?<br><br>
-                                            <em>If prospect asks “Do you have APIs?”</em><br>
+                                            <em>If prospect asks “Do you have APIs?”</em><br><br>
                                             <strong>Rep:</strong> Yes—API-based integration options plus exports and admin tooling. On the call we can cover your top integration targets and what you need for multi-tenant support.
                                         </div>
                                     </div>
@@ -282,7 +400,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Perfect. If I can show a straightforward partner playbook for packaging and launching video, can we do 15 minutes next week?<br><br>
                                             <strong>Prospect:</strong> Fine.<br><br>
                                             <strong>Rep:</strong> Great—what’s better, Tuesday morning or Wednesday afternoon?<br><br>
-                                            <em>If prospect pushes back on price:</em><br>
+                                            <em>If prospect pushes back on price:</em><br><br>
                                             <strong>Prospect:</strong> Video is expensive.<br><br>
                                             <strong>Rep:</strong> Totally fair. Most TSPs don’t win on cheapest hardware—they win on reliability, fewer escalations, and a platform fleets actually use. On a short call, we can map your economics and see if the margin and ops model make sense.
                                         </div>
@@ -453,7 +571,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If we could show a workflow that cuts time-to-video and makes incidents easier to manage, would you be open to a 15–20 minute discovery call next week?<br><br>
                                             <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great—does Tuesday morning or Wednesday afternoon work better?<br><br>
-                                            <em>If they say “Not interested”:</em><br>
+                                            <em>If they say “Not interested”:</em><br><br>
                                             <strong>Rep:</strong> Understood. Before I let you go, is it not a priority this year, or is it more about timing?<br><br>
                                             <strong>Prospect:</strong> Timing.<br><br>
                                             <strong>Rep:</strong> Makes sense—when should I circle back?
@@ -473,7 +591,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Totally get it. That’s why I’m asking for just 15 minutes. If I can show you a faster incident workflow and what the rollout looks like, would next week be crazy?<br><br>
                                             <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Fair—what day is typically lighter for you, Tuesday or Thursday?<br><br>
-                                            <em>If they say “Send info”:</em><br>
+                                            <em>If they say “Send info”:</em><br><br>
                                             <strong>Rep:</strong> Happy to. What’s the best email? And should we lock 15 minutes so I can tailor it to your workflow?
                                         </div>
                                     </div>
@@ -491,7 +609,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If we do a 20-minute technical call, we can cover edge AI event tuning, alert noise reduction, and how data access and retention are controlled. Would next week be reasonable?<br><br>
                                             <strong>Prospect:</strong> Possibly.<br><br>
                                             <strong>Rep:</strong> Great. Monday 2:00 or Wednesday 11:00?<br><br>
-                                            <em>If they ask “Do you support SSO/security?”</em><br>
+                                            <em>If they ask “Do you support SSO/security?”</em><br><br>
                                             <strong>Rep:</strong> Yes—role-based access controls and enterprise security options. We can align your requirements on the call.
                                         </div>
                                     </div>
@@ -525,7 +643,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                             <strong>Rep:</strong> Got it. If I can show you a setup that makes clips easy to access and share, can we do a quick 10–15 minute call to see if it fits what you want?<br><br>
                                             <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great—what’s a better time, later today or tomorrow?<br><br>
-                                            <em>If they push back on price:</em><br>
+                                            <em>If they push back on price:</em><br><br>
                                             <strong>Prospect:</strong> Sounds expensive.<br><br>
                                             <strong>Rep:</strong> I hear you. Most people justify it with avoided headaches—faster proof when something happens and fewer repeat incidents. On a short call we can see if it’s even worth it for your situation.
                                         </div>
