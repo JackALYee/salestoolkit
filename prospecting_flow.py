@@ -195,20 +195,20 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Book a 15–20 min partner fit call.<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br>
-                                            <strong>Prospect:</strong> I have a minute.<br>
-                                            <strong>Rep:</strong> Thanks. We partner with telematics service providers to offer AI video telematics to fleets—designed to scale without turning into a support burden. I’m calling to see if it’s relevant for {company}.<br>
-                                            <strong>Prospect:</strong> What do you mean by “partner”?<br>
-                                            <strong>Rep:</strong> You keep the customer relationship. We provide the video + AI platform, partner enablement, and operational tools so you can package it as part of your offering.<br>
-                                            <strong>Prospect:</strong> We already have a video vendor.<br>
-                                            <strong>Rep:</strong> That makes sense. When TSPs switch or add a second option, it’s usually because of one of three reasons: platform usability, false alerts/AI performance, or support load. Which of those is most painful today—if any?<br>
-                                            <strong>Prospect:</strong> Support load and reliability.<br>
-                                            <strong>Rep:</strong> Got it. If we can show you an ops-friendly approach—deployment, diagnostics, escalation—would it be worth a quick 15–20 minute partner fit call next week?<br>
-                                            <strong>Prospect:</strong> Maybe.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br><br>
+                                            <strong>Prospect:</strong> I have a minute.<br><br>
+                                            <strong>Rep:</strong> Thanks. We partner with telematics service providers to offer AI video telematics to fleets—designed to scale without turning into a support burden. I’m calling to see if it’s relevant for {company}.<br><br>
+                                            <strong>Prospect:</strong> What do you mean by “partner”?<br><br>
+                                            <strong>Rep:</strong> You keep the customer relationship. We provide the video + AI platform, partner enablement, and operational tools so you can package it as part of your offering.<br><br>
+                                            <strong>Prospect:</strong> We already have a video vendor.<br><br>
+                                            <strong>Rep:</strong> That makes sense. When TSPs switch or add a second option, it’s usually because of one of three reasons: platform usability, false alerts/AI performance, or support load. Which of those is most painful today—if any?<br><br>
+                                            <strong>Prospect:</strong> Support load and reliability.<br><br>
+                                            <strong>Rep:</strong> Got it. If we can show you an ops-friendly approach—deployment, diagnostics, escalation—would it be worth a quick 15–20 minute partner fit call next week?<br><br>
+                                            <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great. I can do Tuesday 10:00 or Wednesday 2:00. Which is better?<br><br>
                                             <em>If prospect says “Not interested”:</em><br>
-                                            <strong>Rep:</strong> Totally fair. Before I let you go, is video telematics simply not a focus for {company} this year, or is it more about timing?<br>
-                                            <strong>Prospect:</strong> Timing.<br>
+                                            <strong>Rep:</strong> Totally fair. Before I let you go, is video telematics simply not a focus for {company} this year, or is it more about timing?<br><br>
+                                            <strong>Prospect:</strong> Timing.<br><br>
                                             <strong>Rep:</strong> Understood—what month should I circle back?
                                         </div>
                                     </div>
@@ -217,18 +217,18 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">2) Business Casual (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Quickly qualify if they’re a TSP motion and get a meeting.<br><br>
-                                            <strong>Rep:</strong> Hey {first_name}, {your_name} here from Streamax. Quick one—am I calling the right person for partnerships or product at {company}?<br>
-                                            <strong>Prospect:</strong> Depends—what’s this about?<br>
-                                            <strong>Rep:</strong> We help TSPs roll out AI video telematics to fleets without creating a ton of support tickets. I’m trying to see if video is on your roadmap or if fleets are asking you for it.<br>
-                                            <strong>Prospect:</strong> Yeah, we get requests.<br>
-                                            <strong>Rep:</strong> Makes sense. What’s the #1 thing you wish was better with video solutions—install, platform usability, AI accuracy, or support?<br>
-                                            <strong>Prospect:</strong> AI accuracy.<br>
-                                            <strong>Rep:</strong> Got it. If I could show you how we handle edge AI and reduce noise while keeping the workflow simple, would a 15-minute call be worth it?<br>
-                                            <strong>Prospect:</strong> Sure, send something.<br>
+                                            <strong>Rep:</strong> Hey {first_name}, {your_name} here from Streamax. Quick one—am I calling the right person for partnerships or product at {company}?<br><br>
+                                            <strong>Prospect:</strong> Depends—what’s this about?<br><br>
+                                            <strong>Rep:</strong> We help TSPs roll out AI video telematics to fleets without creating a ton of support tickets. I’m trying to see if video is on your roadmap or if fleets are asking you for it.<br><br>
+                                            <strong>Prospect:</strong> Yeah, we get requests.<br><br>
+                                            <strong>Rep:</strong> Makes sense. What’s the #1 thing you wish was better with video solutions—install, platform usability, AI accuracy, or support?<br><br>
+                                            <strong>Prospect:</strong> AI accuracy.<br><br>
+                                            <strong>Rep:</strong> Got it. If I could show you how we handle edge AI and reduce noise while keeping the workflow simple, would a 15-minute call be worth it?<br><br>
+                                            <strong>Prospect:</strong> Sure, send something.<br><br>
                                             <strong>Rep:</strong> Will do—what’s the best email? And should we just lock 15 minutes now so it doesn’t get lost?<br><br>
                                             <em>If prospect says “Send info”:</em><br>
-                                            <strong>Rep:</strong> Happy to. To make it relevant, are you selling video today or still evaluating partners?<br>
-                                            <strong>Prospect:</strong> Selling.<br>
+                                            <strong>Rep:</strong> Happy to. To make it relevant, are you selling video today or still evaluating partners?<br><br>
+                                            <strong>Prospect:</strong> Selling.<br><br>
                                             <strong>Rep:</strong> Perfect—I’ll send a short overview and a couple of questions. Want to do a quick 15 minutes Thursday or Friday to see if it’s a fit?
                                         </div>
                                     </div>
@@ -237,16 +237,16 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">3) Technical / Operations (Technical Audience)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Book a technical discovery call (ops scalability + integration).<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br>
-                                            <strong>Prospect:</strong> Okay—what’s up?<br>
-                                            <strong>Rep:</strong> We support TSP deployments where the hard part is scale: multi-tenant operations, provisioning, remote diagnostics, and integrations. I’m calling to see how {company} runs video operations today and whether you have pain points we can help with.<br>
-                                            <strong>Prospect:</strong> We’re pretty set.<br>
-                                            <strong>Rep:</strong> Understood. Quick calibration—how are you handling device provisioning and firmware management at volume right now?<br>
-                                            <strong>Prospect:</strong> Mostly manual, some scripts.<br>
-                                            <strong>Rep:</strong> That’s common. When TSPs talk to us, they usually want fewer escalations and faster time-to-resolution. What’s your biggest ops bottleneck today?<br>
-                                            <strong>Prospect:</strong> Too many support tickets after install.<br>
-                                            <strong>Rep:</strong> Got it. If we did a 20-minute technical call, I’d like to map your flow—activation, diagnostics, escalation—and share how our partner toolset reduces ticket volume. Is next week reasonable?<br>
-                                            <strong>Prospect:</strong> Possibly.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br><br>
+                                            <strong>Prospect:</strong> Okay—what’s up?<br><br>
+                                            <strong>Rep:</strong> We support TSP deployments where the hard part is scale: multi-tenant operations, provisioning, remote diagnostics, and integrations. I’m calling to see how {company} runs video operations today and whether you have pain points we can help with.<br><br>
+                                            <strong>Prospect:</strong> We’re pretty set.<br><br>
+                                            <strong>Rep:</strong> Understood. Quick calibration—how are you handling device provisioning and firmware management at volume right now?<br><br>
+                                            <strong>Prospect:</strong> Mostly manual, some scripts.<br><br>
+                                            <strong>Rep:</strong> That’s common. When TSPs talk to us, they usually want fewer escalations and faster time-to-resolution. What’s your biggest ops bottleneck today?<br><br>
+                                            <strong>Prospect:</strong> Too many support tickets after install.<br><br>
+                                            <strong>Rep:</strong> Got it. If we did a 20-minute technical call, I’d like to map your flow—activation, diagnostics, escalation—and share how our partner toolset reduces ticket volume. Is next week reasonable?<br><br>
+                                            <strong>Prospect:</strong> Possibly.<br><br>
                                             <strong>Rep:</strong> Great. Monday 3:00 or Wednesday 11:00?<br><br>
                                             <em>If prospect asks “Do you have APIs?”</em><br>
                                             <strong>Rep:</strong> Yes—API-based integration options plus exports and admin tooling. On the call we can cover your top integration targets and what you need for multi-tenant support.
@@ -257,14 +257,14 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">4) C-Level Professional (CEO/GM/VP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Executive alignment call (growth, ARPU, retention).<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. I’ll be brief—do you have 20 seconds?<br>
-                                            <strong>Prospect:</strong> Go ahead.<br>
-                                            <strong>Rep:</strong> Streamax partners with telematics providers to add AI video telematics as a differentiated bundle that increases ARPU and retention. I’m calling to ask one question: is {company} more focused this year on growing ARPU, reducing churn, or winning more RFPs?<br>
-                                            <strong>Prospect:</strong> Winning more RFPs.<br>
-                                            <strong>Rep:</strong> Makes sense. Video is often the missing layer in RFPs, but it only works if it scales without hurting service quality. If I could share how other TSPs launch a video bundle with a clean operational model, would you be open to a 15-minute conversation?<br>
-                                            <strong>Prospect:</strong> Maybe—send me details.<br>
-                                            <strong>Rep:</strong> Happy to. To tailor it: are you already offering video, or evaluating adding it?<br>
-                                            <strong>Prospect:</strong> Offering video.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. I’ll be brief—do you have 20 seconds?<br><br>
+                                            <strong>Prospect:</strong> Go ahead.<br><br>
+                                            <strong>Rep:</strong> Streamax partners with telematics providers to add AI video telematics as a differentiated bundle that increases ARPU and retention. I’m calling to ask one question: is {company} more focused this year on growing ARPU, reducing churn, or winning more RFPs?<br><br>
+                                            <strong>Prospect:</strong> Winning more RFPs.<br><br>
+                                            <strong>Rep:</strong> Makes sense. Video is often the missing layer in RFPs, but it only works if it scales without hurting service quality. If I could share how other TSPs launch a video bundle with a clean operational model, would you be open to a 15-minute conversation?<br><br>
+                                            <strong>Prospect:</strong> Maybe—send me details.<br><br>
+                                            <strong>Rep:</strong> Happy to. To tailor it: are you already offering video, or evaluating adding it?<br><br>
+                                            <strong>Prospect:</strong> Offering video.<br><br>
                                             <strong>Rep:</strong> Great. Let’s do 15 minutes and I’ll come prepared with a migration/upgrade checklist and partner economics discussion. Tuesday or Thursday?
                                         </div>
                                     </div>
@@ -273,17 +273,17 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">5) C-Level Casual (CEO/GM/Founder)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Fast “fit check” and book a short meeting.<br><br>
-                                            <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br>
-                                            <strong>Prospect:</strong> What do you need?<br>
-                                            <strong>Rep:</strong> Super quick. We help TSPs add video + AI in a way that’s scalable—so it helps you win fleets, not drown your team in support. I’m trying to see if this is even on your radar at {company}.<br>
-                                            <strong>Prospect:</strong> We get asked about video sometimes.<br>
-                                            <strong>Rep:</strong> That tracks. If you could wave a magic wand, what would video do for your business—help you win deals, increase ARPU, or reduce churn?<br>
-                                            <strong>Prospect:</strong> Win deals.<br>
-                                            <strong>Rep:</strong> Perfect. If I can show a straightforward partner playbook for packaging and launching video, can we do 15 minutes next week?<br>
-                                            <strong>Prospect:</strong> Fine.<br>
+                                            <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br><br>
+                                            <strong>Prospect:</strong> What do you need?<br><br>
+                                            <strong>Rep:</strong> Super quick. We help TSPs add video + AI in a way that’s scalable—so it helps you win fleets, not drown your team in support. I’m trying to see if this is even on your radar at {company}.<br><br>
+                                            <strong>Prospect:</strong> We get asked about video sometimes.<br><br>
+                                            <strong>Rep:</strong> That tracks. If you could wave a magic wand, what would video do for your business—help you win deals, increase ARPU, or reduce churn?<br><br>
+                                            <strong>Prospect:</strong> Win deals.<br><br>
+                                            <strong>Rep:</strong> Perfect. If I can show a straightforward partner playbook for packaging and launching video, can we do 15 minutes next week?<br><br>
+                                            <strong>Prospect:</strong> Fine.<br><br>
                                             <strong>Rep:</strong> Great—what’s better, Tuesday morning or Wednesday afternoon?<br><br>
                                             <em>If prospect pushes back on price:</em><br>
-                                            <strong>Prospect:</strong> Video is expensive.<br>
+                                            <strong>Prospect:</strong> Video is expensive.<br><br>
                                             <strong>Rep:</strong> Totally fair. Most TSPs don’t win on cheapest hardware—they win on reliability, fewer escalations, and a platform fleets actually use. On a short call, we can map your economics and see if the margin and ops model make sense.
                                         </div>
                                     </div>
@@ -444,18 +444,18 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (Safety/Ops)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Book a 15–20 min discovery call.<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br>
-                                            <strong>Prospect:</strong> Sure, what’s this about?<br>
-                                            <strong>Rep:</strong> We help fleets reduce incidents and speed up claims evidence using AI video telematics—so safety teams can find the right video fast and coach drivers consistently. I’m calling to see if it’s relevant for {company}.<br>
-                                            <strong>Prospect:</strong> We already have cameras.<br>
-                                            <strong>Rep:</strong> Totally fair. Most fleets do. When teams talk to us, it’s usually because evidence is still slow to retrieve, or coaching isn’t consistent, or the system creates too much noise. Which one is most true for you today?<br>
-                                            <strong>Prospect:</strong> Evidence retrieval is slow.<br>
-                                            <strong>Rep:</strong> Got it. If we could show a workflow that cuts time-to-video and makes incidents easier to manage, would you be open to a 15–20 minute discovery call next week?<br>
-                                            <strong>Prospect:</strong> Maybe.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br><br>
+                                            <strong>Prospect:</strong> Sure, what’s this about?<br><br>
+                                            <strong>Rep:</strong> We help fleets reduce incidents and speed up claims evidence using AI video telematics—so safety teams can find the right video fast and coach drivers consistently. I’m calling to see if it’s relevant for {company}.<br><br>
+                                            <strong>Prospect:</strong> We already have cameras.<br><br>
+                                            <strong>Rep:</strong> Totally fair. Most fleets do. When teams talk to us, it’s usually because evidence is still slow to retrieve, or coaching isn’t consistent, or the system creates too much noise. Which one is most true for you today?<br><br>
+                                            <strong>Prospect:</strong> Evidence retrieval is slow.<br><br>
+                                            <strong>Rep:</strong> Got it. If we could show a workflow that cuts time-to-video and makes incidents easier to manage, would you be open to a 15–20 minute discovery call next week?<br><br>
+                                            <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great—does Tuesday morning or Wednesday afternoon work better?<br><br>
                                             <em>If they say “Not interested”:</em><br>
-                                            <strong>Rep:</strong> Understood. Before I let you go, is it not a priority this year, or is it more about timing?<br>
-                                            <strong>Prospect:</strong> Timing.<br>
+                                            <strong>Rep:</strong> Understood. Before I let you go, is it not a priority this year, or is it more about timing?<br><br>
+                                            <strong>Prospect:</strong> Timing.<br><br>
                                             <strong>Rep:</strong> Makes sense—when should I circle back?
                                         </div>
                                     </div>
@@ -464,14 +464,14 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">2) Business Casual (Dispatcher / Ops)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Identify pain fast and secure meeting.<br><br>
-                                            <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br>
-                                            <strong>Prospect:</strong> What do you need?<br>
-                                            <strong>Rep:</strong> Quick one. When an incident happens, do you have the video you need within a few minutes—or does it turn into a hunt?<br>
-                                            <strong>Prospect:</strong> It’s definitely a hunt.<br>
-                                            <strong>Rep:</strong> That’s exactly what we fix. Streamax is AI video telematics that makes evidence retrieval fast and consistent, and helps reduce repeat incidents with coaching workflows.<br>
-                                            <strong>Prospect:</strong> We’re busy right now.<br>
-                                            <strong>Rep:</strong> Totally get it. That’s why I’m asking for just 15 minutes. If I can show you a faster incident workflow and what the rollout looks like, would next week be crazy?<br>
-                                            <strong>Prospect:</strong> Maybe.<br>
+                                            <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br><br>
+                                            <strong>Prospect:</strong> What do you need?<br><br>
+                                            <strong>Rep:</strong> Quick one. When an incident happens, do you have the video you need within a few minutes—or does it turn into a hunt?<br><br>
+                                            <strong>Prospect:</strong> It’s definitely a hunt.<br><br>
+                                            <strong>Rep:</strong> That’s exactly what we fix. Streamax is AI video telematics that makes evidence retrieval fast and consistent, and helps reduce repeat incidents with coaching workflows.<br><br>
+                                            <strong>Prospect:</strong> We’re busy right now.<br><br>
+                                            <strong>Rep:</strong> Totally get it. That’s why I’m asking for just 15 minutes. If I can show you a faster incident workflow and what the rollout looks like, would next week be crazy?<br><br>
+                                            <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Fair—what day is typically lighter for you, Tuesday or Thursday?<br><br>
                                             <em>If they say “Send info”:</em><br>
                                             <strong>Rep:</strong> Happy to. What’s the best email? And should we lock 15 minutes so I can tailor it to your workflow?
@@ -482,14 +482,14 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">3) Technical Audience (IT / Tech)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Book a 20-min technical discovery.<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br>
-                                            <strong>Prospect:</strong> Okay—go ahead.<br>
-                                            <strong>Rep:</strong> Streamax provides AI video telematics with a focus on reliable deployment: provisioning at scale, role-based access control, and integration options like APIs and exports. I’m calling to see if {company} is evaluating video telematics upgrades this year.<br>
-                                            <strong>Prospect:</strong> We’re not changing anything.<br>
-                                            <strong>Rep:</strong> Understood. Quick check—are there any pain points you consistently hear from safety or ops about the current system?<br>
-                                            <strong>Prospect:</strong> Complaints about too many false alerts.<br>
-                                            <strong>Rep:</strong> Got it. If we do a 20-minute technical call, we can cover edge AI event tuning, alert noise reduction, and how data access and retention are controlled. Would next week be reasonable?<br>
-                                            <strong>Prospect:</strong> Possibly.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br><br>
+                                            <strong>Prospect:</strong> Okay—go ahead.<br><br>
+                                            <strong>Rep:</strong> Streamax provides AI video telematics with a focus on reliable deployment: provisioning at scale, role-based access control, and integration options like APIs and exports. I’m calling to see if {company} is evaluating video telematics upgrades this year.<br><br>
+                                            <strong>Prospect:</strong> We’re not changing anything.<br><br>
+                                            <strong>Rep:</strong> Understood. Quick check—are there any pain points you consistently hear from safety or ops about the current system?<br><br>
+                                            <strong>Prospect:</strong> Complaints about too many false alerts.<br><br>
+                                            <strong>Rep:</strong> Got it. If we do a 20-minute technical call, we can cover edge AI event tuning, alert noise reduction, and how data access and retention are controlled. Would next week be reasonable?<br><br>
+                                            <strong>Prospect:</strong> Possibly.<br><br>
                                             <strong>Rep:</strong> Great. Monday 2:00 or Wednesday 11:00?<br><br>
                                             <em>If they ask “Do you support SSO/security?”</em><br>
                                             <strong>Rep:</strong> Yes—role-based access controls and enterprise security options. We can align your requirements on the call.
@@ -500,14 +500,14 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">4) C-Level Professional (CEO/COO/CFO)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Executive alignment + meeting.<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. I’ll be brief—do you have 20 seconds?<br>
-                                            <strong>Prospect:</strong> Go ahead.<br>
-                                            <strong>Rep:</strong> Streamax helps fleets reduce accident exposure and claims friction using AI video telematics—reliable video evidence plus workflows that drive consistent coaching. I’m calling to ask one question: is {company} more focused this year on reducing incidents, reducing claims costs, or improving operational efficiency?<br>
-                                            <strong>Prospect:</strong> Claims costs.<br>
-                                            <strong>Rep:</strong> Makes sense. Faster, cleaner evidence and fewer disputed claims usually drive direct savings. If I could share a quick framework for ROI and rollout risk, would you be open to a 15-minute call?<br>
-                                            <strong>Prospect:</strong> Maybe—send me something.<br>
-                                            <strong>Rep:</strong> Happy to. To make it relevant, who owns safety and claims workflow day-to-day at {company}?<br>
-                                            <strong>Prospect:</strong> Our safety director.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. I’ll be brief—do you have 20 seconds?<br><br>
+                                            <strong>Prospect:</strong> Go ahead.<br><br>
+                                            <strong>Rep:</strong> Streamax helps fleets reduce accident exposure and claims friction using AI video telematics—reliable video evidence plus workflows that drive consistent coaching. I’m calling to ask one question: is {company} more focused this year on reducing incidents, reducing claims costs, or improving operational efficiency?<br><br>
+                                            <strong>Prospect:</strong> Claims costs.<br><br>
+                                            <strong>Rep:</strong> Makes sense. Faster, cleaner evidence and fewer disputed claims usually drive direct savings. If I could share a quick framework for ROI and rollout risk, would you be open to a 15-minute call?<br><br>
+                                            <strong>Prospect:</strong> Maybe—send me something.<br><br>
+                                            <strong>Rep:</strong> Happy to. To make it relevant, who owns safety and claims workflow day-to-day at {company}?<br><br>
+                                            <strong>Prospect:</strong> Our safety director.<br><br>
                                             <strong>Rep:</strong> Great. If you’re okay with it, let’s schedule 15 minutes with them as well so we can align outcomes and timeline.
                                         </div>
                                     </div>
@@ -516,17 +516,17 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">5) Driver / Small Fleet Owner (SMB)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
                                             <strong>Goal:</strong> Book a short fit check; keep language simple.<br><br>
-                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you at a bad time?<br>
-                                            <strong>Prospect:</strong> What is this?<br>
-                                            <strong>Rep:</strong> Totally fair—quick one. Streamax is a dashcam + AI safety system that helps protect drivers with video evidence and alerts, and makes it easier to handle accidents or false claims.<br>
-                                            <strong>Prospect:</strong> I already have a dashcam.<br>
-                                            <strong>Rep:</strong> Many drivers do. The difference is whether it actually helps when something happens—can you pull the right clip fast, and does it help avoid repeat issues?<br>
-                                            <strong>Prospect:</strong> Getting clips is annoying.<br>
-                                            <strong>Rep:</strong> Got it. If I can show you a setup that makes clips easy to access and share, can we do a quick 10–15 minute call to see if it fits what you want?<br>
-                                            <strong>Prospect:</strong> Maybe.<br>
+                                            <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you at a bad time?<br><br>
+                                            <strong>Prospect:</strong> What is this?<br><br>
+                                            <strong>Rep:</strong> Totally fair—quick one. Streamax is a dashcam + AI safety system that helps protect drivers with video evidence and alerts, and makes it easier to handle accidents or false claims.<br><br>
+                                            <strong>Prospect:</strong> I already have a dashcam.<br><br>
+                                            <strong>Rep:</strong> Many drivers do. The difference is whether it actually helps when something happens—can you pull the right clip fast, and does it help avoid repeat issues?<br><br>
+                                            <strong>Prospect:</strong> Getting clips is annoying.<br><br>
+                                            <strong>Rep:</strong> Got it. If I can show you a setup that makes clips easy to access and share, can we do a quick 10–15 minute call to see if it fits what you want?<br><br>
+                                            <strong>Prospect:</strong> Maybe.<br><br>
                                             <strong>Rep:</strong> Great—what’s a better time, later today or tomorrow?<br><br>
                                             <em>If they push back on price:</em><br>
-                                            <strong>Prospect:</strong> Sounds expensive.<br>
+                                            <strong>Prospect:</strong> Sounds expensive.<br><br>
                                             <strong>Rep:</strong> I hear you. Most people justify it with avoided headaches—faster proof when something happens and fewer repeat incidents. On a short call we can see if it’s even worth it for your situation.
                                         </div>
                                     </div>
