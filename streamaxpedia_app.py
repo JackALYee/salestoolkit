@@ -248,7 +248,7 @@ css_and_html = r"""
                     </p>
                     <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
                         <button class="see-details-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white;" onclick="document.getElementById('securityModal').classList.remove('active')">Cancel / 取消</button>
-                        <button class="see-details-btn" style="background: #ff4757; color: white;" onclick="downloadSecurityPolicy()"><i class="fa-solid fa-download"></i> Download Policy / 下载管控通知</button>
+                        <button class="see-details-btn" style="background: #ff4757; color: white;" onclick="viewSecurityPolicy()"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Policy / 查看管控通知</button>
                     </div>
                 </div>
             </div>
@@ -306,22 +306,20 @@ js_part_2 = r""";
     
     <div class="footer">
         <p style="text-indent: 0;">深圳市锐明技术股份有限公司</p>
-        <p style="text-indent: 0;">首席执行官(CEO)签批: ________</p>
+        <p style="text-indent: 0;">首席执行官(CEO)签批: 望西淀</p>
         <p style="text-indent: 0;">2026年1月30日</p>
     </div>
 </body>
 </html>`;
 
-                window.downloadSecurityPolicy = function() {
-                    const blob = new Blob([policyHtmlContent], { type: 'text/html;charset=utf-8' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'HRD20260130-001_Streamax_Security_Policy.html';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                window.viewSecurityPolicy = function() {
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                        newWindow.document.write(policyHtmlContent);
+                        newWindow.document.close();
+                    } else {
+                        alert('请允许浏览器弹出窗口以查看该政策文件。 / Please allow pop-ups to view the policy.');
+                    }
                 };
 
                 let currentMascotSrc = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; 
