@@ -98,7 +98,6 @@ css_and_html = r"""
                 .modal-overlay { 
                     position: absolute; 
                     top: 0; left: 0; right: 0; 
-                    /* height dynamically set by JS to cover full doc */
                     background: rgba(5, 8, 16, 0.85); 
                     backdrop-filter: blur(8px); 
                     z-index: 1000; 
@@ -108,7 +107,6 @@ css_and_html = r"""
                 }
                 .modal-overlay.active { opacity: 1; visibility: visible; }
                 
-                /* Modal Window Design with Resizing Enabled */
                 .modal-box { 
                     background: var(--glass-bg); 
                     border: var(--glass-border); 
@@ -129,7 +127,6 @@ css_and_html = r"""
                     overflow: hidden; 
                     box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
                     resize: both; 
-                    /* Notice we isolate transform and opacity so the JS 'top' positioning doesn't animate */
                     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
                 }
                 .modal-overlay.active .modal-box { 
@@ -210,7 +207,6 @@ css_and_html = r"""
                 </div>
                 
                 <div class="search-box">
-                    <!-- Native instant search keystroke input -->
                     <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
                     <i class="fa-solid fa-xmark clear-icon" id="clearBtn"></i>
@@ -219,7 +215,7 @@ css_and_html = r"""
 
             <div class="stats" id="statsBar">Found <span id="resultCount">0</span> terms</div>
             <div class="results-container" id="resultsContainer">
-                <!-- Results will be injected here via JavaScript instantly without reloading -->
+                <!-- Results will be injected here via JavaScript -->
             </div>
 
             <!-- RELEVANCE GRAPH MODAL -->
@@ -239,18 +235,21 @@ css_and_html = r"""
                 </div>
             </div>
 
-            <!-- SECURITY WARNING MODAL -->
+            <!-- SECURITY WARNING MODAL WITH POLICY EMBED -->
             <div class="modal-overlay" id="securityModal">
-                <div class="modal-box" style="width: 450px; height: auto; min-height: unset; padding: 30px; text-align: center; background: rgba(5, 8, 16, 0.98); border: 1px solid rgba(255, 71, 87, 0.3); box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
+                <div class="modal-box" style="width: 550px; height: auto; min-height: unset; padding: 40px; text-align: center; background: rgba(5, 8, 16, 0.98); border: 1px solid rgba(255, 71, 87, 0.3); box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
                     <button class="close-modal" onclick="document.getElementById('securityModal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
                     <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #ff4757; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.4));"></i>
-                    <h3 style="color: var(--text-white); font-size: 1.3rem; margin-bottom: 15px;">Access Denied</h3>
+                    <h3 style="color: var(--text-white); font-size: 1.4rem; margin-bottom: 15px;">Access Denied / 下载受限</h3>
                     <p style="color: var(--text-grey); font-size: 0.95rem; line-height: 1.6; margin-bottom: 0;">
-                        Due to Company IT Security Policy, downloading the selected document is prohibited.
+                        Due to Company IT Security Policy, downloading core technical documents, specs, and manuals to the public network is strictly prohibited.
                         <br><br>
-                        根据公司网络安全法规，该文件的下载已被禁止。
+                        根据公司信息安全管理规范，严禁将核心技术资料（含白皮书、规格书、手册等）发布或下载至公网环境。
                     </p>
-                    <button class="see-details-btn" style="margin: 25px auto 0;" onclick="document.getElementById('securityModal').classList.remove('active')">Acknowledge / 确认</button>
+                    <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+                        <button class="see-details-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white;" onclick="document.getElementById('securityModal').classList.remove('active')">Cancel / 取消</button>
+                        <button class="see-details-btn" style="background: #ff4757; color: white;" onclick="downloadSecurityPolicy()"><i class="fa-solid fa-download"></i> Download Policy / 下载管控通知</button>
+                    </div>
                 </div>
             </div>
 """
@@ -262,10 +261,68 @@ js_part_1 = r"""
 
 js_part_2 = r""";
                 // ==========================================
-                // MASTER SWITCH TO ENABLE/DISABLE DOWNLOADS
+                // MASTER SWITCH TO ENABLE/DISABLE ALL DOWNLOADS
                 // ==========================================
-                const ENABLE_DOWNLOADS = true; // Change to true to enable "Spec" and "User Manual" downloads
+                const ENABLE_DOWNLOADS = false; // Change to true to enable ALL downloads (White Papers, Specs, Manuals, etc.)
                 // ==========================================
+
+                // --- SECURITY POLICY GENERATOR ---
+                // Generates the uploaded company policy as an offline HTML document
+                const policyHtmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于严禁核心技术资料公网发布的安全管控通知</title>
+    <style>
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 40px; line-height: 1.8; color: #333; max-width: 800px; margin: 0 auto; background: #fff; }
+        h2 { text-align: center; border-bottom: 2px solid #cc0000; padding-bottom: 10px; color: #cc0000; margin-bottom: 5px; }
+        .doc-num { text-align: right; font-weight: bold; margin-bottom: 30px; font-size: 14px; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 30px; }
+        p { text-indent: 2em; margin-bottom: 15px; }
+        .section-title { font-weight: bold; font-size: 18px; margin-top: 25px; margin-bottom: 10px; text-indent: 0; }
+        .footer { margin-top: 50px; text-align: right; }
+    </style>
+</head>
+<body>
+    <h2>深圳市锐明技术股份有限公司文件<br><span style="font-size:16px;">STREAMAX TECHNOLOGY CO., LTD</span></h2>
+    <div class="doc-num">HRD20260130-001</div>
+    <h1>关于严禁核心技术资料公网发布的安全管控通知</h1>
+    <p style="text-indent: 0; font-weight: bold;">各部门、全体员工:</p>
+    <p>我司作为高新技术科技公司,研发创新是公司生存与发展的核心命脉,核心技术资料(含解决方案、技术文档、协议文档等)是公司多年研发投入的核心成果,承载着公司的商业秘密与技术竞争力,其安全保密直接关系到公司的生存发展、市场地位及全体员工的切身利益。为坚决防范核心技术资料泄露风险,筑牢公司安全防线,保障公司知识产权与商业秘密不受侵害,现就核心技术资料公网发布管控事宜通知如下:</p>
+    
+    <div class="section-title">一、明确管控范围,严守资料安全红线</div>
+    <p>本次安全管控的核心技术资料范围包括但不限于:各类产品/项目解决方案、技术设计方案、源代码、算法模型、技术参数说明、测试报告、协议文档(含通信协议、接口协议等)、技术复盘文档及其他涉及公司核心技术、商业秘密的相关资料。</p>
+    <p>全体员工必须严格遵守“核心资料不上公网”的基本原则,严禁以任何形式、任何理由将上述核心技术资料发布、上传、分享至公网平台,包括但不限于Github、GitLab 等代码托管平台,谷歌云、DropBox、百度网盘、阿里云盘、腾讯微云等各类网络存储网盘,微信公众号、知乎、博客、论坛等社交及技术分享平台,以及其他可被外部人员访问的公网渠道。</p>
+    
+    <div class="section-title">二、规范资料管理,落实安全管控责任</div>
+    <p>(一)强化源头管控。各部门负责人为本部门核心技术资料安全管控第一责任人,需明确资料保管人,规范资料的生成、归档、借阅、传输流程,定期开展部门内部安全自查,及时排查资料泄露风险。</p>
+    <p>(二)规范内部使用。核心技术资料的内部传输、存储需通过公司指定的内部办公系统、文件服务器或加密存储设备进行,严禁使用个人邮箱、私人社交账号、非公司指定的存储设备传输、存储核心资料。员工离职、调岗时,需按流程完成核心技术资料的交接归档,不得私自留存任何核心资料副本。</p>
+    <p>(三)提升安全意识。全体员工需主动学习公司信息安全管理制度《IT-WI-02 信息安全管理规范V1.5》,充分认识核心技术资料泄露的严重危害,自觉遵守安全管控要求,对工作中发现的资料安全隐患、违规行为,应第一时间向部门负责人或公司安全管理部门报告。</p>
+    
+    <div class="section-title">三、严格责任追究,严肃查处违规行为</div>
+    <p>公司将建立常态化安全巡查机制,通过技术监测、定期检查、专项审计等方式,对核心技术资料公网发布情况进行全程管控。对违反本通知要求,擅自将核心技术资料发布至公网的员工,无论是否造成资料泄露、是否给公司造成损失,一经查实,给予通报批评、降职降薪、绩效扣分等处分;若造成核心技术泄露、公司经济损失或声誉损害的,将依法追究其民事赔偿责任;情节严重、触犯国家法律法规的,将移交司法机关处理。</p>
+    <p>核心技术安全是公司发展的生命线,安全管控无小事,责任落实在人人。请各部门务必高度重视,迅速组织全员传达学习本通知精神,严格落实各项安全管控措施。全体员工要牢固树立“安全第一、保密有责”的意识,自觉抵制各类违规行为,共同守护公司核心技术资产安全,为公司持续健康发展奠定坚实基础。</p>
+    
+    <div class="footer">
+        <p style="text-indent: 0;">深圳市锐明技术股份有限公司</p>
+        <p style="text-indent: 0;">首席执行官(CEO)签批: ________</p>
+        <p style="text-indent: 0;">2026年1月30日</p>
+    </div>
+</body>
+</html>`;
+
+                window.downloadSecurityPolicy = function() {
+                    const blob = new Blob([policyHtmlContent], { type: 'text/html;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'HRD20260130-001_Streamax_Security_Policy.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                };
 
                 let currentMascotSrc = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; 
                 let isGraphDragging = false, graphStartX = 0, graphStartY = 0, graphTranslateX = 0, graphTranslateY = 0, hasGraphDragged = false;
@@ -353,12 +410,13 @@ js_part_2 = r""";
                         const delay = index * 0.05;
                         let downHTML = '';
                         
-                        // Check the MASTER SWITCH before building the download buttons
+                        // ALL downloads are blocked if ENABLE_DOWNLOADS is false
                         if (item.file) {
+                            let singleLabel = item.term.includes("DMS") ? "Download DMS vs. DSC white paper" : "Download Document";
                             if (ENABLE_DOWNLOADS) {
-                                downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</a>`;
+                                downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</a>`;
                             } else {
-                                downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> Download DMS vs. DSC white paper</button>`;
+                                downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</button>`;
                             }
                         }
                         
@@ -372,7 +430,6 @@ js_part_2 = r""";
                             });
                         }
                         
-                        // FIX: Pass the clicked button ('this') so we can dynamically calculate Y position!
                         let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
@@ -412,7 +469,7 @@ js_part_2 = r""";
                         const rect = btnElement.getBoundingClientRect();
                         const absoluteY = rect.top + window.scrollY; 
                         
-                        let boxHeight = modalBox.offsetHeight || 300;
+                        let boxHeight = modalBox.offsetHeight || 350;
                         let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
                         
                         if (boxTop < 20) boxTop = 20; 
