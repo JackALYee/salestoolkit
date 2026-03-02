@@ -1,27 +1,25 @@
 content = r"""        <!-- SECTION: PROSPECTING FLOW -->
         <div id="prospecting-flow" class="content-section hidden">
             
-            <!-- Custom CSS for Vertical Nested Tabs -->
+            <!-- Custom CSS for Horizontal Nested Tabs -->
             <style>
                 .nested-tab-btn {
                     background: rgba(255, 255, 255, 0.05);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     color: var(--text-grey);
-                    padding: 12px 20px;
-                    border-radius: 12px;
+                    padding: 10px 24px;
+                    border-radius: 30px;
                     cursor: pointer;
                     font-weight: 600;
                     transition: var(--transition);
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
-                    width: 100%;
-                    text-align: left;
-                    margin-bottom: 10px;
+                    gap: 8px;
                 }
                 .nested-tab-btn:hover {
                     background: rgba(255, 255, 255, 0.1);
                     color: var(--text-white);
-                    transform: translateX(4px);
+                    transform: translateY(-2px);
                 }
                 .nested-tab-btn.active-nested-tab {
                     background: rgba(42, 245, 152, 0.1) !important;
@@ -31,7 +29,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                 }
             </style>
 
-            <!-- Script to handle Vertical Nested Tabs -->
+            <!-- Script to handle Nested Tabs -->
             <script>
                 function switchNestedTab(tabId, btnElement, contentClass) {
                     const container = btnElement.closest('.nested-tabs-container');
@@ -109,34 +107,32 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                         </div>
                     </div>
 
-                    <!-- Step 2 (Scripts inside Vertical Tabs) -->
+                    <!-- Step 2 (Scripts inside Horizontal Tabs) -->
                     <div class="flow-step-block fade-up">
                         <div class="flow-marker blue">2</div>
                         <div class="flow-title">Prospecting Scripts</div>
                         <span class="flow-subtitle">Initial Outreach & Value Pitching</span>
                         
-                        <div class="card nested-tabs-container flex flex-col md:flex-row gap-6" style="margin-left: 0; padding: 25px;">
+                        <div class="card nested-tabs-container" style="margin-left: 0; padding: 25px;">
                             
-                            <!-- Vertical Tabs Nav -->
-                            <div class="flex flex-col w-full md:w-1/4 shrink-0">
+                            <!-- Horizontal Tabs Nav -->
+                            <div class="flex flex-wrap gap-4 mb-6 border-b border-white/10 pb-5">
                                 <button onclick="switchNestedTab('tsp-emails', this, 'tsp-script-content')" class="nested-tab-btn active-nested-tab">
-                                    <i class="fa-solid fa-envelope mr-3"></i> Email Template
+                                    <i class="fa-solid fa-envelope"></i> Email Template
                                 </button>
                                 <button onclick="switchNestedTab('tsp-calls', this, 'tsp-script-content')" class="nested-tab-btn">
-                                    <i class="fa-solid fa-phone mr-3"></i> Cold Calling Script
+                                    <i class="fa-solid fa-phone"></i> Cold Calling Script
                                 </button>
                                 <button onclick="switchNestedTab('tsp-pitches', this, 'tsp-script-content')" class="nested-tab-btn">
-                                    <i class="fa-solid fa-microphone mr-3"></i> Elevator Pitch Script
+                                    <i class="fa-solid fa-microphone"></i> Elevator Pitch Script
                                 </button>
                             </div>
                             
                             <!-- Tabs Content Area -->
-                            <div class="flex-1 w-full">
+                            <div class="w-full">
                                 
                                 <!-- ================== TSP EMAILS ================== -->
                                 <div id="tsp-emails" class="tsp-script-content">
-                                    <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> Email Templates</h4>
-                                    
                                     <div class="script-box">
                                         <div class="script-header"><span class="script-tag">1) Business professional (general audience)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
@@ -195,8 +191,6 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                 
                                 <!-- ================== TSP COLD CALLS ================== -->
                                 <div id="tsp-calls" class="tsp-script-content hidden">
-                                    <h4 style="color: var(--secondary-blue); margin-bottom: 15px;"><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> Cold Calling Scripts</h4>
-
                                     <div class="script-box" style="border-left-color: var(--secondary-blue);">
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
@@ -297,8 +291,6 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
 
                                 <!-- ================== TSP PITCHES ================== -->
                                 <div id="tsp-pitches" class="tsp-script-content hidden">
-                                    <h4 style="color: #A0AEC0; margin-bottom: 15px;"><i class="fa-solid fa-microphone" style="margin-right: 8px;"></i> Elevator Pitches</h4>
-                                    
                                     <div class="script-box" style="border-left-color: #A0AEC0;">
                                         <div class="script-header"><span class="script-tag" style="color: #A0AEC0;">1) "Who is Streamax?" (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
@@ -365,34 +357,32 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                         </div>
                     </div>
 
-                    <!-- Step 2 (Scripts inside Vertical Tabs) -->
+                    <!-- Step 2 (Scripts inside Horizontal Tabs) -->
                     <div class="flow-step-block fade-up">
                         <div class="flow-marker blue">2</div>
                         <div class="flow-title">Prospecting Scripts</div>
                         <span class="flow-subtitle">Initial Outreach & Value Pitching</span>
                         
-                        <div class="card nested-tabs-container flex flex-col md:flex-row gap-6" style="margin-left: 0; padding: 25px;">
+                        <div class="card nested-tabs-container" style="margin-left: 0; padding: 25px;">
                             
-                            <!-- Vertical Tabs Nav -->
-                            <div class="flex flex-col w-full md:w-1/4 shrink-0">
+                            <!-- Horizontal Tabs Nav -->
+                            <div class="flex flex-wrap gap-4 mb-6 border-b border-white/10 pb-5">
                                 <button onclick="switchNestedTab('eu-emails', this, 'eu-script-content')" class="nested-tab-btn active-nested-tab">
-                                    <i class="fa-solid fa-envelope mr-3"></i> Email Template
+                                    <i class="fa-solid fa-envelope"></i> Email Template
                                 </button>
                                 <button onclick="switchNestedTab('eu-calls', this, 'eu-script-content')" class="nested-tab-btn">
-                                    <i class="fa-solid fa-phone mr-3"></i> Cold Calling Script
+                                    <i class="fa-solid fa-phone"></i> Cold Calling Script
                                 </button>
                                 <button onclick="switchNestedTab('eu-pitches', this, 'eu-script-content')" class="nested-tab-btn">
-                                    <i class="fa-solid fa-microphone mr-3"></i> Elevator Pitch Script
+                                    <i class="fa-solid fa-microphone"></i> Elevator Pitch Script
                                 </button>
                             </div>
                             
                             <!-- Tabs Content Area -->
-                            <div class="flex-1 w-full">
+                            <div class="w-full">
                                 
                                 <!-- ================== EU EMAILS ================== -->
                                 <div id="eu-emails" class="eu-script-content">
-                                    <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> Email Templates</h4>
-                                    
                                     <div class="script-box">
                                         <div class="script-header"><span class="script-tag">1) Business professional (General Audience)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
@@ -450,8 +440,6 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                                 
                                 <!-- ================== EU COLD CALLS ================== -->
                                 <div id="eu-calls" class="eu-script-content hidden">
-                                    <h4 style="color: var(--secondary-blue); margin-bottom: 15px;"><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> Cold Calling Scripts</h4>
-
                                     <div class="script-box" style="border-left-color: var(--secondary-blue);">
                                         <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (Safety/Ops)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
@@ -546,8 +534,6 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
 
                                 <!-- ================== EU PITCHES ================== -->
                                 <div id="eu-pitches" class="eu-script-content hidden">
-                                    <h4 style="color: #A0AEC0; margin-bottom: 15px;"><i class="fa-solid fa-microphone" style="margin-right: 8px;"></i> Elevator Pitches</h4>
-                                    
                                     <div class="script-box" style="border-left-color: #A0AEC0;">
                                         <div class="script-header"><span class="script-tag" style="color: #A0AEC0;">1) General (Safety + Evidence)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                         <div class="script-text">
