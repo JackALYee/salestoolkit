@@ -31,18 +31,19 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                 /* Sales Pipeline Diagram CSS */
                 .pipeline-container {
                     display: flex;
-                    justify-content: space-between;
+                    justify-content: flex-start;
+                    gap: 15px;
                     align-items: flex-start;
                     position: relative;
                     margin: 40px 0 20px 0;
                     overflow-x: auto;
-                    padding-bottom: 15px;
+                    padding-bottom: 20px;
                 }
                 .pipeline-line {
                     position: absolute;
                     top: 24px;
-                    left: 50px;
-                    right: 50px;
+                    left: 75px;
+                    width: max(100%, 1100px);
                     height: 2px;
                     background: rgba(255, 255, 255, 0.15);
                     z-index: 1;
@@ -54,7 +55,7 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                     flex-direction: column;
                     align-items: center;
                     text-align: center;
-                    width: 130px;
+                    width: 150px;
                     flex-shrink: 0;
                 }
                 .pipeline-icon {
@@ -100,8 +101,8 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                 
                 /* Mobile adjustment for pipeline */
                 @media (max-width: 900px) {
-                    .pipeline-container { justify-content: flex-start; gap: 10px; padding-bottom: 20px; }
-                    .pipeline-line { right: auto; width: 850px; } /* Force line width to match scroll */
+                    .pipeline-container { justify-content: flex-start; gap: 15px; padding-bottom: 20px; }
+                    .pipeline-line { right: auto; width: 1100px; } 
                 }
             </style>
 
@@ -151,36 +152,84 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                 <div class="pipeline-container">
                     <div class="pipeline-line"></div>
                     
+                    <!-- Step 1: Prospecting -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-satellite-dish"></i></div>
                         <div class="pipeline-title">1. Prospecting</div>
                         <div class="pipeline-desc">Lead Intake &<br>First Contact</div>
+                        <!-- Extended Info -->
+                        <div class="mt-4 text-left bg-black/40 p-3 rounded-lg border border-[var(--primary-green)]/30 text-[11px] text-gray-300 w-full shadow-inner flex flex-col gap-2 h-full">
+                            <div>
+                                <strong class="text-[var(--primary-green)] block mb-0.5 uppercase tracking-wider text-[9px]">The Cycle</strong>
+                                <span class="leading-tight">Identify ideal targets, execute multi-channel outreach, and pitch core value to secure a meeting.</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Step 2: Discovery -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
                         <div class="pipeline-title">2. Discovery</div>
                         <div class="pipeline-desc">Qualify Pain &<br>Map Requirements</div>
+                        <!-- Extended Info -->
+                        <div class="mt-4 text-left bg-black/40 p-3 rounded-lg border border-[var(--secondary-blue)]/30 text-[11px] text-gray-300 w-full shadow-inner flex flex-col gap-2 h-full">
+                            <div>
+                                <strong class="text-[var(--secondary-blue)] block mb-0.5 uppercase tracking-wider text-[9px]">Why It Matters</strong>
+                                <span class="leading-tight">Crucial for uncovering true pain points and aligning solution value.</span>
+                            </div>
+                            <div>
+                                <strong class="text-[var(--secondary-blue)] block mb-0.5 uppercase tracking-wider text-[9px]">Key Features</strong>
+                                <ul class="pl-3 m-0 list-disc opacity-90 text-[10px] leading-tight">
+                                    <li>Structured question banks</li>
+                                    <li>Pain quantification</li>
+                                    <li>Stakeholder mapping</li>
+                                </ul>
+                            </div>
+                            <button onclick="switchTab('discovery', document.querySelector('.nav-tabs button[onclick*=\'discovery\']'))" class="mt-auto w-full bg-[var(--secondary-blue)]/10 hover:bg-[var(--secondary-blue)] hover:text-white text-[var(--secondary-blue)] border border-[var(--secondary-blue)]/30 text-[10px] font-bold py-1.5 px-2 rounded transition-all">
+                                Go to Section <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Step 3: Demo -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-laptop-code"></i></div>
                         <div class="pipeline-title">3. Demo</div>
                         <div class="pipeline-desc">Platform Deep Dive<br>& Tech Fit</div>
+                        <!-- Extended Info -->
+                        <div class="mt-4 text-left bg-black/40 p-3 rounded-lg border border-[var(--primary-green)]/30 text-[11px] text-gray-300 w-full shadow-inner flex flex-col gap-2 h-full">
+                            <div>
+                                <strong class="text-[var(--primary-green)] block mb-0.5 uppercase tracking-wider text-[9px]">PMM Synergy</strong>
+                                <span class="leading-tight">Leverage Product Marketing assets to deliver a compelling "Closed-Loop" narrative tailored to the prospect.</span>
+                            </div>
+                            <button onclick="switchTab('presentation', document.querySelector('.nav-tabs button[onclick*=\'presentation\']'))" class="mt-auto w-full bg-[var(--primary-green)]/10 hover:bg-[var(--primary-green)] hover:text-[#050810] text-[var(--primary-green)] border border-[var(--primary-green)]/30 text-[10px] font-bold py-1.5 px-2 rounded transition-all">
+                                Go to Section <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Step 4 -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-truck-fast"></i></div>
                         <div class="pipeline-title">4. Pilot (PoC)</div>
                         <div class="pipeline-desc">Prep, Execution<br>& Review</div>
                     </div>
+                    
+                    <!-- Step 5 -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-chart-pie"></i></div>
                         <div class="pipeline-title">5. Proposal</div>
                         <div class="pipeline-desc">ROI Presentation<br>& Business Case</div>
                     </div>
+                    
+                    <!-- Step 6 -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-file-signature"></i></div>
                         <div class="pipeline-title">6. Contracting</div>
                         <div class="pipeline-desc">Procurement &<br>Legal Review</div>
                     </div>
+                    
+                    <!-- Step 7 -->
                     <div class="pipeline-step">
                         <div class="pipeline-icon"><i class="fa-solid fa-handshake"></i></div>
                         <div class="pipeline-title">7. Closed Won</div>
