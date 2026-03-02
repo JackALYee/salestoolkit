@@ -1,5 +1,14 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import smtplib
+import ssl
+import time
+import re
+import os
+import tempfile
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import make_msgid
 
 # Import modular components
 from login import render_login
@@ -8,7 +17,24 @@ from prospecting_flow import content as prospecting_flow_content
 from discovery_meeting import content as discovery_meeting_content
 from presentation import content as presentation_content
 from value_calculator import content as value_calculator_content
-from dripmailer import render_dripmailer
+from dripmailer import content as dripmailer_content
+
+# --- SMTP PYTHON HELPERS ---
+def render_template(template_str, row):
+    def replace_var(match):
+        key = match.group(1).lower().strip()
+        val = row.get(key, "")
+        return str(val) if val else f"[{match.group(1)}]"
+    return re.sub(r'\{([^}]+)\}', replace_var, template_str)
+
+def create_message(subject, html_body, to_addr, from_name, from_email):
+    msg = MIMEMultipart("alternative")
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg["Message-ID"] = make_msgid(domain=from_email.split("@")[-1])
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    return msg
 
 # --- CONFIG & LAYOUT ---
 st.set_page_config(
@@ -44,15 +70,8 @@ if 'authenticated' not in st.session_state:
 if not st.session_state['authenticated']:
     render_login()
 else:
-    # URL Parameter Routing - This securely separates the HTML view from the Python Email view
-    current_tab = st.query_params.get("tab", "toolkit")
-    
-    if current_tab == "dripmailer":
-        # Renders the pure Python Native Streamlit app
-        render_dripmailer()
-    else:
-        # 1. HTML Head & CSS (Restored entirely to your original pristine styling)
-        html_head = r"""<!DOCTYPE html>
+    # 1. HTML Head & CSS (Restored entirely to original style, with inline Email Tool tab)
+    html_head = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -792,13 +811,13 @@ else:
         .delay-2 { animation-delay: 0.2s; }
         .delay-3 { animation-delay: 0.3s; }
         .delay-4 { animation-delay: 0.4s; }
-        input[type="number"] {
+        input[type="number"], input[type="text"], input[type="file"], textarea {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-white);
             transition: all 0.3s ease;
         }
-        input[type="number"]:focus {
+        input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
             border-color: var(--primary-green);
             box-shadow: 0 0 12px rgba(42, 245, 152, 0.2);
             outline: none;
@@ -860,15 +879,14 @@ else:
             <button class="nav-btn" onclick="switchTab('value-calculator', this)">
                 <i data-lucide="calculator"></i> Value Calculator
             </button>
-            <!-- SAFE LINK TO NATIVE STREAMLIT EMAIL TOOL -->
-            <a href="?tab=dripmailer" target="_top" class="nav-btn" style="text-decoration: none;">
+            <button class="nav-btn" onclick="switchTab('dripmailer', this)">
                 <i data-lucide="mail"></i> Email Tool
-            </a>
+            </button>
         </nav>
 """
 
-        # 2. Base HTML closing tags + Original Javascript Logic
-        html_tail = r"""
+    # 2. Base HTML closing tags + Inline Streamlit Component Logic
+    html_tail = r"""
         <div style="height: 100px;"></div>
     </div>
 
@@ -876,6 +894,37 @@ else:
     <div id="toast">Copied to Clipboard!</div>
 
     <script>
+        // --- INLINE STREAMLIT COMPONENT BRIDGE ---
+        // This fully eliminates the need for the external CDN and prevents any "SyntaxError: Cannot use import statement outside a module"
+        const Streamlit = {
+            setComponentReady: function() {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1}, "*");
+            },
+            setFrameHeight: function(height) {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: height}, "*");
+            },
+            setComponentValue: function(value) {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:setComponentValue", value: value}, "*");
+            },
+            events: {
+                addEventListener: function(type, callback) {
+                    window.addEventListener("message", function(event) {
+                        if (event.data && event.data.type === type) {
+                            callback(event);
+                        }
+                    });
+                }
+            },
+            RENDER_EVENT: "streamlit:render"
+        };
+
+        function onRender(event) {
+            Streamlit.setFrameHeight(1800);
+        }
+        Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+        Streamlit.setComponentReady();
+        setInterval(() => { Streamlit.setFrameHeight(1800); }, 1000);
+
         // --- ICONS INITIALIZATION ---
         lucide.createIcons();
 
@@ -1187,16 +1236,90 @@ else:
 </html>
 """
 
-        # 3. ASSEMBLE HTML EXACTLY AS ORIGINAL
-        html_code = (
-            html_head + "\n" +
-            streamaxpedia_content + "\n" +
-            prospecting_flow_content + "\n" +
-            discovery_meeting_content + "\n" +
-            presentation_content + "\n" +
-            value_calculator_content + "\n" +
-            html_tail
-        )
+    # 3. Fetch variables to inject into the Drip Mailer Javascript
+    current_email = st.session_state.get('user_email', 'your.email@streamax.com')
+    auth_mode = st.session_state.get('auth_mode', 'Success')
+    customized_dripmailer = dripmailer_content.replace("__USER_EMAIL__", current_email).replace("__AUTH_MODE__", auth_mode)
 
-        # 4. RENDER
-        components.html(html_code, height=1800, scrolling=True)
+    # 4. ASSEMBLE HTML
+    html_code = (
+        html_head + "\n" +
+        streamaxpedia_content + "\n" +
+        prospecting_flow_content + "\n" +
+        discovery_meeting_content + "\n" +
+        presentation_content + "\n" +
+        value_calculator_content + "\n" +
+        customized_dripmailer + "\n" +
+        html_tail
+    )
+
+    # 5. DECLARE AS CUSTOM COMPONENT 
+    if 'component_dir' not in st.session_state:
+        st.session_state.component_dir = tempfile.mkdtemp()
+    
+    index_path = os.path.join(st.session_state.component_dir, "index.html")
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(html_code)
+
+    ToolkitComponent = components.declare_component("streamax_toolkit", path=st.session_state.component_dir)
+    
+    # 6. RENDER & CAPTURE
+    result = ToolkitComponent(key="main_toolkit")
+
+    # 7. PYTHON SMTP PROCESSOR
+    if result and isinstance(result, dict) and result.get("action") == "send_batch":
+        csv_data = result.get("csvData", [])
+        subj_tmpl = result.get("subjectTemplate", "")
+        body_tmpl = result.get("bodyTemplate", "")
+        sig_html = result.get("sigHtml", "")
+        sig_name = result.get("sigName", "Streamax Sales")
+        
+        user_email = st.session_state.get('user_email')
+        user_pass = st.session_state.get('user_password')
+        
+        if not user_email or not user_pass:
+            st.error("Missing secure credentials. Please refresh the page and re-authenticate on the login screen.")
+        else:
+            st.toast("Batch email process started! Check the bottom of the screen.", icon="🚀")
+            with st.status(f"Transmitting {len(csv_data)} emails securely via mail.streamax.com...", expanded=True) as status:
+                try:
+                    context = ssl.create_default_context()
+                    server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=30, context=context)
+                    server.login(user_email, user_pass)
+                    
+                    success_count = 0
+                    for index, row in enumerate(csv_data):
+                        # Ensure keys are lowercase strings for matching
+                        row_lower = {str(k).lower(): v for k, v in row.items()}
+                        row_lower["your_name"] = sig_name
+                        
+                        target_email = row_lower.get('email', '')
+                        if not target_email:
+                            st.write(f"⚠️ Row {index+1}: Missing email address, skipping.")
+                            continue
+                            
+                        rendered_subj = render_template(subj_tmpl, row_lower)
+                        rendered_body = render_template(body_tmpl, row_lower).replace('\n', '<br>')
+                        html_content = rendered_body + f"<br><br>{sig_html}"
+                        
+                        msg = create_message(rendered_subj, html_content, target_email, sig_name, user_email)
+                        
+                        try:
+                            server.send_message(msg)
+                            st.write(f"✅ Sent to **{target_email}**")
+                            success_count  += 1
+                        except Exception as e:
+                            st.write(f"❌ Failed to send to **{target_email}**: {str(e)}")
+                            
+                        time.sleep(0.5) # Prevent overloading the Streamax SMTP server
+                        
+                    server.quit()
+                    status.update(label=f"Batch complete! Successfully dispatched {success_count} emails.", state="complete", expanded=False)
+                    st.balloons()
+                    
+                except smtplib.SMTPAuthenticationError:
+                    status.update(label="Authentication Failed.", state="error")
+                    st.error("Email or password incorrect. Please refresh and re-authenticate.")
+                except Exception as e:
+                    status.update(label="SMTP Error", state="error")
+                    st.error(f"SMTP Connection Error: {str(e)}")
