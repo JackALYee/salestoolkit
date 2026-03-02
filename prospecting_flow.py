@@ -45,42 +45,159 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                         <span class="flow-subtitle">Cold Email & Calling</span>
                         
                         <div class="card" style="margin-left: 0;">
+                            <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> Email Templates</h4>
+                            
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">Cold Email Template (TSP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">1) Business Professional (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Subject options:</strong>
-                                    <ul style="margin-top:5px; margin-bottom:15px; margin-left:20px; color: var(--text-grey);">
-                                        <li>Partnering to add AI video telematics to your portfolio</li>
-                                        <li>A scalable video telematics platform for TSPs</li>
-                                        <li>Helping TSPs increase attach rate with video + AI</li>
-                                    </ul>
-                                    Hi {FirstName},<br><br>
-                                    I’m {YourName} from Streamax. We work with Telematics Service Providers who want to add (or upgrade) AI video telematics in a way that scales—without creating a heavy support or integration burden.<br><br>
-                                    A quick question: are you currently offering video telematics as part of your bundle, or are fleets requesting it and you’re evaluating partners?<br><br>
-                                    If relevant, I’d love to share how partners use Streamax to:
-                                    <ul style="margin-top:5px; margin-bottom:15px; margin-left:20px; color: var(--text-grey);">
-                                        <li>package a differentiated safety offering (video + AI + evidence workflow),</li>
-                                        <li>manage customers efficiently (repeatable deployment + platform operations),</li>
-                                        <li>and improve retention by solving claims and driver coaching pain.</li>
-                                    </ul>
-                                    Would you be open to a <strong>15–20 minute partner fit call</strong> next week? I can do {TimeOption1} or {TimeOption2}.<br><br>
-                                    Best,<br>
-                                    {YourName}<br>
-                                    {Title} | Streamax<br>
-                                    {Phone}
+                                    <strong>Subject:</strong> Partnering with {company} to scale AI video telematics<br><br>
+                                    Hi {first_name},<br><br>
+                                    I’m reaching out because Streamax partners with Telematics Service Providers to deliver AI video telematics to fleets with a scalable, support-friendly model.<br><br>
+                                    If you’re expanding your portfolio or upgrading an existing video solution, I’d like to learn how {company} goes to market today and what a “good partner” looks like for you (margin, platform operations, integrations, and support).<br><br>
+                                    Would you be open to a 15–20 minute partner fit call next week? If it’s not a priority right now, I’m happy to follow your timing.
                                 </div>
                             </div>
 
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">Cold Calling Template (TSP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">2) Business Casual (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Rep:</strong> "Hi {Name}, this is {YourName} from Streamax—did I catch you at an okay time for 30 seconds?"<br><br>
-                                    <strong>Prospect:</strong> {Yes/No}<br><br>
-                                    <strong>Rep (30s):</strong> "We partner with TSPs and integrators to offer AI video telematics—reliable hardware, edge AI, and a cloud platform designed to scale across many fleets. The goal is to help you win more deals and retain customers with a higher-value safety bundle."<br><br>
-                                    <strong>Rep (qualifier):</strong> "Quick question—do you currently offer video telematics today, or are you evaluating options due to customer demand?"<br><br>
-                                    <strong>If offering today:</strong> "What are you hearing from customers—evidence quality, false alerts, installation burden, or platform usability?"<br><br>
-                                    <strong>If evaluating:</strong> "What would a winning partner look like—margin, multi-tenant platform, support SLAs, or speed to deploy?"<br><br>
-                                    <strong>CTA:</strong> "If it makes sense, can we schedule a <strong>15–20 minute partner fit call</strong> to review your portfolio and see where Streamax fits? I have {Option1} or {Option2}."
+                                    <strong>Subject:</strong> Quick chat on video telematics for {company}?<br><br>
+                                    Hi {first_name},<br><br>
+                                    I work with Streamax, and we help TSPs add or upgrade AI video telematics without turning it into a support headache.<br><br>
+                                    Curious—are your fleet customers asking for better video/AI lately, or are you already offering video and looking to improve it?<br><br>
+                                    If it’s worth exploring, can we do a quick 15-minute call to see whether there’s a fit for {company}?
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">3) Technical (Technical Audience)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Multi-tenant video telematics + APIs for TSP operations<br><br>
+                                    Hi {first_name},<br><br>
+                                    Streamax supports TSP deployments that require scalable operations—multi-tenant management, provisioning at volume, remote diagnostics, and integration paths (API/webhooks/export) to fit existing workflows.<br><br>
+                                    I’m trying to understand how {company} operates today: provisioning, firmware management, user/role administration, and your top integration requirements (ELD/TMS/SSO/reporting).<br><br>
+                                    If you’re open, I’d value a 20-minute technical discovery to align on architecture needs and what “operationally scalable” means for your team.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">4) C-Level Professional (C-Suite)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Expanding ARPU and retention with a modern video safety bundle<br><br>
+                                    Hi {first_name},<br><br>
+                                    Streamax partners with Telematics Service Providers to create differentiated video + AI safety offerings that increase attach rate, improve retention, and strengthen competitiveness in RFPs.<br><br>
+                                    I’d like to understand {company}’s growth focus this year—ARPU expansion, churn reduction, or new segment penetration—and share how leading TSPs structure a scalable video program without diluting service quality.<br><br>
+                                    Would you be open to a brief 15–20 minute conversation?
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">5) C-Level Casual (C-Suite)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Could Streamax help {company} win more fleets with video?<br><br>
+                                    Hi {first_name},<br><br>
+                                    I’ll keep this short. Streamax helps TSPs add a video + AI safety layer that makes your offering stickier and more competitive—without a messy rollout.<br><br>
+                                    If you’re open, I’d love 15 minutes to learn what {company} is optimizing for this year (growth, retention, differentiation) and see if there’s a fit.<br><br>
+                                    Would next week work?
+                                </div>
+                            </div>
+
+                            <h4 style="color: var(--secondary-blue); margin-top: 40px; margin-bottom: 15px;"><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> Cold Call Scripts</h4>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Book a 15–20 min partner fit call.<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br>
+                                    <strong>Prospect:</strong> I have a minute.<br>
+                                    <strong>Rep:</strong> Thanks. We partner with telematics service providers to offer AI video telematics to fleets—designed to scale without turning into a support burden. I’m calling to see if it’s relevant for {company}.<br>
+                                    <strong>Prospect:</strong> What do you mean by “partner”?<br>
+                                    <strong>Rep:</strong> You keep the customer relationship. We provide the video + AI platform, partner enablement, and operational tools so you can package it as part of your offering.<br>
+                                    <strong>Prospect:</strong> We already have a video vendor.<br>
+                                    <strong>Rep:</strong> That makes sense. When TSPs switch or add a second option, it’s usually because of one of three reasons: platform usability, false alerts/AI performance, or support load. Which of those is most painful today—if any?<br>
+                                    <strong>Prospect:</strong> Support load and reliability.<br>
+                                    <strong>Rep:</strong> Got it. If we can show you an ops-friendly approach—deployment, diagnostics, escalation—would it be worth a quick 15–20 minute partner fit call next week?<br>
+                                    <strong>Prospect:</strong> Maybe.<br>
+                                    <strong>Rep:</strong> Great. I can do Tuesday 10:00 or Wednesday 2:00. Which is better?<br><br>
+                                    <em>If prospect says “Not interested”:</em><br>
+                                    <strong>Rep:</strong> Totally fair. Before I let you go, is video telematics simply not a focus for {company} this year, or is it more about timing?<br>
+                                    <strong>Prospect:</strong> Timing.<br>
+                                    <strong>Rep:</strong> Understood—what month should I circle back?
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">2) Business Casual (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Quickly qualify if they’re a TSP motion and get a meeting.<br><br>
+                                    <strong>Rep:</strong> Hey {first_name}, {your_name} here from Streamax. Quick one—am I calling the right person for partnerships or product at {company}?<br>
+                                    <strong>Prospect:</strong> Depends—what’s this about?<br>
+                                    <strong>Rep:</strong> We help TSPs roll out AI video telematics to fleets without creating a ton of support tickets. I’m trying to see if video is on your roadmap or if fleets are asking you for it.<br>
+                                    <strong>Prospect:</strong> Yeah, we get requests.<br>
+                                    <strong>Rep:</strong> Makes sense. What’s the #1 thing you wish was better with video solutions—install, platform usability, AI accuracy, or support?<br>
+                                    <strong>Prospect:</strong> AI accuracy.<br>
+                                    <strong>Rep:</strong> Got it. If I could show you how we handle edge AI and reduce noise while keeping the workflow simple, would a 15-minute call be worth it?<br>
+                                    <strong>Prospect:</strong> Sure, send something.<br>
+                                    <strong>Rep:</strong> Will do—what’s the best email? And should we just lock 15 minutes now so it doesn’t get lost?<br><br>
+                                    <em>If prospect says “Send info”:</em><br>
+                                    <strong>Rep:</strong> Happy to. To make it relevant, are you selling video today or still evaluating partners?<br>
+                                    <strong>Prospect:</strong> Selling.<br>
+                                    <strong>Rep:</strong> Perfect—I’ll send a short overview and a couple of questions. Want to do a quick 15 minutes Thursday or Friday to see if it’s a fit?
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">3) Technical / Operations (Technical)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Book a technical discovery call (ops scalability + integration).<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br>
+                                    <strong>Prospect:</strong> Okay—what’s up?<br>
+                                    <strong>Rep:</strong> We support TSP deployments where the hard part is scale: multi-tenant operations, provisioning, remote diagnostics, and integrations. I’m calling to see how {company} runs video operations today and whether you have pain points we can help with.<br>
+                                    <strong>Prospect:</strong> We’re pretty set.<br>
+                                    <strong>Rep:</strong> Understood. Quick calibration—how are you handling device provisioning and firmware management at volume right now?<br>
+                                    <strong>Prospect:</strong> Mostly manual, some scripts.<br>
+                                    <strong>Rep:</strong> That’s common. When TSPs talk to us, they usually want fewer escalations and faster time-to-resolution. What’s your biggest ops bottleneck today?<br>
+                                    <strong>Prospect:</strong> Too many support tickets after install.<br>
+                                    <strong>Rep:</strong> Got it. If we did a 20-minute technical call, I’d like to map your flow—activation, diagnostics, escalation—and share how our partner toolset reduces ticket volume. Is next week reasonable?<br>
+                                    <strong>Prospect:</strong> Possibly.<br>
+                                    <strong>Rep:</strong> Great. Monday 3:00 or Wednesday 11:00?<br><br>
+                                    <em>If prospect asks “Do you have APIs?”</em><br>
+                                    <strong>Rep:</strong> Yes—API-based integration options plus exports and admin tooling. On the call we can cover your top integration targets and what you need for multi-tenant support.
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">4) C-Level Professional (CEO/GM/VP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Executive alignment call (growth, ARPU, retention).<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. I’ll be brief—do you have 20 seconds?<br>
+                                    <strong>Prospect:</strong> Go ahead.<br>
+                                    <strong>Rep:</strong> Streamax partners with telematics providers to add AI video telematics as a differentiated bundle that increases ARPU and retention. I’m calling to ask one question: is {company} more focused this year on growing ARPU, reducing churn, or winning more RFPs?<br>
+                                    <strong>Prospect:</strong> Winning more RFPs.<br>
+                                    <strong>Rep:</strong> Makes sense. Video is often the missing layer in RFPs, but it only works if it scales without hurting service quality. If I could share how other TSPs launch a video bundle with a clean operational model, would you be open to a 15-minute conversation?<br>
+                                    <strong>Prospect:</strong> Maybe—send me details.<br>
+                                    <strong>Rep:</strong> Happy to. To tailor it: are you already offering video, or evaluating adding it?<br>
+                                    <strong>Prospect:</strong> Offering video.<br>
+                                    <strong>Rep:</strong> Great. Let’s do 15 minutes and I’ll come prepared with a migration/upgrade checklist and partner economics discussion. Tuesday or Thursday?
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">5) C-Level Casual (CEO/Founder)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Fast “fit check” and book a short meeting.<br><br>
+                                    <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br>
+                                    <strong>Prospect:</strong> What do you need?<br>
+                                    <strong>Rep:</strong> Super quick. We help TSPs add video + AI in a way that’s scalable—so it helps you win fleets, not drown your team in support. I’m trying to see if this is even on your radar at {company}.<br>
+                                    <strong>Prospect:</strong> We get asked about video sometimes.<br>
+                                    <strong>Rep:</strong> That tracks. If you could wave a magic wand, what would video do for your business—help you win deals, increase ARPU, or reduce churn?<br>
+                                    <strong>Prospect:</strong> Win deals.<br>
+                                    <strong>Rep:</strong> Perfect. If I can show a straightforward partner playbook for packaging and launching video, can we do 15 minutes next week?<br>
+                                    <strong>Prospect:</strong> Fine.<br>
+                                    <strong>Rep:</strong> Great—what’s better, Tuesday morning or Wednesday afternoon?<br><br>
+                                    <em>If prospect pushes back on price:</em><br>
+                                    <strong>Prospect:</strong> Video is expensive.<br>
+                                    <strong>Rep:</strong> Totally fair. Most TSPs don’t win on cheapest hardware—they win on reliability, fewer escalations, and a platform fleets actually use. On a short call, we can map your economics and see if the margin and ops model make sense.
                                 </div>
                             </div>
                         </div>
@@ -117,22 +234,43 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                     <div class="flow-step-block fade-up">
                         <div class="flow-marker blue">4</div>
                         <div class="flow-title">Pitching Value</div>
-                        <span class="flow-subtitle">Elevator Pitch & Story</span>
+                        <span class="flow-subtitle">Elevator Pitches</span>
                         
                         <div class="card" style="margin-left: 0;">
+                            <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-microphone" style="margin-right: 8px;"></i> Elevator Pitches</h4>
+                            
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">30-Second Elevator Pitch (TSP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">1) "Who is Streamax?" (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    "Streamax is an AI-powered video telematics platform purpose-built for partners who want to scale. We provide reliable hardware, edge AI, and a unified cloud platform with partner-friendly capabilities like multi-tenant management, repeatable deployment, and strong technical support. TSPs work with us to increase attach rate and retention—offering fleets a modern safety and evidence workflow without taking on excessive integration or support burden."
+                                    Good morning, I’m from Streamax. We’re a global provider of AI-powered video safety and fleet management solutions, operating in 100+ countries with millions of connected vehicles. We help fleets turn video into action—prevent incidents, resolve claims faster, and coach drivers consistently—so safety teams spend less time chasing evidence and more time reducing risk.
                                 </div>
                             </div>
 
-                            <div class="script-box" style="border-left-color: var(--primary-green);">
-                                <div class="script-header"><span class="script-tag" style="color: var(--primary-green);">Example Value Story (TSP)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">2) "Why Streamax?" (Outcome-driven)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Scenario:</strong> "A regional telematics provider wanted to differentiate beyond GPS and ELD. Their fleets were asking for better incident evidence and driver coaching, but the provider was worried about support load and rollout complexity."<br><br>
-                                    <strong>What we did:</strong> "We aligned on a packaged offering (hardware + AI + platform), built a repeatable deployment checklist, and enabled their sales/support teams with demo scripts and escalation paths."<br><br>
-                                    <strong>Outcome framing:</strong> "They added a new revenue line, improved competitiveness in RFPs, and positioned a higher-value safety bundle that strengthened customer retention."
+                                    Streamax is built for fleets that care about measurable outcomes. Our customers use Streamax to reduce accident rates, speed up incident investigation, and improve fleet efficiency through a practical loop: detect risk with edge AI, capture reliable evidence, and turn events into coaching. The result is fewer disputes, fewer repeat incidents, and a safety program that actually gets adopted day-to-day.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">3) Public Transit / Bus Operators</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax is a trusted AI video safety partner for large-scale operations like public transit. We help bus operators reduce accidents and operating costs by combining in-vehicle video, edge AI, and a unified cloud platform that supports daily safety workflows. In markets like Latin America, major transit operators have adopted Streamax to improve safety performance and reduce incident-related expenses—especially at scale across thousands of buses.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">4) TSP / Channel Partner</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax partners with Telematics Service Providers to add a scalable video + AI safety layer to their portfolio. We help you offer a differentiated bundle that fleets want—without creating a heavy support burden—by providing reliable hardware, edge AI, and a platform designed for repeatable deployment and operations. The goal is simple: help you win more deals, increase ARPU, and improve retention with a solution that scales.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">5) "Why is it not cheap?" (Value + ROI)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax may not be the cheapest option, but we focus on total cost of ownership and long-term value. Cheaper systems become expensive when they miss critical events, generate noisy false alerts, or create operational overhead. Streamax is designed to deliver outcomes—customers have reported improvements like lower accident-related costs, reduced maintenance and insurance burden, and stronger uptime—often achieving payback within a multi-year program while improving safety for drivers and passengers.
                                 </div>
                             </div>
                         </div>
@@ -169,41 +307,152 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                         <span class="flow-subtitle">Cold Email & Calling</span>
                         
                         <div class="card" style="margin-left: 0;">
+                            <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> Email Templates</h4>
+                            
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">Cold Email Template (End Users)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">1) Business Professional (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Subject options:</strong>
-                                    <ul style="margin-top:5px; margin-bottom:15px; margin-left:20px; color: var(--text-grey);">
-                                        <li>Reducing claims friction with AI video evidence</li>
-                                        <li>A faster way to get incident video and coach drivers</li>
-                                        <li>Video telematics to improve safety outcomes</li>
-                                    </ul>
-                                    Hi {FirstName},<br><br>
-                                    I’m {YourName} with Streamax. We help fleets reduce safety risk and claims friction by combining in-vehicle cameras, edge AI, and a cloud platform that makes video evidence and coaching workflows easy to run.<br><br>
-                                    When an incident happens today, how long does it take your team to (a) find the right video, and (b) turn it into a coachable action?<br><br>
-                                    If it’s worth exploring, I can share how fleets use Streamax to:
-                                    <ul style="margin-top:5px; margin-bottom:15px; margin-left:20px; color: var(--text-grey);">
-                                        <li>speed up incident evidence and reduce disputes,</li>
-                                        <li>improve driver coaching consistency,</li>
-                                        <li>and increase visibility without adding operational overhead.</li>
-                                    </ul>
-                                    Open to a <strong>15–20 minute discovery call</strong> this week to see if it’s relevant? I can do {TimeOption1} or {TimeOption2}.<br><br>
-                                    Best,<br>
-                                    {YourName}<br>
-                                    {Title} | Streamax<br>
-                                    {Phone}
+                                    <strong>Subject:</strong> Reducing incidents and speeding up claims evidence for {company}<br><br>
+                                    Hi {first_name},<br><br>
+                                    I’m {your_name} with Streamax. We help fleets reduce safety risk and claims friction using AI-powered video telematics—reliable in-vehicle video plus a platform that makes it fast to find, review, and share evidence.<br><br>
+                                    If {company} is focused on improving driver safety, reducing preventable incidents, or shortening the time it takes to resolve claims, I’d like to learn how your team handles incidents today and where the workflow gets stuck.<br><br>
+                                    Would you be open to a 15–20 minute discovery call next week to see if Streamax is relevant for your fleet?
                                 </div>
                             </div>
 
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">Cold Calling Template (End Users)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">2) Business Casual (General)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Rep:</strong> "Hi {Name}, this is {YourName} from Streamax—did I catch you at an okay time for 30 seconds?"<br><br>
-                                    <strong>Prospect:</strong> {Yes/No}<br><br>
-                                    <strong>Rep (30s):</strong> "Streamax helps fleets reduce incidents and claims friction using AI video telematics—reliable cameras plus a cloud platform that makes evidence review and driver coaching fast and consistent."<br><br>
-                                    <strong>Rep (hook question):</strong> "Quick question—when an incident happens, is your bigger pain <em>getting the right video quickly</em>, <em>disputes/claims</em>, or <em>changing driver behavior through coaching</em>?"<br><br>
-                                    <strong>Rep (follow-up):</strong> "What are you using today, and what’s prompting you to look at alternatives now?"<br><br>
-                                    <strong>CTA:</strong> "If it makes sense, can we schedule a <strong>15–20 minute discovery call</strong> with the right stakeholders to map your current workflow and see if Streamax can help? I have {Option1} or {Option2}."
+                                    <strong>Subject:</strong> Quick question about your incident video workflow at {company}<br><br>
+                                    Hi {first_name},<br><br>
+                                    When something happens on the road, how long does it take your team to pull the right video and share it with the right people?<br><br>
+                                    Streamax helps fleets make that process fast and repeatable with AI video telematics—so safety teams spend less time chasing footage and more time preventing repeat incidents.<br><br>
+                                    If it’s worth exploring, open to a quick 15-minute call to see whether Streamax could help {company}?
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">3) Technical (Technical/IT)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Video telematics deployment + security requirements for {company}<br><br>
+                                    Hi {first_name},<br><br>
+                                    I’m {your_name} from Streamax. We support fleet deployments of AI video telematics with a focus on operational reliability and security—device provisioning at scale, role-based access control, auditability, and integration paths (APIs/exports) to fit existing systems.<br><br>
+                                    If you’re involved in evaluation for {company}, I’d like to understand your requirements around access control, data retention, connectivity, and integration needs (ELD/TMS/SSO/reporting).<br><br>
+                                    Would you be open to a 20-minute technical discovery to confirm fit and outline a deployment approach?
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">4) C-Level Professional (C-Suite)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Lowering accident exposure and claims costs for {company}<br><br>
+                                    Hi {first_name},<br><br>
+                                    Streamax helps fleets reduce accident exposure and improve safety performance by combining in-vehicle video, edge AI, and a platform built for fast evidence retrieval and consistent driver coaching.<br><br>
+                                    Leaders typically come to us when they want to reduce preventable incidents, shorten claims cycle time, and improve accountability without adding operational overhead.<br><br>
+                                    If those priorities align with {company}’s goals this year, would you be open to a brief 15–20 minute conversation to evaluate whether Streamax is a fit?
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">5) C-Level Casual (C-Suite)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Subject:</strong> Could we help {company} cut claims friction and repeat incidents?<br><br>
+                                    Hi {first_name},<br><br>
+                                    I’ll keep this short. Streamax helps fleets reduce incidents and make claims/evidence workflows faster with AI video telematics. The biggest difference is adoption: safety teams can find the right clip quickly, act on it, and coach drivers consistently.<br><br>
+                                    If you’re open, I’d love 15 minutes to learn what {company} is trying to improve right now—incident rates, claims cycle time, or coaching consistency—and see if Streamax is relevant.
+                                </div>
+                            </div>
+
+                            <h4 style="color: var(--secondary-blue); margin-top: 40px; margin-bottom: 15px;"><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> Cold Call Scripts</h4>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">1) Business Professional (Safety/Ops)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Book a 15–20 min discovery call.<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you with 30 seconds?<br>
+                                    <strong>Prospect:</strong> Sure, what’s this about?<br>
+                                    <strong>Rep:</strong> We help fleets reduce incidents and speed up claims evidence using AI video telematics—so safety teams can find the right video fast and coach drivers consistently. I’m calling to see if it’s relevant for {company}.<br>
+                                    <strong>Prospect:</strong> We already have cameras.<br>
+                                    <strong>Rep:</strong> Totally fair. Most fleets do. When teams talk to us, it’s usually because evidence is still slow to retrieve, or coaching isn’t consistent, or the system creates too much noise. Which one is most true for you today?<br>
+                                    <strong>Prospect:</strong> Evidence retrieval is slow.<br>
+                                    <strong>Rep:</strong> Got it. If we could show a workflow that cuts time-to-video and makes incidents easier to manage, would you be open to a 15–20 minute discovery call next week?<br>
+                                    <strong>Prospect:</strong> Maybe.<br>
+                                    <strong>Rep:</strong> Great—does Tuesday morning or Wednesday afternoon work better?<br><br>
+                                    <em>If they say “Not interested”:</em><br>
+                                    <strong>Rep:</strong> Understood. Before I let you go, is it not a priority this year, or is it more about timing?<br>
+                                    <strong>Prospect:</strong> Timing.<br>
+                                    <strong>Rep:</strong> Makes sense—when should I circle back?
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">2) Business Casual (Dispatcher / Ops)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Identify pain fast and secure meeting.<br><br>
+                                    <strong>Rep:</strong> Hey {first_name}, {your_name} from Streamax—did I catch you at a bad time?<br>
+                                    <strong>Prospect:</strong> What do you need?<br>
+                                    <strong>Rep:</strong> Quick one. When an incident happens, do you have the video you need within a few minutes—or does it turn into a hunt?<br>
+                                    <strong>Prospect:</strong> It’s definitely a hunt.<br>
+                                    <strong>Rep:</strong> That’s exactly what we fix. Streamax is AI video telematics that makes evidence retrieval fast and consistent, and helps reduce repeat incidents with coaching workflows.<br>
+                                    <strong>Prospect:</strong> We’re busy right now.<br>
+                                    <strong>Rep:</strong> Totally get it. That’s why I’m asking for just 15 minutes. If I can show you a faster incident workflow and what the rollout looks like, would next week be crazy?<br>
+                                    <strong>Prospect:</strong> Maybe.<br>
+                                    <strong>Rep:</strong> Fair—what day is typically lighter for you, Tuesday or Thursday?<br><br>
+                                    <em>If they say “Send info”:</em><br>
+                                    <strong>Rep:</strong> Happy to. What’s the best email? And should we lock 15 minutes so I can tailor it to your workflow?
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">3) Technical Audience (IT / Tech)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Book a 20-min technical discovery.<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. Do you have 30 seconds?<br>
+                                    <strong>Prospect:</strong> Okay—go ahead.<br>
+                                    <strong>Rep:</strong> Streamax provides AI video telematics with a focus on reliable deployment: provisioning at scale, role-based access control, and integration options like APIs and exports. I’m calling to see if {company} is evaluating video telematics upgrades this year.<br>
+                                    <strong>Prospect:</strong> We’re not changing anything.<br>
+                                    <strong>Rep:</strong> Understood. Quick check—are there any pain points you consistently hear from safety or ops about the current system?<br>
+                                    <strong>Prospect:</strong> Complaints about too many false alerts.<br>
+                                    <strong>Rep:</strong> Got it. If we do a 20-minute technical call, we can cover edge AI event tuning, alert noise reduction, and how data access and retention are controlled. Would next week be reasonable?<br>
+                                    <strong>Prospect:</strong> Possibly.<br>
+                                    <strong>Rep:</strong> Great. Monday 2:00 or Wednesday 11:00?<br><br>
+                                    <em>If they ask “Do you support SSO/security?”</em><br>
+                                    <strong>Rep:</strong> Yes—role-based access controls and enterprise security options. We can align your requirements on the call.
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">4) C-Level Professional (CEO/COO/CFO)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Executive alignment + meeting.<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} from Streamax. I’ll be brief—do you have 20 seconds?<br>
+                                    <strong>Prospect:</strong> Go ahead.<br>
+                                    <strong>Rep:</strong> Streamax helps fleets reduce accident exposure and claims friction using AI video telematics—reliable video evidence plus workflows that drive consistent coaching. I’m calling to ask one question: is {company} more focused this year on reducing incidents, reducing claims costs, or improving operational efficiency?<br>
+                                    <strong>Prospect:</strong> Claims costs.<br>
+                                    <strong>Rep:</strong> Makes sense. Faster, cleaner evidence and fewer disputed claims usually drive direct savings. If I could share a quick framework for ROI and rollout risk, would you be open to a 15-minute call?<br>
+                                    <strong>Prospect:</strong> Maybe—send me something.<br>
+                                    <strong>Rep:</strong> Happy to. To make it relevant, who owns safety and claims workflow day-to-day at {company}?<br>
+                                    <strong>Prospect:</strong> Our safety director.<br>
+                                    <strong>Rep:</strong> Great. If you’re okay with it, let’s schedule 15 minutes with them as well so we can align outcomes and timeline.
+                                </div>
+                            </div>
+
+                            <div class="script-box" style="border-left-color: var(--secondary-blue);">
+                                <div class="script-header"><span class="script-tag" style="color: var(--secondary-blue);">5) Driver / Small Fleet Owner (SMB)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    <strong>Goal:</strong> Book a short fit check; keep language simple.<br><br>
+                                    <strong>Rep:</strong> Hi {first_name}, this is {your_name} with Streamax. Did I catch you at a bad time?<br>
+                                    <strong>Prospect:</strong> What is this?<br>
+                                    <strong>Rep:</strong> Totally fair—quick one. Streamax is a dashcam + AI safety system that helps protect drivers with video evidence and alerts, and makes it easier to handle accidents or false claims.<br>
+                                    <strong>Prospect:</strong> I already have a dashcam.<br>
+                                    <strong>Rep:</strong> Many drivers do. The difference is whether it actually helps when something happens—can you pull the right clip fast, and does it help avoid repeat issues?<br>
+                                    <strong>Prospect:</strong> Getting clips is annoying.<br>
+                                    <strong>Rep:</strong> Got it. If I can show you a setup that makes clips easy to access and share, can we do a quick 10–15 minute call to see if it fits what you want?<br>
+                                    <strong>Prospect:</strong> Maybe.<br>
+                                    <strong>Rep:</strong> Great—what’s a better time, later today or tomorrow?<br><br>
+                                    <em>If they push back on price:</em><br>
+                                    <strong>Prospect:</strong> Sounds expensive.<br>
+                                    <strong>Rep:</strong> I hear you. Most people justify it with avoided headaches—faster proof when something happens and fewer repeat incidents. On a short call we can see if it’s even worth it for your situation.
                                 </div>
                             </div>
                         </div>
@@ -240,22 +489,43 @@ content = r"""        <!-- SECTION: PROSPECTING FLOW -->
                     <div class="flow-step-block fade-up">
                         <div class="flow-marker blue">4</div>
                         <div class="flow-title">Pitching Value</div>
-                        <span class="flow-subtitle">Elevator Pitch & Story</span>
+                        <span class="flow-subtitle">Elevator Pitches</span>
                         
                         <div class="card" style="margin-left: 0;">
+                            <h4 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fa-solid fa-microphone" style="margin-right: 8px;"></i> Elevator Pitches</h4>
+                            
                             <div class="script-box">
-                                <div class="script-header"><span class="script-tag">30-Second Elevator Pitch (End Users)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-header"><span class="script-tag">1) General (Safety + Evidence)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    "Streamax is an AI-powered video telematics solution that helps fleets prevent accidents, protect drivers, and reduce claims costs. We combine reliable in-vehicle hardware, edge AI, and a unified cloud platform so your team can quickly find video evidence, coach drivers consistently, and improve safety performance without creating extra operational burden."
+                                    Streamax is an AI-powered video telematics solution that helps fleets prevent incidents and resolve claims faster. We combine reliable in-vehicle cameras with edge AI and a cloud platform so your team can quickly find the right video, understand what happened, and coach drivers consistently—turning every event into a repeatable safety improvement.
                                 </div>
                             </div>
 
-                            <div class="script-box" style="border-left-color: var(--primary-green);">
-                                <div class="script-header"><span class="script-tag" style="color: var(--primary-green);">Example Value Story (End Users)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">2) Claims & Risk (Insurance / Litigation)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
                                 <div class="script-text">
-                                    <strong>Scenario:</strong> "A fleet was spending too much time handling incidents—video was hard to find, disputes dragged on, and safety coaching wasn’t consistent."<br><br>
-                                    <strong>What we did:</strong> "We deployed Streamax cameras and the cloud platform to streamline evidence capture and review, set up event workflows, and aligned coaching routines."<br><br>
-                                    <strong>Outcome framing:</strong> "They shortened time-to-evidence, improved safety coaching adoption, and strengthened their position in claims disputes with clearer incident visibility."
+                                    Streamax helps fleets reduce risk by making video evidence easy to capture, retrieve, and share. When an incident happens, your team can pull the right clip fast, reduce disputes, and strengthen your position in claims. Over time, the same event data supports better coaching and fewer repeat incidents—so you lower exposure without adding operational overhead.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">3) Operations-Focused (Efficiency + Downtime)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax improves fleet operations by turning video and AI into actionable workflows. Instead of chasing footage, your safety and ops teams get a structured process to identify risk, review incidents quickly, and reduce preventable downtime—especially from repeat events and minor collisions. It’s safety technology designed to be used every day, not just after accidents.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">4) Driver Coaching (Behavior Change)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax helps safety managers run a coaching program that actually sticks. We detect risk with edge AI, capture the right moments on video, and make it simple to turn events into coaching conversations. The result is more consistent coaching, fewer repeat behaviors, and a measurable improvement in safety culture across the fleet.
+                                </div>
+                            </div>
+
+                            <div class="script-box">
+                                <div class="script-header"><span class="script-tag">5) "Not the cheapest" (TCO + Adoption)</span><button class="copy-btn" onclick="copyText(this)"><i data-lucide="copy"></i> Copy</button></div>
+                                <div class="script-text">
+                                    Streamax isn’t built to be the cheapest camera—it’s built to deliver outcomes. Cheaper systems become expensive when video is hard to access, alerts are noisy, or the platform creates extra work. Streamax focuses on reliability, evidence quality, and adoption—so your team can act fast when it matters and improve safety over time with a lower total cost of ownership.
                                 </div>
                             </div>
                         </div>
