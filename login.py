@@ -9,6 +9,8 @@ def verify_streamax_credentials(email, password):
         return True, "Jerry"
     if email == "hekun_test" and password == "testme":
         return True, "Hekun"
+    if email == "zntang_test" and password == "testme":
+        return True, "ZNTang"
         
     if not email.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
@@ -27,6 +29,8 @@ def verify_streamax_credentials(email, password):
             return True, "Jerry"
         elif email_lower == "hekun@streamax.com":
             return True, "Hekun"
+        elif email_lower == "zntang@streamax.com":
+            return True, "ZNTang"
             
         return True, "Success"
     except smtplib.SMTPAuthenticationError:
@@ -119,7 +123,7 @@ def render_login():
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>做大做强，创造辉煌</h2>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
                 <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
@@ -142,6 +146,25 @@ def render_login():
         
         time.sleep(8)
         st.session_state['show_hekun_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+
+    # 3. ZNTang Animation (Easter Egg)
+    elif st.session_state.get('show_zntang_anim', False):
+        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
+            
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>今年一个亿，明年三个亿，后年上市</h2>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        time.sleep(8)
+        st.session_state['show_zntang_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
 
@@ -174,7 +197,10 @@ def render_login():
                         is_valid, message = verify_streamax_credentials(email_input, pass_input)
                         
                     if is_valid:
+                        # SAVING CREDENTIALS TO BE USED LATER IN THE DRIP MAILER!
                         st.session_state['user_email'] = email_input
+                        st.session_state['user_password'] = pass_input
+                        st.session_state['auth_mode'] = message
                         
                         # Trigger appropriate transition animation state
                         if message == "Jerry":
@@ -182,6 +208,9 @@ def render_login():
                             st.rerun()
                         elif message == "Hekun":
                             st.session_state['show_hekun_anim'] = True
+                            st.rerun()
+                        elif message == "ZNTang":
+                            st.session_state['show_zntang_anim'] = True
                             st.rerun()
                         else:
                             st.session_state['authenticated'] = True
