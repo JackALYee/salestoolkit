@@ -588,7 +588,7 @@ part2 = r"""
 
                         // 3. Format & Update DOM
                         const formatCurr = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-                        const formatMo = (num) => isFinite(num) ? num.toFixed(1) + " mo" : "Never";
+                        const formatMo = (num) => isFinite(num) ? num.toFixed(1) + " mo" : "Never Paid Back";
                         const formatPct = (num) => new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(num);
 
                         document.getElementById('out-sub-fixed').innerText = formatCurr(fTotal);
@@ -598,7 +598,6 @@ part2 = r"""
                         document.getElementById('out-sub-rev').innerText = formatCurr(rTotal);
                         document.getElementById('out-sub-arr').innerText = formatCurr(arr);
                         
-                        document.getElementById('out-sub-payback').innerText = formatMo(payback);
                         document.getElementById('out-sub-profit-mo').innerText = formatMo(pureProfitPeriod);
                         document.getElementById('out-sub-profit').innerText = formatCurr(totalProfit);
 
@@ -615,13 +614,15 @@ part2 = r"""
                             document.getElementById('out-sub-tmargin').style.color = 'var(--primary-green)'; // Green
                         }
 
-                        // Color handling for Profit/Payback
+                        // Color and Text handling for Profit/Payback
                         if (totalProfit < 0) {
                             document.getElementById('out-sub-profit').style.color = '#ff4757'; // Red
                             document.getElementById('out-sub-payback').style.color = '#ff4757';
+                            document.getElementById('out-sub-payback').innerText = 'Never Paid Back';
                         } else {
                             document.getElementById('out-sub-profit').style.color = 'var(--primary-green)';
                             document.getElementById('out-sub-payback').style.color = 'white';
+                            document.getElementById('out-sub-payback').innerText = formatMo(payback);
                         }
 
                         // 4. Update Chart
@@ -702,7 +703,17 @@ part2 = r"""
                                         bodySpacing: 6,
                                         footerMarginTop: 10,
                                         footerFont: { size: 14, weight: 'bold', family: '"Inter", sans-serif' },
-                                        footerColor: '#FFFFFF', // Keep the text bright to read easily
+                                        footerColor: function(context) {
+                                            try {
+                                                const items = context.tooltip.dataPoints || context.tooltipItems;
+                                                if (items && items.length === 2) {
+                                                    const rev = items[0].parsed.y;
+                                                    const cost = items[1].parsed.y;
+                                                    return (rev - cost >= 0) ? '#2AF598' : '#ff4757';
+                                                }
+                                            } catch(e) {}
+                                            return '#FFFFFF';
+                                        },
                                         callbacks: {
                                             label: function(context) {
                                                 let label = context.dataset.label || '';
