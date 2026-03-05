@@ -263,7 +263,7 @@ part2 = r"""
                         
                         <!-- Internal Warning Message -->
                         <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg inline-flex items-center mt-6 font-bold text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                            <i class="fas fa-exclamation-triangle mr-2 text-lg"></i> This is Internal Calculator. DO NOT SHOW RESULTS TO CLIENTS
+                            <i class="fas fa-exclamation-triangle mr-2 text-lg"></i> This is for internal calculation only. DO NOT SHOW RESULTS TO CLIENTS
                         </div>
                     </div>
 
