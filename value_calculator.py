@@ -458,12 +458,12 @@ part2 = r"""
                                     <div class="text-lg font-bold text-[var(--secondary-blue)]" id="out-sub-rev">$0</div>
                                 </div>
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-[var(--primary-green)]/70">
-                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Monthly Margin</div>
-                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-margin">$0</div>
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Mo. Profit Margin</div>
+                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-margin">0%</div>
                                 </div>
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-[var(--primary-green)]">
-                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Margin</div>
-                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-tmargin">$0</div>
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Profit Margin</div>
+                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-tmargin">0%</div>
                                 </div>
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-[#8b5cf6]">
                                     <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">ARR</div>
@@ -501,10 +501,10 @@ part2 = r"""
                                 <div class="text-center pb-2 text-[0.8rem] space-y-3 text-gray-400 leading-relaxed">
                                     <div>$F_{total} = \class{var-sub-hw}{C_{hw}} + \class{var-sub-del}{C_{del}} + \class{var-sub-fix}{C_{fix}}$</div>
                                     <div>$M_{cost} = \class{var-sub-plat}{C_{plat}} + (\class{var-sub-datac}{C_{data}} \times \class{var-sub-dataa}{A_{data}}) + \class{var-sub-othermo}{C_{other}}$</div>
-                                    <div>$Margin_{mo} = \class{var-sub-fee}{Fee_{mo}} - M_{cost}$ &nbsp; | &nbsp; $Margin_{total} = Margin_{mo} \times \class{var-sub-months}{T_{mo}}$</div>
+                                    <div>$Margin_{mo}(\%) = \frac{\class{var-sub-fee}{Fee_{mo}} - M_{cost}}{\class{var-sub-fee}{Fee_{mo}}}$ &nbsp; | &nbsp; $Margin_{total}(\%) = \frac{Profit}{R_{total}}$</div>
                                     <div>$R_{total} = \class{var-sub-fee}{Fee_{mo}} \times \class{var-sub-months}{T_{mo}}$ &nbsp; | &nbsp; $ARR = \class{var-sub-fee}{Fee_{mo}} \times 12$</div>
-                                    <div>$P_{payback} = \frac{F_{total}}{Margin_{mo}}$ &nbsp; | &nbsp; $P_{profit} = \class{var-sub-months}{T_{mo}} - P_{payback}$</div>
-                                    <div>$Profit = Margin_{total} - F_{total}$</div>
+                                    <div>$P_{payback} = \frac{F_{total}}{\class{var-sub-fee}{Fee_{mo}} - M_{cost}}$ &nbsp; | &nbsp; $P_{profit} = \class{var-sub-months}{T_{mo}} - P_{payback}$</div>
+                                    <div>$Profit = (\class{var-sub-fee}{Fee_{mo}} - M_{cost}) \times \class{var-sub-months}{T_{mo}} - F_{total}$</div>
                                 </div>
                             </div>
                         </div>
@@ -518,7 +518,8 @@ part2 = r"""
                     // Custom Plugin to draw vertical profit line on hover
                     const profitLinePlugin = {
                         id: 'profitLine',
-                        afterDatasetsDraw: (chart) => {
+                        // Hooking into afterDraw ensures the custom profit badge renders ON TOP of the standard tooltip
+                        afterDraw: (chart) => {
                             if (chart.tooltip?._active?.length) {
                                 const ctx = chart.ctx;
                                 const activePoint = chart.tooltip._active[0];
@@ -548,23 +549,33 @@ part2 = r"""
                                 ctx.stroke();
                                 
                                 // Draw numerical profit box
-                                const midY = (yRev + yCost) / 2;
+                                let midY = (yRev + yCost) / 2;
                                 ctx.font = 'bold 12px "Inter", sans-serif';
-                                ctx.textAlign = 'left';
                                 ctx.textBaseline = 'middle';
                                 const text = (profit >= 0 ? '+$' : '-$') + Math.abs(profit).toLocaleString('en-US', {maximumFractionDigits: 0});
                                 
                                 const textWidth = ctx.measureText(text).width;
-                                ctx.fillStyle = 'rgba(5, 8, 16, 0.9)';
+                                const rectWidth = textWidth + 16;
+                                const rectHeight = 28;
+                                
+                                // Boundary check: If moving too far right, flip the label to the left side
+                                const chartRight = chart.chartArea.right;
+                                const isRightAligned = (x + rectWidth + 15) > chartRight;
+                                
+                                const rectX = isRightAligned ? x - rectWidth - 10 : x + 10;
+                                const textX = isRightAligned ? x - rectWidth - 2 : x + 18;
+                                
+                                ctx.fillStyle = 'rgba(5, 8, 16, 0.95)';
                                 ctx.beginPath();
-                                ctx.roundRect(x + 10, midY - 14, textWidth + 16, 28, 6);
+                                ctx.roundRect(rectX, midY - (rectHeight/2), rectWidth, rectHeight, 6);
                                 ctx.fill();
-                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
                                 ctx.lineWidth = 1;
                                 ctx.stroke();
                                 
+                                ctx.textAlign = 'left';
                                 ctx.fillStyle = profit >= 0 ? '#2AF598' : '#ff4757';
-                                ctx.fillText(text, x + 18, midY);
+                                ctx.fillText(text, textX, midY);
                                 
                                 ctx.restore();
                             }
@@ -590,26 +601,30 @@ part2 = r"""
                         const mCost = platCost + (dataCost * dataAmt) + otherMo;
                         const rTotal = moFee * months;
                         
-                        const margin = moFee - mCost;
-                        const totalMargin = margin * months;
-                        let payback = margin > 0 ? (fTotal / margin) : Infinity;
+                        const marginRaw = moFee - mCost;
+                        let payback = marginRaw > 0 ? (fTotal / marginRaw) : Infinity;
                         
                         let pureProfitPeriod = 0;
-                        if (margin > 0 && months > payback) {
+                        if (marginRaw > 0 && months > payback) {
                             pureProfitPeriod = months - payback;
                         }
                         
-                        const totalProfit = totalMargin - fTotal;
+                        const totalProfit = (marginRaw * months) - fTotal;
                         const arr = moFee * 12;
+
+                        // Calculate Profit Margins (Percentages)
+                        const moMarginPct = moFee > 0 ? marginRaw / moFee : 0;
+                        const totalMarginPct = rTotal > 0 ? totalProfit / rTotal : 0;
 
                         // 3. Format & Update DOM
                         const formatCurr = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
                         const formatMo = (num) => isFinite(num) ? num.toFixed(1) + " mo" : "Never";
+                        const formatPct = (num) => new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(num);
 
                         document.getElementById('out-sub-fixed').innerText = formatCurr(fTotal);
                         document.getElementById('out-sub-mcost').innerText = formatCurr(mCost);
-                        document.getElementById('out-sub-margin').innerText = formatCurr(margin);
-                        document.getElementById('out-sub-tmargin').innerText = formatCurr(totalMargin);
+                        document.getElementById('out-sub-margin').innerText = formatPct(moMarginPct);
+                        document.getElementById('out-sub-tmargin').innerText = formatPct(totalMarginPct);
                         document.getElementById('out-sub-rev').innerText = formatCurr(rTotal);
                         document.getElementById('out-sub-arr').innerText = formatCurr(arr);
                         
@@ -618,11 +633,15 @@ part2 = r"""
                         document.getElementById('out-sub-profit').innerText = formatCurr(totalProfit);
 
                         // Color handling for Margin
-                        if (margin < 0) {
+                        if (moMarginPct < 0) {
                             document.getElementById('out-sub-margin').style.color = '#ff4757'; // Red
-                            document.getElementById('out-sub-tmargin').style.color = '#ff4757'; // Red
                         } else {
                             document.getElementById('out-sub-margin').style.color = 'var(--primary-green)'; // Green
+                        }
+
+                        if (totalMarginPct < 0) {
+                            document.getElementById('out-sub-tmargin').style.color = '#ff4757'; // Red
+                        } else {
                             document.getElementById('out-sub-tmargin').style.color = 'var(--primary-green)'; // Green
                         }
 
