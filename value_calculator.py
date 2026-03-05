@@ -515,10 +515,10 @@ part2 = r"""
                 <script>
                     let subChartInstance = null;
 
-                    // Custom Plugin to draw vertical profit line on hover
+                    // Custom Plugin to draw ONLY the vertical dashed line connecting the two dots
+                    // The tooltip handles rendering the actual profit number dynamically
                     const profitLinePlugin = {
                         id: 'profitLine',
-                        // Hooking into afterDraw ensures the custom profit badge renders ON TOP of the standard tooltip
                         afterDraw: (chart) => {
                             if (chart.tooltip?._active?.length) {
                                 const ctx = chart.ctx;
@@ -547,36 +547,6 @@ part2 = r"""
                                 ctx.strokeStyle = profit >= 0 ? 'rgba(42, 245, 152, 0.8)' : 'rgba(255, 71, 87, 0.8)';
                                 ctx.setLineDash([4, 4]);
                                 ctx.stroke();
-                                
-                                // Draw numerical profit box
-                                let midY = (yRev + yCost) / 2;
-                                ctx.font = 'bold 12px "Inter", sans-serif';
-                                ctx.textBaseline = 'middle';
-                                const text = (profit >= 0 ? '+$' : '-$') + Math.abs(profit).toLocaleString('en-US', {maximumFractionDigits: 0});
-                                
-                                const textWidth = ctx.measureText(text).width;
-                                const rectWidth = textWidth + 16;
-                                const rectHeight = 28;
-                                
-                                // Boundary check: If moving too far right, flip the label to the left side
-                                const chartRight = chart.chartArea.right;
-                                const isRightAligned = (x + rectWidth + 15) > chartRight;
-                                
-                                const rectX = isRightAligned ? x - rectWidth - 10 : x + 10;
-                                const textX = isRightAligned ? x - rectWidth - 2 : x + 18;
-                                
-                                ctx.fillStyle = 'rgba(5, 8, 16, 0.95)';
-                                ctx.beginPath();
-                                ctx.roundRect(rectX, midY - (rectHeight/2), rectWidth, rectHeight, 6);
-                                ctx.fill();
-                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-                                ctx.lineWidth = 1;
-                                ctx.stroke();
-                                
-                                ctx.textAlign = 'left';
-                                ctx.fillStyle = profit >= 0 ? '#2AF598' : '#ff4757';
-                                ctx.fillText(text, textX, midY);
-                                
                                 ctx.restore();
                             }
                         }
@@ -724,11 +694,15 @@ part2 = r"""
                                         labels: { boxWidth: 12, usePointStyle: true }
                                     },
                                     tooltip: {
-                                        backgroundColor: 'rgba(5, 8, 16, 0.9)',
+                                        backgroundColor: 'rgba(5, 8, 16, 0.95)',
                                         titleColor: '#2AF598',
                                         borderColor: 'rgba(255,255,255,0.1)',
                                         borderWidth: 1,
-                                        padding: 10,
+                                        padding: 12,
+                                        bodySpacing: 6,
+                                        footerMarginTop: 10,
+                                        footerFont: { size: 14, weight: 'bold', family: '"Inter", sans-serif' },
+                                        footerColor: '#FFFFFF', // Keep the text bright to read easily
                                         callbacks: {
                                             label: function(context) {
                                                 let label = context.dataset.label || '';
@@ -737,6 +711,18 @@ part2 = r"""
                                                     label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
                                                 }
                                                 return label;
+                                            },
+                                            // The footer callback injects the dynamically calculated profit right inside the tooltip!
+                                            footer: function(tooltipItems) {
+                                                if (tooltipItems.length === 2) {
+                                                    const rev = tooltipItems[0].parsed.y;
+                                                    const cost = tooltipItems[1].parsed.y;
+                                                    const profit = rev - cost;
+                                                    const sign = profit >= 0 ? '+$' : '-$';
+                                                    const val = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.abs(profit));
+                                                    return `Total Profit: ${sign}${val}`;
+                                                }
+                                                return '';
                                             }
                                         }
                                     }
