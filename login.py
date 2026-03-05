@@ -136,7 +136,7 @@ def render_login():
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         
         # Reusable C-Suite Badge and Loading Text
-        gaoguan_badge = "<div style='background: linear-gradient(135deg, #FFD700 0%, #F7971E 100%); color: #050810; padding: 6px 16px; border-radius: 30px; font-weight: 800; font-size: 0.9rem; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4); display: inline-flex; align-items: center; letter-spacing: 1px;'><span style='font-size: 1.1rem; margin-right: 6px;'></span> 高管权限登陆</div>"
+        gaoguan_badge = "<div style='background: linear-gradient(135deg, #FFD700 0%, #F7971E 100%); color: #050810; padding: 6px 16px; border-radius: 30px; font-weight: 800; font-size: 0.9rem; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4); display: inline-flex; align-items: center; letter-spacing: 1px;'><span style='font-size: 1.1rem; margin-right: 6px;'>☑️</span> 高管权限登陆</div>"
         logging_in_text = "<p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 15px;'>Logging in...</p>"
         
         if csuite_mode == "Jerry":
