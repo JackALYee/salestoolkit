@@ -4,24 +4,15 @@ import ssl
 import time
 
 def verify_streamax_credentials(email, password):
-    email_lower = email.lower()
-    
-    # Test Easter Egg Overrides (including generic C-Suite tests)
-    test_accounts = {
-        "jerry_test": "Jerry",
-        "hekun_test": "Hekun",
-        "zntang_test": "ZNTang",
-        "liheng_test": "C_Suite",
-        "xdwang_test": "C_Suite",
-        "alan_test": "C_Suite",
-        "melanie_test": "C_Suite",
-        "zjzhao_test": "C_Suite"
-    }
-    
-    if email_lower in test_accounts and password == "testme":
-        return True, test_accounts[email_lower]
+    # Test Easter Egg Overrides
+    if email == "jerry_test" and password == "testme":
+        return True, "Jerry"
+    if email == "hekun_test" and password == "testme":
+        return True, "Hekun"
+    if email == "zntang_test" and password == "testme":
+        return True, "ZNTang"
         
-    if not email_lower.endswith("@streamax.com"):
+    if not email.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
     if not password:
         return False, "Password cannot be empty."
@@ -29,23 +20,17 @@ def verify_streamax_credentials(email, password):
     try:
         context = ssl.create_default_context()
         server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=10, context=context)
-        server.login(email_lower, password)
+        server.login(email, password)
         server.quit()
         
-        # C-Suites Directory Mapping
-        c_suites_directory = {
-            "jerry@streamax.com": "Jerry",
-            "hekun@streamax.com": "Hekun",
-            "zntang@streamax.com": "ZNTang",
-            "liheng@streamax.com": "C_Suite",
-            "xdwang@streamax.com": "C_Suite",
-            "alan@streamax.com": "C_Suite",
-            "melanie@streamax.com": "C_Suite",
-            "zjzhao@streamax.com": "C_Suite"
-        }
-        
-        if email_lower in c_suites_directory:
-            return True, c_suites_directory[email_lower]
+        # Special Easter Egg Logins (Must pass real SMTP Auth first!)
+        email_lower = email.lower()
+        if email_lower == "jerry@streamax.com":
+            return True, "Jerry"
+        elif email_lower == "hekun@streamax.com":
+            return True, "Hekun"
+        elif email_lower == "zntang@streamax.com":
+            return True, "ZNTang"
             
         return True, "Success"
     except smtplib.SMTPAuthenticationError:
@@ -129,60 +114,61 @@ def render_login():
         unsafe_allow_html=True
     )
         
-    # --- C-SUITE ANIMATION HANDLER ---
-    csuite_mode = st.session_state.get('show_csuite_anim', False)
-    
-    if csuite_mode:
-        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        
-        # Reusable C-Suite Badge and Loading Text
-        gaoguan_badge = "<div style='background: linear-gradient(135deg, #FFD700 0%, #F7971E 100%); color: #050810; padding: 6px 16px; border-radius: 30px; font-weight: 800; font-size: 0.9rem; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4); display: inline-flex; align-items: center; letter-spacing: 1px;'><span style='font-size: 1.1rem; margin-right: 6px;'>☑️</span> 高管权限登陆</div>"
-        logging_in_text = "<p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 15px;'>Logging in...</p>"
-        
-        if csuite_mode == "Jerry":
-            img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
-            content_html = f"""
-                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6); margin-bottom: 25px;'>
-                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px; margin-bottom: 25px;'>Drawing...</div>
-                {gaoguan_badge}
-                <h2 style='color: #2AF598; margin-top: 5px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
-            """
-        elif csuite_mode == "Hekun":
-            content_html = f"""
-                <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598; margin-bottom: 35px;'>💰</div>
-                {gaoguan_badge}
-                <h2 style='color: #2AF598; margin-top: 5px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
-            """
-        elif csuite_mode == "ZNTang":
-            img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
-            content_html = f"""
-                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6); margin-bottom: 25px;'>
-                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px; margin-bottom: 25px;'>Drawing...</div>
-                {gaoguan_badge}
-                <h2 style='color: #2AF598; margin-top: 5px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>今年一个亿，明年三个亿，后年上市</h2>
-            """
-        else:
-            # Generic C-Suite Welcome
-            content_html = f"""
-                <div style='font-size: 80px; margin-bottom: 25px; filter: drop-shadow(0 10px 25px rgba(255, 215, 0, 0.3));'>🏢</div>
-                {gaoguan_badge}
-                <h2 style='color: #2AF598; margin-top: 5px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎高管检阅销售Toolkit</h2>
-            """
+    # 1. Jerry Animation
+    if st.session_state.get('show_jerry_anim', False):
+        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
             
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                {content_html}
-                {logging_in_text}
+                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
         
-        # All C-Suite members get the 8-second animation
         time.sleep(8)
-        st.session_state['show_csuite_anim'] = False
+        st.session_state['show_jerry_anim'] = False
         st.session_state['authenticated'] = True
         st.rerun()
 
-    # --- Standard Form View ---
+    # 2. Hekun Animation
+    elif st.session_state.get('show_hekun_anim', False):
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown("""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598;'>💰</div>
+                <h2 style='color: #2AF598; margin-top: 40px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        time.sleep(8)
+        st.session_state['show_hekun_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+
+    # 3. ZNTang Animation (Easter Egg)
+    elif st.session_state.get('show_zntang_anim', False):
+        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
+            
+        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
+                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
+                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>今年一个亿，明年三个亿，后年上市</h2>
+                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        time.sleep(8)
+        st.session_state['show_zntang_anim'] = False
+        st.session_state['authenticated'] = True
+        st.rerun()
+
+    # Show Standard Form View
     else:
         st.write("<br><br>", unsafe_allow_html=True) # Vertical spacing
         
@@ -211,13 +197,20 @@ def render_login():
                         is_valid, message = verify_streamax_credentials(email_input, pass_input)
                         
                     if is_valid:
+                        # SAVING CREDENTIALS TO BE USED LATER IN THE DRIP MAILER!
                         st.session_state['user_email'] = email_input
                         st.session_state['user_password'] = pass_input
                         st.session_state['auth_mode'] = message
                         
-                        # Check if returned message indicates any C-Suite role
-                        if message in ["Jerry", "Hekun", "ZNTang", "C_Suite"]:
-                            st.session_state['show_csuite_anim'] = message
+                        # Trigger appropriate transition animation state
+                        if message == "Jerry":
+                            st.session_state['show_jerry_anim'] = True
+                            st.rerun()
+                        elif message == "Hekun":
+                            st.session_state['show_hekun_anim'] = True
+                            st.rerun()
+                        elif message == "ZNTang":
+                            st.session_state['show_zntang_anim'] = True
                             st.rerun()
                         else:
                             st.session_state['authenticated'] = True
