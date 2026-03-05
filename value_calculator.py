@@ -260,6 +260,11 @@ part2 = r"""
                         <p class="text-[var(--text-grey)] text-base md:text-lg max-w-3xl mx-auto font-light leading-relaxed">
                             Model out pricing, fixed costs, and recurring margins to instantly visualize your payback period and contract profitability.
                         </p>
+                        
+                        <!-- Internal Warning Message -->
+                        <div class="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg inline-flex items-center mt-6 font-bold text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                            <i class="fas fa-exclamation-triangle mr-2 text-lg"></i> This is Internal Calculator. DO NOT SHOW RESULTS TO CLIENTS
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
@@ -439,7 +444,7 @@ part2 = r"""
                         <div class="lg:col-span-7 p-6 md:p-10 flex flex-col justify-start rounded-b-2xl lg:rounded-bl-none lg:rounded-br-2xl fade-up delay-3 relative bg-black/20">
                             
                             <!-- Key Metrics Grid -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-red-400/50">
                                     <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Fixed Cost</div>
                                     <div class="text-lg font-bold text-red-400" id="out-sub-fixed">$0</div>
@@ -451,6 +456,14 @@ part2 = r"""
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-[var(--secondary-blue)]">
                                     <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Revenue</div>
                                     <div class="text-lg font-bold text-[var(--secondary-blue)]" id="out-sub-rev">$0</div>
+                                </div>
+                                <div class="glass-panel p-4 text-center border-t-2 border-t-[var(--primary-green)]/70">
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Monthly Margin</div>
+                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-margin">$0</div>
+                                </div>
+                                <div class="glass-panel p-4 text-center border-t-2 border-t-[var(--primary-green)]">
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Margin</div>
+                                    <div class="text-lg font-bold text-[var(--primary-green)]" id="out-sub-tmargin">$0</div>
                                 </div>
                                 <div class="glass-panel p-4 text-center border-t-2 border-t-[#8b5cf6]">
                                     <div class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">ARR</div>
@@ -488,9 +501,10 @@ part2 = r"""
                                 <div class="text-center pb-2 text-[0.8rem] space-y-3 text-gray-400 leading-relaxed">
                                     <div>$F_{total} = \class{var-sub-hw}{C_{hw}} + \class{var-sub-del}{C_{del}} + \class{var-sub-fix}{C_{fix}}$</div>
                                     <div>$M_{cost} = \class{var-sub-plat}{C_{plat}} + (\class{var-sub-datac}{C_{data}} \times \class{var-sub-dataa}{A_{data}}) + \class{var-sub-othermo}{C_{other}}$</div>
+                                    <div>$Margin_{mo} = \class{var-sub-fee}{Fee_{mo}} - M_{cost}$ &nbsp; | &nbsp; $Margin_{total} = Margin_{mo} \times \class{var-sub-months}{T_{mo}}$</div>
                                     <div>$R_{total} = \class{var-sub-fee}{Fee_{mo}} \times \class{var-sub-months}{T_{mo}}$ &nbsp; | &nbsp; $ARR = \class{var-sub-fee}{Fee_{mo}} \times 12$</div>
-                                    <div>$P_{payback} = \frac{F_{total}}{\class{var-sub-fee}{Fee_{mo}} - M_{cost}}$ &nbsp; | &nbsp; $P_{profit} = \class{var-sub-months}{T_{mo}} - P_{payback}$</div>
-                                    <div>$Profit = (\class{var-sub-fee}{Fee_{mo}} - M_{cost}) \times \class{var-sub-months}{T_{mo}} - F_{total}$</div>
+                                    <div>$P_{payback} = \frac{F_{total}}{Margin_{mo}}$ &nbsp; | &nbsp; $P_{profit} = \class{var-sub-months}{T_{mo}} - P_{payback}$</div>
+                                    <div>$Profit = Margin_{total} - F_{total}$</div>
                                 </div>
                             </div>
                         </div>
@@ -500,6 +514,62 @@ part2 = r"""
                 <!-- Subscription Calculator JS Logic -->
                 <script>
                     let subChartInstance = null;
+
+                    // Custom Plugin to draw vertical profit line on hover
+                    const profitLinePlugin = {
+                        id: 'profitLine',
+                        afterDatasetsDraw: (chart) => {
+                            if (chart.tooltip?._active?.length) {
+                                const ctx = chart.ctx;
+                                const activePoint = chart.tooltip._active[0];
+                                const index = activePoint.index;
+                                
+                                const metaRev = chart.getDatasetMeta(0);
+                                const metaCost = chart.getDatasetMeta(1);
+                                
+                                if(!metaRev.data[index] || !metaCost.data[index]) return;
+
+                                const x = metaRev.data[index].x;
+                                const yRev = metaRev.data[index].y;
+                                const yCost = metaCost.data[index].y;
+                                
+                                const revVal = chart.data.datasets[0].data[index];
+                                const costVal = chart.data.datasets[1].data[index];
+                                const profit = revVal - costVal;
+
+                                ctx.save();
+                                // Draw the vertical dashed line
+                                ctx.beginPath();
+                                ctx.moveTo(x, yRev);
+                                ctx.lineTo(x, yCost);
+                                ctx.lineWidth = 2;
+                                ctx.strokeStyle = profit >= 0 ? 'rgba(42, 245, 152, 0.8)' : 'rgba(255, 71, 87, 0.8)';
+                                ctx.setLineDash([4, 4]);
+                                ctx.stroke();
+                                
+                                // Draw numerical profit box
+                                const midY = (yRev + yCost) / 2;
+                                ctx.font = 'bold 12px "Inter", sans-serif';
+                                ctx.textAlign = 'left';
+                                ctx.textBaseline = 'middle';
+                                const text = (profit >= 0 ? '+$' : '-$') + Math.abs(profit).toLocaleString('en-US', {maximumFractionDigits: 0});
+                                
+                                const textWidth = ctx.measureText(text).width;
+                                ctx.fillStyle = 'rgba(5, 8, 16, 0.9)';
+                                ctx.beginPath();
+                                ctx.roundRect(x + 10, midY - 14, textWidth + 16, 28, 6);
+                                ctx.fill();
+                                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                                
+                                ctx.fillStyle = profit >= 0 ? '#2AF598' : '#ff4757';
+                                ctx.fillText(text, x + 18, midY);
+                                
+                                ctx.restore();
+                            }
+                        }
+                    };
 
                     function calculateSub() {
                         // 1. Get Inputs (Fallback to 0 if NaN)
@@ -521,6 +591,7 @@ part2 = r"""
                         const rTotal = moFee * months;
                         
                         const margin = moFee - mCost;
+                        const totalMargin = margin * months;
                         let payback = margin > 0 ? (fTotal / margin) : Infinity;
                         
                         let pureProfitPeriod = 0;
@@ -528,7 +599,7 @@ part2 = r"""
                             pureProfitPeriod = months - payback;
                         }
                         
-                        const totalProfit = (margin * months) - fTotal;
+                        const totalProfit = totalMargin - fTotal;
                         const arr = moFee * 12;
 
                         // 3. Format & Update DOM
@@ -537,12 +608,23 @@ part2 = r"""
 
                         document.getElementById('out-sub-fixed').innerText = formatCurr(fTotal);
                         document.getElementById('out-sub-mcost').innerText = formatCurr(mCost);
+                        document.getElementById('out-sub-margin').innerText = formatCurr(margin);
+                        document.getElementById('out-sub-tmargin').innerText = formatCurr(totalMargin);
                         document.getElementById('out-sub-rev').innerText = formatCurr(rTotal);
                         document.getElementById('out-sub-arr').innerText = formatCurr(arr);
                         
                         document.getElementById('out-sub-payback').innerText = formatMo(payback);
                         document.getElementById('out-sub-profit-mo').innerText = formatMo(pureProfitPeriod);
                         document.getElementById('out-sub-profit').innerText = formatCurr(totalProfit);
+
+                        // Color handling for Margin
+                        if (margin < 0) {
+                            document.getElementById('out-sub-margin').style.color = '#ff4757'; // Red
+                            document.getElementById('out-sub-tmargin').style.color = '#ff4757'; // Red
+                        } else {
+                            document.getElementById('out-sub-margin').style.color = 'var(--primary-green)'; // Green
+                            document.getElementById('out-sub-tmargin').style.color = 'var(--primary-green)'; // Green
+                        }
 
                         // Color handling for Profit/Payback
                         if (totalProfit < 0) {
@@ -581,6 +663,7 @@ part2 = r"""
 
                         subChartInstance = new Chart(ctx, {
                             type: 'line',
+                            plugins: [profitLinePlugin],
                             data: {
                                 labels: labels,
                                 datasets: [
