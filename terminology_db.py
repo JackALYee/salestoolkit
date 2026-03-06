@@ -1,4 +1,5 @@
 import re
+import itertools
 
 # --- 1. EXISTING TERMINOLOGY DATABASE ---
 TERMINOLOGY_DB = [
@@ -385,152 +386,124 @@ TERMINOLOGY_DB = [
     { "term": "Jack Yi", "category": "TEAM", "desc": "不太正经程序员，梦想做一名理工科市场推广大师，尽量别找我写PPT。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry Li"], "exact": True }
 ]
 
-# --- 2. PRODUCT COMBINATION MATRIX ---
-# Extracted directly from the provided CSV file
+
+# --- 2. PRODUCT COMBINATION MATRIX (Expanded & Dynamic) ---
 PRODUCT_COMBINATIONS = [
-    {
-        "ai": "No AI", "ch": "2-channel monitoring", "hdd": "NO",
-        "composition": "C43",
-        "dms": "NO", "adas": "NO", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "No AI", "ch": "2-channel monitoring", "hdd": "NO",
-        "composition": "C6 Lite / C6 Lite-SA (外扩AHD)",
-        "dms": "NO", "adas": "NO", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "2-channel monitoring", "hdd": "NO",
-        "composition": "C6 Lite 2.0",
-        "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "2-channel monitoring", "hdd": "NO",
-        "composition": "C6 Lite 2.0-S + CA29P/CA29M",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "3-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0-S + C29N",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "3-channel monitoring", "hdd": "NO",
-        "composition": "C6D 7.0",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "4-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0",
-        "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "4-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0 + C29N",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "5-channel monitoring", "hdd": "NO",
-        "composition": "F1N + CA20S + CA29P/CA29M/C29N",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "2-Channel AI", "ch": "5-channel monitoring", "hdd": "YES",
-        "composition": "M1N/X1N + C29N + CA20S",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES",
-        "composition": "M3N + {ADKIT + CA20S} + C46*2",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"
-    },
-    {
-        "ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES",
-        "composition": "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"
-    },
-    {
-        "ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES",
-        "composition": "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"
-    },
-    {
-        "ai": "5-Channel AI", "ch": "6-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0 + {C53(左/右) + CA51(可选)}",
-        "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "YES", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "5-Channel AI", "ch": "6-channel monitoring", "hdd": "YES",
-        "composition": "M1N 2.0 + CA20S + C29N + {C53(左/右) + CA51(可选)}",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"
-    },
-    {
-        "ai": "5-Channel AI", "ch": "8-channel monitoring", "hdd": "YES",
-        "composition": "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM，存储4宫格AVM原始画面)",
-        "dms": "NO", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"
-    },
-    {
-        "ai": "6-Channel AI", "ch": "6-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)",
-        "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "YES"
-    },
-    {
-        "ai": "6-Channel AI", "ch": "7-channel monitoring", "hdd": "NO",
-        "composition": "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)",
-        "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"
-    }
+    {"ai": "No AI", "ch": "2-channel monitoring", "hdd": "NO", "composition": "C43", "dms": "NO", "adas": "NO", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "No AI", "ch": "2-channel monitoring", "hdd": "NO", "composition": "C6 Lite / C6 Lite-SA (外扩AHD)", "dms": "NO", "adas": "NO", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "2-channel monitoring", "hdd": "NO", "composition": "C6 Lite 2.0", "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "2-channel monitoring", "hdd": "NO", "composition": "C6 Lite 2.0-S + CA29P/CA29M", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "3-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0-S + C29N", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "3-channel monitoring", "hdd": "NO", "composition": "C6D 7.0", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "4-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0", "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "4-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0 + C29N", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "5-channel monitoring", "hdd": "NO", "composition": "F1N + CA20S + CA29P/CA29M/C29N", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "2-Channel AI", "ch": "5-channel monitoring", "hdd": "YES", "composition": "M1N/X1N + C29N + CA20S", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "NO"},
+    {"ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "M3N + {ADKIT + CA20S} + C46*2", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"},
+    {"ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"},
+    {"ai": "4-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"},
+    {"ai": "5-Channel AI", "ch": "6-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0 + {C53(左/右) + CA51(可选)}", "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "YES", "bsd": "NO", "avm": "NO"},
+    {"ai": "5-Channel AI", "ch": "6-channel monitoring", "hdd": "YES", "composition": "M1N 2.0 + CA20S + C29N + {C53(左/右) + CA51(可选)}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"},
+    {"ai": "5-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM，存储4宫格AVM原始画面)", "dms": "NO", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"},
+    {"ai": "6-Channel AI", "ch": "6-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", "dms": "NO", "adas": "YES", "dsc": "YES", "bsis": "NO", "bsd": "NO", "avm": "YES"},
+    {"ai": "6-Channel AI", "ch": "7-channel monitoring", "hdd": "NO", "composition": "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"},
+    # Advanced / Pro setups
+    {"ai": "8-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "X3N Pro + CA20S + C29N + C46*2", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选一", "avm": "NO"},
+    {"ai": "8-Channel AI", "ch": "8-channel monitoring", "hdd": "YES", "composition": "X3N Pro + CA20S + C29N + CA46 (后BSD)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "后BSD", "avm": "NO"},
+    {"ai": "8-Channel AI", "ch": "11-channel monitoring", "hdd": "YES", "composition": "X3N Pro + {ADKIT + CA20S} + C46*4", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "四选二", "avm": "NO"},
+    {"ai": "8-Channel AI", "ch": "11-channel monitoring", "hdd": "YES", "composition": "X3N Pro + {ADKIT + CA20S} + {AVM + CA51*4}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"}
 ]
 
-import re
 
-# --- 3. PARSING ENGINE ---
-# Decompose combinations, extract products, and auto-link in TERMINOLOGY_DB
+# --- 3. RECURSIVE ARCHITECTURE PARSER ---
+ALL_PRODUCTS_SET = set()
+
 for combo in PRODUCT_COMBINATIONS:
     raw = combo["composition"]
     
-    # 1. Standardize text
-    std = raw.replace('（', '(').replace('）', ')').replace('＋', '+')
+    # Standardize string
+    text = raw.replace('（', '(').replace('）', ')').replace('＋', '+')
     
-    # 2. Extract notes "()"
-    notes = re.findall(r'\((.*?)\)', std)
+    # Extract parenthesis notes
+    notes = re.findall(r'\((.*?)\)', text)
+    clean = re.sub(r'\(.*?\)', '', text)
+    
+    # Extract smart loose Chinese (e.g. "存储4宫格") and treat as notes
+    loose_chinese = re.findall(r'[\u4e00-\u9fff]+[^\+/{]*', clean)
+    notes.extend([lc.strip() for lc in loose_chinese if lc.strip()])
+    
+    # Strip loose Chinese to leave pure architecture logic
+    clean = re.sub(r'[\u4e00-\u9fff]+[^\+/{]*', '', clean)
+    clean = re.sub(r'\bor\b', '/', clean)
     combo["notes"] = notes
     
-    # Strip notes for clean product parsing
-    clean = re.sub(r'\(.*?\)', '', std)
-    
-    # 3. Extract pairs "{}"
-    pairs = re.findall(r'\{(.*?)\}', clean)
-    combo["pairs"] = pairs
-    
-    # 4. Extract base products
-    # Remove curly braces
-    flat = clean.replace('{', '').replace('}', '')
-    # Remove multipliers (e.g. *2, *4)
-    flat = re.sub(r'\*\s*\d+', '', flat)
-    
-    # Split logic: '+' (AND), '/' (OR), ' or ' (OR)
-    raw_prods = re.split(r'\+|/|\bor\b', flat)
-    
-    extracted_products = []
-    for p in raw_prods:
-        pt = p.strip()
-        if pt:
-            extracted_products.append(pt)
-            
-    # Deduplicate and store in combo
-    combo["products_involved"] = list(set(extracted_products))
+    # Recursive parsing to handle {}, +, and / logic correctly
+    def split_outside(s, chars):
+        parts, curr, depth = [], [], 0
+        for c in s:
+            if c == '{': depth += 1
+            elif c == '}': depth -= 1
+            if c in chars and depth == 0:
+                parts.append("".join(curr))
+                curr = []
+            else:
+                curr.append(c)
+        parts.append("".join(curr))
+        return parts
 
-    # --- 4. AUTO-LINKING KNOWLEDGE GRAPH ---
-    # Add unseen products to DB and link all products in this combination together!
-    for prod_name in combo["products_involved"]:
-        # Find in DB
-        db_entry = next((item for item in TERMINOLOGY_DB if item["term"].lower() == prod_name.lower()), None)
+    def parse_expr(s):
+        # 1. Base layer is addition (+)
+        terms = split_outside(s, ['+'])
+        term_combos = []
+        for t in terms:
+            # 2. Sub-layer is alternatives (/)
+            alts = split_outside(t, ['/'])
+            alt_res = []
+            for a in alts:
+                a = a.strip()
+                if not a: continue
+                # 3. If grouped, recursively unpack
+                if a.startswith('{') and a.endswith('}'):
+                    alt_res.extend(parse_expr(a[1:-1]))
+                else:
+                    # Strip multipliers like *4
+                    a_clean = re.sub(r'\*\s*\d+', '', a).strip()
+                    if a_clean:
+                        alt_res.append([a_clean])
+            if alt_res:
+                term_combos.append(alt_res)
         
-        # If not in DB, create a stub for it automatically
+        # Cross product to build all valid subset permutations
+        res = []
+        for c in itertools.product(*term_combos):
+            flat = []
+            for lst in c:
+                flat.extend(lst)
+            res.append(flat)
+        return res
+        
+    combos = parse_expr(clean)
+    valid_sets = []
+    products_involved = set()
+    
+    for c in combos:
+        unique_set = sorted(list(set(c)))
+        if unique_set not in valid_sets:
+            valid_sets.append(unique_set)
+        products_involved.update(unique_set)
+        ALL_PRODUCTS_SET.update(unique_set)
+        
+    combo["valid_sets"] = valid_sets
+    combo["products_involved"] = list(products_involved)
+
+    # --- 4. AUTO-LINK KNOWLEDGE GRAPH ---
+    for prod_name in products_involved:
+        db_entry = next((item for item in TERMINOLOGY_DB if item["term"].lower() == prod_name.lower()), None)
         if not db_entry:
             db_entry = {
                 "term": prod_name, 
                 "category": "Auto-Discovered Component", 
-                "desc": "Component automatically extracted from the Product Combination Matrix.", 
+                "desc": "Component dynamically extracted from the Master Product Matrix.", 
                 "related": []
             }
             TERMINOLOGY_DB.append(db_entry)
@@ -538,13 +511,11 @@ for combo in PRODUCT_COMBINATIONS:
         if "related" not in db_entry:
             db_entry["related"] = []
             
-        # Cross-link with every other product in the exact same combination row
-        for other_prod in combo["products_involved"]:
+        for other_prod in products_involved:
             if prod_name != other_prod and other_prod not in db_entry["related"]:
                 db_entry["related"].append(other_prod)
 
-# --- 5. RESOLVE BIDIRECTIONAL LINKS ---
-# Ensure every "related" definition is fully reciprocated across the entire DB
+# Resolve final bidirectional links
 for item in TERMINOLOGY_DB:
     if "related" in item:
         for related_term in item["related"]:
@@ -554,3 +525,6 @@ for item in TERMINOLOGY_DB:
                     target["related"] = []
                 if item["term"] not in target["related"]:
                     target["related"].append(item["term"])
+
+# Export sorted list (longest first, to prevent tokenizing bugs in JS)
+ALL_PRODUCTS = sorted(list(ALL_PRODUCTS_SET), key=len, reverse=True)
