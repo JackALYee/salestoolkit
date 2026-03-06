@@ -186,36 +186,99 @@ css_and_html = r"""
                 #modalChildExplanation.active { display: block; }
                 .see-details-btn { background: var(--secondary-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; margin-top: 15px; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
                 .see-details-btn:hover { background: var(--primary-green); color: var(--bg-deep); }
-            </style>
 
-            <div class="search-wrapper" id="searchWrapper">
-                <div class="title-container">
-                    <div class="mascot-container">
-                        <img src="https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500" alt="Streamax Mascot" class="mascot" id="mascotImage" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'">
-                    </div>
-                    <h1 class="brand-title"><span class="gradient-text">Streamaxpedia</span></h1>
-                </div>
-                
-                <div class="subtitle-box">
-                    <p class="temp-note">
-                        <i class="fa-solid fa-circle-info" style="color: var(--secondary-blue); margin-right: 5px;"></i>
-                        This is a temporary Streamax info library. A more powerful Streamax AI agent is coming soon!
-                    </p>
-                    <p class="credit-line">
-                        <i class="fa-solid fa-bolt" style="margin-right: 5px;"></i>By Trucking BU - a Sales Toolkit Extension
-                    </p>
-                </div>
-                
-                <div class="search-box">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <i class="fa-solid fa-xmark clear-icon" id="clearBtn"></i>
-                </div>
+                /* Checkbox styling */
+                .matrix-filter-label {
+                    display: flex; align-items: center; gap: 10px; color: var(--text-grey); cursor: pointer; transition: all 0.2s; font-size: 0.95rem;
+                }
+                .matrix-filter-label:hover { color: var(--text-white); }
+                .matrix-filter-checkbox {
+                    width: 18px; height: 18px; accent-color: var(--primary-green); cursor: pointer;
+                }
+            </style>
+            
+            <div class="sub-nav-tabs fade-up w-full justify-center mt-6">
+                <button class="sub-nav-btn active" onclick="switchSpediaMode('spedia-search-mode', this)">
+                    <i class="fa-solid fa-magnifying-glass"></i> Search Engine
+                </button>
+                <button class="sub-nav-btn" onclick="switchSpediaMode('spedia-matrix-mode', this)">
+                    <i class="fa-solid fa-table-cells-large"></i> Product Matrix
+                </button>
             </div>
 
-            <div class="stats" id="statsBar">Found <span id="resultCount">0</span> terms</div>
-            <div class="results-container" id="resultsContainer">
-                <!-- Results will be injected here via JavaScript -->
+            <!-- MODE 1: SEARCH ENGINE -->
+            <div id="spedia-search-mode" class="spedia-mode w-full flex flex-col items-center">
+                <div class="search-wrapper" id="searchWrapper">
+                    <div class="title-container">
+                        <div class="mascot-container">
+                            <img src="https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500" alt="Streamax Mascot" class="mascot" id="mascotImage" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'">
+                        </div>
+                        <h1 class="brand-title"><span class="gradient-text">Streamaxpedia</span></h1>
+                    </div>
+                    
+                    <div class="subtitle-box">
+                        <p class="temp-note">
+                            <i class="fa-solid fa-circle-info" style="color: var(--secondary-blue); margin-right: 5px;"></i>
+                            This is a temporary Streamax info library. A more powerful Streamax AI agent is coming soon!
+                        </p>
+                        <p class="credit-line">
+                            <i class="fa-solid fa-bolt" style="margin-right: 5px;"></i>By Trucking BU - a Sales Toolkit Extension
+                        </p>
+                    </div>
+                    
+                    <div class="search-box">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search for ADAS, MDVR, APIs, metrics..." autocomplete="off">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <i class="fa-solid fa-xmark clear-icon" id="clearBtn"></i>
+                    </div>
+                </div>
+
+                <div class="stats" id="statsBar">Found <span id="resultCount">0</span> terms</div>
+                <div class="results-container" id="resultsContainer">
+                    <!-- Results will be injected here via JavaScript -->
+                </div>
+            </div>
+            
+            <!-- MODE 2: PRODUCT MATRIX -->
+            <div id="spedia-matrix-mode" class="spedia-mode hidden w-full">
+                <div class="flex flex-col md:flex-row gap-6 w-full max-w-6xl mx-auto px-4 mt-4 pb-20">
+                    <!-- Filters Sidebar -->
+                    <div class="w-full md:w-1/4 glass-panel p-5 h-fit sticky top-20 border border-white/10 rounded-xl bg-black/40">
+                        <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-filter text-[var(--secondary-blue)] mr-2"></i> Features</h3>
+                        
+                        <div class="space-y-4">
+                            <label class="matrix-filter-label">
+                                <input type="checkbox" id="filter-dms" class="matrix-filter-checkbox" onchange="updateMatrix()"> DMS
+                            </label>
+                            <label class="matrix-filter-label">
+                                <input type="checkbox" id="filter-adas" class="matrix-filter-checkbox" onchange="updateMatrix()"> ADAS
+                            </label>
+                            <label class="matrix-filter-label">
+                                <input type="checkbox" id="filter-dsc" class="matrix-filter-checkbox" onchange="updateMatrix()"> DSC
+                            </label>
+                            <label class="matrix-filter-label">
+                                <input type="checkbox" id="filter-bsis" class="matrix-filter-checkbox" onchange="updateMatrix()"> BSIS/MOIS
+                            </label>
+                            <label class="matrix-filter-label">
+                                <input type="checkbox" id="filter-avm" class="matrix-filter-checkbox" onchange="updateMatrix()"> AI-AVM
+                            </label>
+                            
+                            <div class="pt-4 border-t border-white/10 mt-4">
+                                <label class="block text-sm text-gray-400 mb-2">Front/Left/Right/Rear BSD</label>
+                                <select id="filter-bsd" class="w-full bg-black/60 border border-white/20 rounded-lg p-2.5 text-white outline-none focus:border-[var(--primary-green)] transition-all text-sm font-medium" onchange="updateMatrix()">
+                                    <option value="Any">Any Configuration</option>
+                                    <option value="NO">NO</option>
+                                    <option value="四选二">四选二</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Grid -->
+                    <div class="w-full md:w-3/4 flex flex-col gap-4" id="matrixResults">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
             </div>
 
             <!-- RELEVANCE GRAPH MODAL -->
@@ -265,6 +328,146 @@ js_part_2 = r""";
                 // ==========================================
                 const ENABLE_DOWNLOADS = false; // Change to true to enable ALL downloads (White Papers, Specs, Manuals, etc.)
                 // ==========================================
+
+                // --- PRODUCT COMBINATION MATRIX DATA ---
+                const matrixData = [
+                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C43", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite / C6 Lite-SA（外扩AHD）", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0-S + CA29P/CA29M", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "AD Plus 2.0-S + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "C6D 7.0", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "NO", sol: "F1N + CA20S + CA29P/CA29M/C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "YES", sol: "M1N/X1N + C29N + CA20S", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} + C46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
+                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {C53（左/右） + CA51(可选)}", dms: "NO", adas: "YES", dsc: "YES", bsis: "YES", bsd: "NO", avm: "NO" },
+                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "YES", sol: "M1N2.0 + CA20S + C29N + {C53（左/右） + CA51(可选)}", dms: "YES", adas: "YES", dsc: "NO", bsis: "YES", bsd: "NO", avm: "NO" },
+                  { ai: "5-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM，存储4宫格AVM原始画面)", dms: "NO", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES" },
+                  { ai: "6-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "YES" },
+                  { ai: "6-Channel AI", ch: "7-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES" }
+                ];
+
+                // Function to toggle between modes
+                function switchSpediaMode(modeId, btnElement) {
+                    const container = btnElement.closest('.sub-nav-tabs');
+                    container.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
+                    btnElement.classList.add('active');
+
+                    document.querySelectorAll('.spedia-mode').forEach(el => el.classList.add('hidden'));
+                    const target = document.getElementById(modeId);
+                    target.classList.remove('hidden');
+                    
+                    if (modeId === 'spedia-matrix-mode') {
+                        updateMatrix(); // Load matrix data
+                    }
+                }
+
+                // Parser logic for "Solution Composition" strings
+                function parseSolutionHtml(sol) {
+                    let notes = [];
+                    // Extract parenthesis for Implementation Notes
+                    let cleanSol = sol.replace(/（/g, '(').replace(/）/g, ')'); 
+                    cleanSol = cleanSol.replace(/\((.*?)\)/g, (match, p1) => {
+                        notes.push(p1);
+                        return '';
+                    });
+
+                    // Format paired combinations {}
+                    cleanSol = cleanSol.replace(/\{/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">[</span><span class="inline-flex items-center">');
+                    cleanSol = cleanSol.replace(/\}/g, '</span><span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">]</span>');
+
+                    // Format OR slash
+                    cleanSol = cleanSol.replace(/\s+or\s+/gi, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
+                    cleanSol = cleanSol.replace(/\//g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
+
+                    // Format AND plus
+                    cleanSol = cleanSol.replace(/\s*\+\s*/g, '<span class="mx-2 text-[var(--primary-green)]"><i class="fa-solid fa-plus text-[12px] opacity-80"></i></span>');
+
+                    // Format quantity multipliers * n
+                    cleanSol = cleanSol.replace(/\*(\d+)/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+
+                    return { html: cleanSol, notes: notes };
+                }
+
+                // Render a single product combination card
+                function renderMatrixCard(item) {
+                    const parsed = parseSolutionHtml(item.sol);
+                    
+                    let notesHtml = '';
+                    if (parsed.notes.length > 0) {
+                        notesHtml = parsed.notes.map(n => `<div class="mt-3 text-[13px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1 text-[var(--secondary-blue)]/80"></i> ${n}</div>`).join('');
+                    }
+
+                    return `
+                        <div class="result-card p-6" style="animation: none; opacity: 1; transform: none;">
+                            <div class="flex flex-wrap items-center text-lg font-bold text-white leading-relaxed">
+                                ${parsed.html}
+                            </div>
+                            ${notesHtml}
+                            
+                            <div class="mt-5 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-300">
+                                <div class="bg-black/20 p-2 rounded border border-white/5">
+                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">AI Requirements</span>
+                                    ${item.ai}
+                                </div>
+                                <div class="bg-black/20 p-2 rounded border border-white/5">
+                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">Channel Specs</span>
+                                    ${item.ch}
+                                </div>
+                                <div class="bg-black/20 p-2 rounded border border-white/5">
+                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">HDD Included</span>
+                                    ${item.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check mr-1"></i> YES</span>' : 'NO'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Apply filters and update UI
+                function updateMatrix() {
+                    const dms = document.getElementById('filter-dms').checked;
+                    const adas = document.getElementById('filter-adas').checked;
+                    const dsc = document.getElementById('filter-dsc').checked;
+                    const bsis = document.getElementById('filter-bsis').checked;
+                    const avm = document.getElementById('filter-avm').checked;
+                    const bsd = document.getElementById('filter-bsd').value;
+
+                    const container = document.getElementById('matrixResults');
+                    let html = '';
+
+                    matrixData.forEach(item => {
+                        let match = true;
+                        
+                        // Checkbox implies MUST HAVE 'YES' if clicked
+                        if (dms && item.dms !== 'YES') match = false;
+                        if (adas && item.adas !== 'YES') match = false;
+                        if (dsc && item.dsc !== 'YES') match = false;
+                        if (bsis && item.bsis !== 'YES') match = false;
+                        if (avm && item.avm !== 'YES') match = false;
+                        
+                        // Select dropdown match
+                        if (bsd !== 'Any' && item.bsd !== bsd) match = false;
+
+                        if (match) {
+                            html += renderMatrixCard(item);
+                        }
+                    });
+
+                    if (html === '') {
+                        html = `
+                            <div class="text-center text-gray-500 py-12 w-full glass-panel rounded-xl">
+                                <i class="fa-solid fa-layer-group text-4xl mb-4 opacity-50"></i>
+                                <h3 class="text-white text-lg mb-2">No Matching Configurations</h3>
+                                <p class="text-sm">Try adjusting your filters to discover valid product combinations.</p>
+                            </div>
+                        `;
+                    }
+                    container.innerHTML = html;
+                }
 
                 // --- SECURITY POLICY GENERATOR ---
                 // Generates the uploaded company policy as an offline HTML document
@@ -689,7 +892,7 @@ js_part_2 = r""";
                     window.addEventListener('mouseup', () => isGraphDragging = false);
                     vp.onclick = (e) => { if(!hasGraphDragged && !e.target.closest('.node-related') && !document.getElementById('modalChildExplanation').contains(e.target)) document.getElementById('modalChildExplanation').classList.remove('active'); };
                 }
-
+        
                 // Observe modal resize to redraw lines dynamically
                 if (typeof ResizeObserver !== 'undefined') {
                     const modalBox = document.querySelector('.modal-box');
