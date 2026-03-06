@@ -891,7 +891,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version BETA 1.7 • Trucking BU • Mar 2026</div>
+            <div class="header-meta fade-up">Version BETA 2.1 • Trucking BU • Mar 2026</div>
         </div>
     </header>
 
