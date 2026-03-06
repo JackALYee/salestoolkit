@@ -1,18 +1,9 @@
 import json
-from terminology_db import TERMINOLOGY_DB
-
-# Process Bidirectional Links Programmatically
-for item in TERMINOLOGY_DB:
-    if "related" in item:
-        for related_term in item["related"]:
-            target = next((t for t in TERMINOLOGY_DB if t["term"] == related_term), None)
-            if target:
-                if "related" not in target:
-                    target["related"] = []
-                if item["term"] not in target["related"]:
-                    target["related"].append(item["term"])
+from terminology_db import TERMINOLOGY_DB, PRODUCT_COMBINATIONS, ALL_PRODUCTS
 
 db_json = json.dumps(TERMINOLOGY_DB)
+matrix_json = json.dumps(PRODUCT_COMBINATIONS)
+products_json = json.dumps(ALL_PRODUCTS)
 
 css_and_html = r"""
         <!-- SECTION: STREAMAXPEDIA -->
@@ -304,7 +295,9 @@ css_and_html = r"""
                                 <select id="filter-bsd" class="bg-black/60 border border-white/20 rounded px-2 py-1.5 text-white outline-none focus:border-[var(--primary-green)] text-sm font-medium" onchange="updateMatrix()">
                                     <option value="Any">Any Config</option>
                                     <option value="NO">NO</option>
+                                    <option value="四选一">四选一</option>
                                     <option value="四选二">四选二</option>
+                                    <option value="后BSD">后BSD</option>
                                 </select>
                             </div>
                         </div>
@@ -376,65 +369,14 @@ css_and_html = r"""
             </div>
 """
 
-js_part_1 = r"""
+js_code = """
             <script>
-                const terminologyDB = 
-"""
-
-js_part_2 = r""";
-                // ==========================================
-                // MASTER SWITCH TO ENABLE/DISABLE ALL DOWNLOADS
-                // ==========================================
-                const ENABLE_DOWNLOADS = false; 
-
-                // --- PRODUCT COMBINATION MATRIX DATA & LOGIC ---
-                // Pre-parsed valid arrays allow the validator to easily match user baskets to actual solutions.
-                const ALL_PRODUCTS = [
-                    "AD Plus 2.0-S", "C6 Lite 2.0-S", "C6 Lite 2.0", "C6 Lite-SA", "C6 Lite", 
-                    "AD Plus 2.0", "C6D 7.0", "ADKIT", "CA29P", "CA29M", "CA20S", 
-                    "C29N", "C40W", "C46", "CA46", "C53", "CA51", "AVM", 
-                    "F1N", "M1N 2.0", "M1N", "X1N", "M3N", "C43", "IPC", "CA42Kit"
-                ];
-
-                const matrixData = [
-                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C43", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["C43"]] },
-                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite / C6 Lite-SA (外扩AHD)", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["C6 Lite"], ["C6 Lite-SA"]] },
-                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["C6 Lite 2.0"]] },
-                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0-S + CA29P/CA29M", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["C6 Lite 2.0-S", "CA29P"], ["C6 Lite 2.0-S", "CA29M"]] },
-                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "AD Plus 2.0-S + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["AD Plus 2.0-S", "C29N"]] },
-                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "C6D 7.0", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["C6D 7.0"]] },
-                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["AD Plus 2.0"]] },
-                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["AD Plus 2.0", "C29N"]] },
-                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "NO", sol: "F1N + CA20S + CA29P/CA29M/C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["F1N", "CA20S", "CA29P"], ["F1N", "CA20S", "CA29M"], ["F1N", "CA20S", "C29N"]] },
-                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "YES", sol: "M1N/X1N + C29N + CA20S", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
-                    valid_sets: [["M1N", "C29N", "CA20S"], ["X1N", "C29N", "CA20S"]] },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} + C46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
-                    valid_sets: [["M3N", "ADKIT", "CA20S", "C46"]] },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
-                    valid_sets: [["M3N", "ADKIT", "CA20S", "CA46"], ["M3N", "C40W", "C29N", "CA46"]] },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
-                    valid_sets: [["M3N", "ADKIT", "CA20S", "C46"], ["M3N", "CA20S", "C29N", "C46"], ["M3N", "C40W", "C29N", "C46"]] },
-                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {C53(左/右) + CA51(可选)}", dms: "NO", adas: "YES", dsc: "YES", bsis: "YES", bsd: "NO", avm: "NO",
-                    valid_sets: [["AD Plus 2.0", "C53"], ["AD Plus 2.0", "C53", "CA51"]] },
-                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "YES", sol: "M1N 2.0 + CA20S + C29N + {C53(左/右) + CA51(可选)}", dms: "YES", adas: "YES", dsc: "NO", bsis: "YES", bsd: "NO", avm: "NO",
-                    valid_sets: [["M1N 2.0", "CA20S", "C29N", "C53"], ["M1N 2.0", "CA20S", "C29N", "C53", "CA51"]] },
-                  { ai: "5-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM)", dms: "NO", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES",
-                    valid_sets: [["M1N", "CA20S", "AVM", "CA51"], ["X1N", "CA20S", "AVM", "CA51"]] },
-                  { ai: "6-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM)", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "YES",
-                    valid_sets: [["AD Plus 2.0", "AVM", "CA51"]] },
-                  { ai: "6-Channel AI", ch: "7-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES",
-                    valid_sets: [["AD Plus 2.0", "C29N", "AVM", "CA51"]] }
-                ];
-
+                const terminologyDB = """ + db_json + """;
+                const matrixData = """ + matrix_json + """;
+                const ALL_PRODUCTS = """ + products_json + """;
+                
+                const ENABLE_DOWNLOADS = false;
+""" + r"""
                 let selectedBasket = new Set();
 
                 // Toggle Sub-Tabs
@@ -517,6 +459,53 @@ js_part_2 = r""";
                     container.innerHTML = html;
                 }
 
+                // Complex Tokenization to make formula strings interactive
+                function makeClickableFormula(sol) {
+                    let res = sol;
+                    let notes = [];
+                    
+                    // Extract parenthesis
+                    res = res.replace(/（/g, '(').replace(/）/g, ')');
+                    res = res.replace(/\((.*?)\)/g, (match, p1) => {
+                        notes.push(p1);
+                        return `__NOTE${notes.length-1}__`;
+                    });
+
+                    // Tokenize Products safely
+                    ALL_PRODUCTS.forEach((p, idx) => {
+                        res = res.split(p).join(`__TKN${idx}__`);
+                    });
+
+                    // Safely replace syntax with placeholders first
+                    res = res.replace(/\s+or\s+/gi, '__OR__');
+                    res = res.replace(/\//g, '__SLASH__');
+                    res = res.replace(/\{/g, '__LBRACE__');
+                    res = res.replace(/\}/g, '__RBRACE__');
+                    res = res.replace(/\s*\+\s*/g, '__PLUS__');
+                    res = res.replace(/\*(\d+)/g, '__MULT$1__');
+
+                    // Apply HTML replacements to syntax placeholders
+                    res = res.replace(/__OR__/g, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
+                    res = res.replace(/__SLASH__/g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
+                    res = res.replace(/__PLUS__/g, '<span class="text-[var(--primary-green)] mx-1 font-black text-sm">+</span>');
+                    res = res.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">[</span>');
+                    res = res.replace(/__RBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">]</span>');
+                    res = res.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+
+                    // Restore Products as Buttons
+                    ALL_PRODUCTS.forEach((p, idx) => {
+                        let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
+                        res = res.split(`__TKN${idx}__`).join(btn);
+                    });
+
+                    // Restore Notes as Info blocks
+                    notes.forEach((n, idx) => {
+                        res = res.replace(`__NOTE${idx}__`, `<div class="mt-2 text-[12px] text-gray-400 italic font-normal tracking-wide flex items-center"><i class="fa-solid fa-circle-info mr-1.5 text-[var(--secondary-blue)]/80"></i> ${n}</div>`);
+                    });
+
+                    return res;
+                }
+
                 // Validator Engine with dynamic suggestions
                 function validateCombination() {
                     const resEl = document.getElementById('validatorResult');
@@ -584,6 +573,14 @@ js_part_2 = r""";
                             <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center">
                                 <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
                             </div>
+                            
+                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg p-4 mb-4">
+                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider mb-2 font-bold"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
+                                <div class="leading-loose text-lg">
+                                    ${makeClickableFormula(matchedRow.composition)}
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai}</div></div>
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch}</div></div>
@@ -617,82 +614,6 @@ js_part_2 = r""";
                     }
                 }
 
-                // Parser logic for syntax formatting to prevent breaking HTML tags
-                function parseSolutionHtml(sol) {
-                    let notes = [];
-                    let cleanSol = sol.replace(/（/g, '(').replace(/）/g, ')'); 
-                    cleanSol = cleanSol.replace(/\((.*?)\)/g, (match, p1) => {
-                        notes.push(p1);
-                        return '';
-                    });
-
-                    // Use placeholders to prevent HTML tag corruption
-                    cleanSol = cleanSol.replace(/\s+or\s+/gi, '__OR__');
-                    cleanSol = cleanSol.replace(/\//g, '__SLASH__');
-                    cleanSol = cleanSol.replace(/\{/g, '__LBRACE__');
-                    cleanSol = cleanSol.replace(/\}/g, '__RBRACE__');
-                    cleanSol = cleanSol.replace(/\s*\+\s*/g, '__PLUS__');
-                    cleanSol = cleanSol.replace(/\*(\d+)/g, '__MULT$1__');
-
-                    // Apply HTML formatting
-                    cleanSol = cleanSol.replace(/__OR__/g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
-                    cleanSol = cleanSol.replace(/__SLASH__/g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
-                    cleanSol = cleanSol.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">[</span><span class="inline-flex items-center">');
-                    cleanSol = cleanSol.replace(/__RBRACE__/g, '</span><span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">]</span>');
-                    cleanSol = cleanSol.replace(/__PLUS__/g, '<span class="mx-2 text-[var(--primary-green)]"><i class="fa-solid fa-plus text-[12px] opacity-80"></i></span>');
-                    cleanSol = cleanSol.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
-
-                    return { html: cleanSol, notes: notes };
-                }
-
-                // Complex Tokenization to make formula strings interactive
-                function makeClickableFormula(sol) {
-                    let res = sol;
-                    let sorted = [...ALL_PRODUCTS].sort((a,b) => b.length - a.length);
-                    
-                    let notes = [];
-                    // Extract parenthesis
-                    res = res.replace(/（/g, '(').replace(/）/g, ')');
-                    res = res.replace(/\((.*?)\)/g, (match, p1) => {
-                        notes.push(p1);
-                        return `__NOTE${notes.length-1}__`;
-                    });
-
-                    // Tokenize Products (protecting them from partial matches later)
-                    sorted.forEach((p, idx) => {
-                        res = res.split(p).join(`__TKN${idx}__`);
-                    });
-
-                    // Safely replace syntax with placeholders first
-                    res = res.replace(/\s+or\s+/gi, '__OR__');
-                    res = res.replace(/\//g, '__SLASH__');
-                    res = res.replace(/\{/g, '__LBRACE__');
-                    res = res.replace(/\}/g, '__RBRACE__');
-                    res = res.replace(/\s*\+\s*/g, '__PLUS__');
-                    res = res.replace(/\*(\d+)/g, '__MULT$1__');
-
-                    // Apply HTML replacements to placeholders
-                    res = res.replace(/__OR__/g, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
-                    res = res.replace(/__SLASH__/g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
-                    res = res.replace(/__PLUS__/g, '<span class="text-[var(--primary-green)] mx-1 font-black text-sm">+</span>');
-                    res = res.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">[</span>');
-                    res = res.replace(/__RBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">]</span>');
-                    res = res.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
-
-                    // Restore Products as Buttons (safely after syntax)
-                    sorted.forEach((p, idx) => {
-                        let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
-                        res = res.split(`__TKN${idx}__`).join(btn);
-                    });
-
-                    // Restore Notes as Info blocks
-                    notes.forEach((n, idx) => {
-                        res = res.replace(`__NOTE${idx}__`, `<div class="mt-2 text-[12px] text-gray-400 italic font-normal tracking-wide flex items-center"><i class="fa-solid fa-circle-info mr-1.5 text-[var(--secondary-blue)]/80"></i> ${n}</div>`);
-                    });
-
-                    return res;
-                }
-
                 // Render Right Configurations Panel
                 function updateMatrix() {
                     const dms = document.getElementById('filter-dms').checked;
@@ -722,7 +643,7 @@ js_part_2 = r""";
                             html += `
                                 <div class="bg-black/30 border border-white/10 rounded-lg p-4 hover:border-white/20 transition-all">
                                     <div class="leading-loose mb-3">
-                                        ${makeClickableFormula(item.sol)}
+                                        ${makeClickableFormula(item.composition)}
                                     </div>
                                     <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider">
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai}</span>
@@ -743,82 +664,6 @@ js_part_2 = r""";
                         `;
                     }
                     container.innerHTML = html;
-                }
-
-                // --- SECURITY POLICY GENERATOR ---
-                // Generates the uploaded company policy as an offline HTML document
-                const policyHtmlContent = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>关于严禁核心技术资料公网发布的安全管控通知</title>
-    <style>
-        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 40px; line-height: 1.8; color: #333; max-width: 800px; margin: 0 auto; background: #fff; }
-        h2 { text-align: center; border-bottom: 2px solid #cc0000; padding-bottom: 10px; color: #cc0000; margin-bottom: 5px; }
-        .doc-num { text-align: right; font-weight: bold; margin-bottom: 30px; font-size: 14px; }
-        h1 { text-align: center; font-size: 24px; margin-bottom: 30px; }
-        p { text-indent: 2em; margin-bottom: 15px; }
-        .section-title { font-weight: bold; font-size: 18px; margin-top: 25px; margin-bottom: 10px; text-indent: 0; }
-        .footer { margin-top: 50px; text-align: right; }
-    </style>
-</head>
-<body>
-    <h2>深圳市锐明技术股份有限公司文件<br><span style="font-size:16px;">STREAMAX TECHNOLOGY CO., LTD</span></h2>
-    <div class="doc-num">HRD20260130-001</div>
-    <h1>关于严禁核心技术资料公网发布的安全管控通知</h1>
-    <p style="text-indent: 0; font-weight: bold;">各部门、全体员工:</p>
-    <p>我司作为高新技术科技公司,研发创新是公司生存与发展的核心命脉,核心技术资料(含解决方案、技术文档、协议文档等)是公司多年研发投入的核心成果,承载着公司的商业秘密与技术竞争力,其安全保密直接关系到公司的生存发展、市场地位及全体员工的切身利益。为坚决防范核心技术资料泄露风险,筑牢公司安全防线,保障公司知识产权与商业秘密不受侵害,现就核心技术资料公网发布管控事宜通知如下:</p>
-    
-    <div class="section-title">一、明确管控范围,严守资料安全红线</div>
-    <p>本次安全管控的核心技术资料范围包括但不限于:各类产品/项目解决方案、技术设计方案、源代码、算法模型、技术参数说明、测试报告、协议文档(含通信协议、接口协议等)、技术复盘文档及其他涉及公司核心技术、商业秘密的相关资料。</p>
-    <p>全体员工必须严格遵守“核心资料不上公网”的基本原则,严禁以任何形式、任何理由将上述核心技术资料发布、上传、分享至公网平台,包括但不限于Github、GitLab 等代码托管平台,谷歌云、DropBox、百度网盘、阿里云盘、腾讯微云等各类网络存储网盘,微信公众号、知乎、博客、论坛等社交及技术分享平台,以及其他可被外部人员访问的公网渠道。</p>
-    
-    <div class="section-title">二、规范资料管理,落实安全管控责任</div>
-    <p>(一)强化源头管控。各部门负责人为本部门核心技术资料安全管控第一责任人,需明确资料保管人,规范资料的生成、归档、借阅、传输流程,定期开展部门内部安全自查,及时排查资料泄露风险。</p>
-    <p>(二)规范内部使用。核心技术资料的内部传输、存储需通过公司指定的内部办公系统、文件服务器或加密存储设备进行,严禁使用个人邮箱、私人社交账号、非公司指定的存储设备传输、存储核心资料。员工离职、调岗时,需按流程完成核心技术资料的交接归档,不得私自留存任何核心资料副本。</p>
-    <p>(三)提升安全意识。全体员工需主动学习公司信息安全管理制度《IT-WI-02 信息安全管理规范V1.5》,充分认识核心技术资料泄露的严重危害,自觉遵守安全管控要求,对工作中发现的资料安全隐患、违规行为,应第一时间向部门负责人或公司安全管理部门报告。</p>
-    
-    <div class="section-title">三、严格责任追究,严肃查处违规行为</div>
-    <p>公司将建立常态化安全巡查机制,通过技术监测、定期检查、专项审计等方式,对核心技术资料公网发布情况进行全程管控。对违反本通知要求,擅自将核心技术资料发布至公网的员工,无论是否造成资料泄露、是否给公司造成损失,一经查实,给予通报批评、降职降薪、绩效扣分等处分;若造成核心技术泄露、公司经济损失或声誉损害的,将依法追究其民事赔偿责任;情节严重、触犯国家法律法规的,将移交司法机关处理。</p>
-    <p>核心技术安全是公司发展的生命线,安全管控无小事,责任落实在人人。请各部门务必高度重视,迅速组织全员传达学习本通知精神,严格落实各项安全管控措施。全体员工要牢固树立“安全第一、保密有责”的意识,自觉抵制各类违规行为,共同守护公司核心技术资产安全,为公司持续健康发展奠定坚实基础。</p>
-    
-    <div class="footer">
-        <p style="text-indent: 0;">深圳市锐明技术股份有限公司</p>
-        <p style="text-indent: 0;">首席执行官(CEO)签批: 望西淀</p>
-        <p style="text-indent: 0;">2026年1月30日</p>
-    </div>
-</body>
-</html>`;
-
-                window.viewSecurityPolicy = function() {
-                    const newWindow = window.open('', '_blank');
-                    if (newWindow) {
-                        newWindow.document.write(policyHtmlContent);
-                        newWindow.document.close();
-                    } else {
-                        alert('请允许浏览器弹出窗口以查看该政策文件。 / Please allow pop-ups to view the policy.');
-                    }
-                };
-
-                let currentMascotSrc = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500'; 
-                let isGraphDragging = false, graphStartX = 0, graphStartY = 0, graphTranslateX = 0, graphTranslateY = 0, hasGraphDragged = false;
-
-                const searchInput = document.getElementById('searchInput');
-                const resultsContainer = document.getElementById('resultsContainer');
-                const searchWrapper = document.getElementById('searchWrapper');
-                const clearBtn = document.getElementById('clearBtn');
-                const statsBar = document.getElementById('statsBar');
-                const resultCount = document.getElementById('resultCount');
-
-                function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-                
-                function highlightText(text, query) {
-                    if (!text) return '';
-                    if (!query) return text;
-                    const escapedQuery = escapeRegExp(query);
-                    const regex = new RegExp(`(${escapedQuery})(?![^<]*>)`, 'gi');
-                    return text.replace(regex, '<span class="highlight">$1</span>');
                 }
 
                 // --- SEARCH ENGINE LOGIC ---
@@ -923,6 +768,13 @@ js_part_2 = r""";
                 }
 
                 // Live Keystroke listener instead of waiting for "Enter"
+                const searchInput = document.getElementById('searchInput');
+                const clearBtn = document.getElementById('clearBtn');
+                const resultsContainer = document.getElementById('resultsContainer');
+                const searchWrapper = document.getElementById('searchWrapper');
+                const statsBar = document.getElementById('statsBar');
+                const resultCount = document.getElementById('resultCount');
+
                 searchInput.addEventListener('input', performSearch);
                 
                 clearBtn.addEventListener('click', () => {
@@ -1168,4 +1020,4 @@ js_part_2 = r""";
 """
 
 # Stitch everything together into a variable that app.py imports
-content = css_and_html + js_part_1 + db_json + js_part_2
+content = css_and_html + js_code
