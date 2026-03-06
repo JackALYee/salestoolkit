@@ -546,6 +546,34 @@ js_part_2 = r""";
                     }
                 }
 
+                // Parser logic for syntax formatting to prevent breaking HTML tags
+                function parseSolutionHtml(sol) {
+                    let notes = [];
+                    let cleanSol = sol.replace(/（/g, '(').replace(/）/g, ')'); 
+                    cleanSol = cleanSol.replace(/\((.*?)\)/g, (match, p1) => {
+                        notes.push(p1);
+                        return '';
+                    });
+
+                    // Use placeholders to prevent HTML tag corruption
+                    cleanSol = cleanSol.replace(/\s+or\s+/gi, '__OR__');
+                    cleanSol = cleanSol.replace(/\//g, '__SLASH__');
+                    cleanSol = cleanSol.replace(/\{/g, '__LBRACE__');
+                    cleanSol = cleanSol.replace(/\}/g, '__RBRACE__');
+                    cleanSol = cleanSol.replace(/\s*\+\s*/g, '__PLUS__');
+                    cleanSol = cleanSol.replace(/\*(\d+)/g, '__MULT$1__');
+
+                    // Apply HTML formatting
+                    cleanSol = cleanSol.replace(/__OR__/g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
+                    cleanSol = cleanSol.replace(/__SLASH__/g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
+                    cleanSol = cleanSol.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">[</span><span class="inline-flex items-center">');
+                    cleanSol = cleanSol.replace(/__RBRACE__/g, '</span><span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">]</span>');
+                    cleanSol = cleanSol.replace(/__PLUS__/g, '<span class="mx-2 text-[var(--primary-green)]"><i class="fa-solid fa-plus text-[12px] opacity-80"></i></span>');
+                    cleanSol = cleanSol.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+
+                    return { html: cleanSol, notes: notes };
+                }
+
                 // Complex Tokenization to make formula strings interactive
                 function makeClickableFormula(sol) {
                     let res = sol;
@@ -564,19 +592,27 @@ js_part_2 = r""";
                         res = res.split(p).join(`__TKN${idx}__`);
                     });
 
-                    // Restore Products as Buttons
+                    // Safely replace syntax with placeholders first
+                    res = res.replace(/\s+or\s+/gi, '__OR__');
+                    res = res.replace(/\//g, '__SLASH__');
+                    res = res.replace(/\{/g, '__LBRACE__');
+                    res = res.replace(/\}/g, '__RBRACE__');
+                    res = res.replace(/\s*\+\s*/g, '__PLUS__');
+                    res = res.replace(/\*(\d+)/g, '__MULT$1__');
+
+                    // Apply HTML replacements to placeholders
+                    res = res.replace(/__OR__/g, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
+                    res = res.replace(/__SLASH__/g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
+                    res = res.replace(/__PLUS__/g, '<span class="text-[var(--primary-green)] mx-1 font-black text-sm">+</span>');
+                    res = res.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">[</span>');
+                    res = res.replace(/__RBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">]</span>');
+                    res = res.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+
+                    // Restore Products as Buttons (safely after syntax)
                     sorted.forEach((p, idx) => {
                         let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
                         res = res.split(`__TKN${idx}__`).join(btn);
                     });
-
-                    // Format Syntax Elements
-                    res = res.replace(/\+/g, '<span class="text-[var(--primary-green)] mx-1 font-black text-sm">+</span>');
-                    res = res.replace(/\bor\b/gi, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
-                    res = res.replace(/\//g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
-                    res = res.replace(/\{/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">[</span>');
-                    res = res.replace(/\}/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">]</span>');
-                    res = res.replace(/\*(\d+)/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
 
                     // Restore Notes as Info blocks
                     notes.forEach((n, idx) => {
