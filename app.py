@@ -892,6 +892,7 @@ else:
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
             <div class="header-meta fade-up">Version BETA 2.1 • Trucking BU • Mar 2026</div>
+            <div class="header-meta fade-up">试用版问题反馈：jcyi@streamax.com</div>
         </div>
     </header>
 
