@@ -467,6 +467,14 @@ js_part_2 = r""";
                     renderBasketUI();
                     validateCombination();
                 }
+                
+                function addMultipleToBasket(itemsListStr) {
+                    let items = itemsListStr.split(',');
+                    items.forEach(p => selectedBasket.add(p.trim()));
+                    renderComponents();
+                    renderBasketUI();
+                    validateCombination();
+                }
 
                 // Render Bottom Basket UI
                 function renderBasketUI() {
@@ -488,12 +496,12 @@ js_part_2 = r""";
                     container.innerHTML = html;
                 }
 
-                // Validator Engine
+                // Validator Engine with dynamic suggestions
                 function validateCombination() {
                     const resEl = document.getElementById('validatorResult');
                     
                     if (selectedBasket.size === 0) {
-                        resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex items-center justify-center";
+                        resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex flex-col items-center justify-center";
                         resEl.innerHTML = `
                             <div class="text-center text-gray-500">
                                 <i class="fa-solid fa-microchip text-3xl mb-2 opacity-50"></i>
@@ -506,20 +514,51 @@ js_part_2 = r""";
                     // Sort arrays for deterministic comparison
                     const basketArr = Array.from(selectedBasket).sort();
                     let matchedRow = null;
+                    let suggestionsMap = new Map();
 
                     for (let row of matrixData) {
                         for (let vSet of row.valid_sets) {
                             let vArr = [...vSet].sort();
+                            
+                            // Check Exact Match
                             if (JSON.stringify(basketArr) === JSON.stringify(vArr)) {
-                                matchedRow = row;
-                                break;
+                                if (!matchedRow) matchedRow = row; 
+                            }
+                            
+                            // Suggestion Search: Is basket a strict subset of this valid set?
+                            let isSubset = basketArr.every(val => vArr.includes(val));
+                            if (isSubset && vArr.length > basketArr.length) {
+                                let missing = vArr.filter(x => !basketArr.includes(x));
+                                let key = missing.sort().join(' + ');
+                                if (!suggestionsMap.has(key)) {
+                                    suggestionsMap.set(key, missing);
+                                }
                             }
                         }
-                        if (matchedRow) break;
                     }
 
+                    // Render Suggestions UI
+                    let suggestionsHtml = '';
+                    if (suggestionsMap.size > 0) {
+                        let pillsHtml = '';
+                        suggestionsMap.forEach((missingArr, key) => {
+                            let itemsStr = missingArr.join(',');
+                            pillsHtml += `<button onclick="addMultipleToBasket('${itemsStr}')" class="bg-black/40 border border-white/20 hover:border-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-plus text-[10px]"></i> ${key}</button>`;
+                        });
+                        
+                        suggestionsHtml = `
+                            <div class="mt-5 pt-4 border-t border-white/10 w-full">
+                                <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i> Expand Solution With:</div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${pillsHtml}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Apply Final UI
                     if (matchedRow) {
-                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)]";
+                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col";
                         resEl.innerHTML = `
                             <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center">
                                 <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
@@ -534,14 +573,25 @@ js_part_2 = r""";
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis}</div></div>
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm}</div></div>
                             </div>
+                            ${suggestionsHtml}
                         `;
                     } else {
-                        resEl.className = "rounded-xl border border-red-500/50 p-5 bg-red-500/5 transition-all";
+                        let errorMsg = suggestionsMap.size > 0 
+                            ? "Your basket has components from a valid architecture, but is currently incomplete. Add the suggested items below to complete it." 
+                            : "The components currently in your basket do not match any recognized standalone system architecture. Try starting over.";
+                        
+                        let statusColor = suggestionsMap.size > 0 ? "text-yellow-500" : "text-red-400";
+                        let borderColor = suggestionsMap.size > 0 ? "border-yellow-500/50" : "border-red-500/50";
+                        let bgColor = suggestionsMap.size > 0 ? "bg-yellow-500/5" : "bg-red-500/5";
+                        let icon = suggestionsMap.size > 0 ? "fa-circle-exclamation" : "fa-circle-xmark";
+
+                        resEl.className = `rounded-xl border ${borderColor} p-5 ${bgColor} transition-all flex flex-col`;
                         resEl.innerHTML = `
-                            <div class="text-red-400 font-bold text-xl mb-2 flex items-center">
-                                <i class="fa-solid fa-circle-xmark mr-2 text-2xl"></i> Invalid or Incomplete Combination
+                            <div class="${statusColor} font-bold text-xl mb-2 flex items-center">
+                                <i class="fa-solid ${icon} mr-2 text-2xl"></i> ${suggestionsMap.size > 0 ? 'Incomplete Combination' : 'Invalid Combination'}
                             </div>
-                            <p class="text-sm text-gray-400 m-0">The components currently in your basket do not match any recognized standalone system architecture. Try adding or removing parts based on the official suggestions.</p>
+                            <p class="text-sm text-gray-400 m-0">${errorMsg}</p>
+                            ${suggestionsHtml}
                         `;
                     }
                 }
