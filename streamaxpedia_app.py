@@ -248,10 +248,10 @@ css_and_html = r"""
             <!-- MODE 2: PRODUCT MATRIX -->
             <div id="spedia-matrix-mode" class="spedia-mode hidden w-full">
                 <!-- TOP AREA: Grid Layout -->
-                <div class="flex flex-col lg:flex-row gap-6 w-full max-w-7xl mx-auto px-4 mt-4">
+                <div class="flex flex-col md:flex-row gap-6 w-full max-w-7xl mx-auto px-4 mt-4">
                     
                     <!-- Left Column: Component Search & Pick -->
-                    <div class="w-full lg:w-1/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
+                    <div class="w-full md:w-1/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
                         <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-box-open text-[var(--primary-green)] mr-2"></i> Component Library</h3>
                         <p class="text-xs text-gray-400 mb-4 leading-relaxed">Search and pick discrete hardware components. Click any chip to add it to your basket below.</p>
                         
@@ -266,7 +266,7 @@ css_and_html = r"""
                     </div>
 
                     <!-- Right Column: Filters & Formulas -->
-                    <div class="w-full lg:w-2/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
+                    <div class="w-full md:w-2/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
                         <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-wand-magic-sparkles text-[var(--secondary-blue)] mr-2"></i> Composition Discovery</h3>
                         <p class="text-xs text-gray-400 mb-4 leading-relaxed">Filter official architectures by requested features. Click components inside the formulas to add them to your basket.</p>
                         
