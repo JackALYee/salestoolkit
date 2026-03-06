@@ -5,7 +5,7 @@ TERMINOLOGY_DB = [
         "term": "AD Plus 2.0", 
         "category": "DASHCAM", 
         "desc": "Streamax bread-and-butter 4-channel dashcam.", 
-        "related": ["PBM", "ADAS", "PBP", "DSC", "DMS", "C29N"],
+        "related": ["PBM", "ADAS", "PBP", "DSC", "DMS", "C29N", "C53", "CA51", "AVM"],
         "files": [
             { "label": "Download Spec", "url": "https://drive.google.com/uc?export=download&id=15UTpGJD4U4hPTktn3UjW-7xFUcD6X3PN" },
             { "label": "Download User Manual", "url": "https://drive.google.com/uc?export=download&id=1nGmQytGKRr288kGiqI4ci651liqmxKdx" }
@@ -25,6 +25,7 @@ TERMINOLOGY_DB = [
         "term": "C6 Lite 2.0", 
         "category": "DASHCAM", 
         "desc": "Economic, ADAS/DSC dashcam.", 
+        "related": ["ADAS", "DSC"],
         "files": [
             { "label": "Download Spec", "url": "https://drive.google.com/uc?export=download&id=1PC1fbWuVgPgWSEt3asOIKQA1JOtdE0fa" },
             { "label": "Download User Manual", "url": "https://drive.google.com/uc?export=download&id=1uYe7JIQffiepX3oIWi3sEImrlUYi3Sdd" }
@@ -75,6 +76,7 @@ TERMINOLOGY_DB = [
         "term": "M1N 2.0", 
         "category": "MDVR", 
         "desc": "Bread-and-butter MDVR.", 
+        "related": ["CA20S", "C29N", "C53", "CA51"],
         "files": [
             { "label": "Download Spec", "url": "https://drive.google.com/uc?export=download&id=1hlQ-5vNlxoZ7dH7I0L2uOY4bj3CX9ie5" },
             { "label": "Download User Manual", "url": "https://drive.google.com/uc?export=download&id=1Q7xYb6jG8E0ZHgWDDVuuWMI9w5vecmvA" }
@@ -93,6 +95,7 @@ TERMINOLOGY_DB = [
         "term": "M3N", 
         "category": "MDVR", 
         "desc": "New MDVR.", 
+        "related": ["ADKIT", "CA20S", "C40W", "C29N", "C46", "CA46"],
         "files": [
             { "label": "Download Spec", "url": "https://drive.google.com/uc?export=download&id=14-vI6TLJrhNSys4qgnbhHOewU0iEWHOa" }
         ] 
@@ -106,6 +109,23 @@ TERMINOLOGY_DB = [
             { "label": "Download Spec", "url": "https://drive.google.com/uc?export=download&id=1nzOhRlXB0C0e-LuOOoXvuBozJEhq2i6H" }
         ] 
     },
+    
+    # --- Matrix Additions ---
+    { "term": "C43", "category": "DASHCAM", "desc": "2-channel monitoring dashcam without AI." },
+    { "term": "C6 Lite", "category": "DASHCAM", "desc": "2-channel monitoring dashcam without AI. Supports AHD extension." },
+    { "term": "C6 Lite-SA", "category": "DASHCAM", "desc": "Variant of C6 Lite." },
+    { "term": "C6 Lite 2.0-S", "category": "DASHCAM", "desc": "2-channel AI dashcam.", "related": ["CA29P", "CA29M"] },
+    { "term": "AD Plus 2.0-S", "category": "DASHCAM", "desc": "3-channel AI dashcam.", "related": ["C29N"] },
+    { "term": "C6D 7.0", "category": "DASHCAM", "desc": "3-channel monitoring dashcam with 2-channel AI.", "related": ["ADAS", "DMS"] },
+    { "term": "F1N", "category": "MDVR", "desc": "5-channel monitoring device.", "related": ["CA20S", "CA29P", "CA29M", "C29N"] },
+    { "term": "X1N", "category": "MDVR", "desc": "Multi-channel MDVR supporting AI extensions.", "related": ["C29N", "CA20S", "AVM", "CA51"] },
+    { "term": "ADKIT", "category": "ACCESSORIES", "desc": "ADAS camera kit.", "related": ["M3N", "ADAS"] },
+    { "term": "CA51", "category": "ACCESSORIES", "desc": "Optional camera for AD Plus 2.0 and MDVRs.", "related": ["AD Plus 2.0"] },
+    { "term": "C46", "category": "ACCESSORIES", "desc": "AHD interface camera." },
+    { "term": "CA46", "category": "ACCESSORIES", "desc": "AHD interface camera variant." },
+    { "term": "CA29P", "category": "ACCESSORIES", "desc": "DMS Camera component." },
+    { "term": "CA29M", "category": "ACCESSORIES", "desc": "DMS Camera component." },
+
     { 
         "term": "B2", 
         "category": "ACCESSORIES", 
