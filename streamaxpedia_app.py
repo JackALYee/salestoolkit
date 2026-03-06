@@ -195,6 +195,12 @@ css_and_html = r"""
                 .matrix-filter-checkbox {
                     width: 18px; height: 18px; accent-color: var(--primary-green); cursor: pointer;
                 }
+                
+                /* Custom Scrollbar for matrix panels */
+                .custom-scroll::-webkit-scrollbar { width: 6px; }
+                .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+                .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+                .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
             </style>
             
             <div class="sub-nav-tabs fade-up w-full justify-center mt-6">
@@ -241,42 +247,74 @@ css_and_html = r"""
             
             <!-- MODE 2: PRODUCT MATRIX -->
             <div id="spedia-matrix-mode" class="spedia-mode hidden w-full">
-                <div class="flex flex-col md:flex-row gap-6 w-full max-w-6xl mx-auto px-4 mt-4 pb-20">
-                    <!-- Filters Sidebar -->
-                    <div class="w-full md:w-1/4 glass-panel p-5 h-fit sticky top-20 border border-white/10 rounded-xl bg-black/40">
-                        <h3 class="text-lg font-bold text-white mb-4"><i class="fa-solid fa-filter text-[var(--secondary-blue)] mr-2"></i> Features</h3>
+                <!-- TOP AREA: Grid Layout -->
+                <div class="flex flex-col lg:flex-row gap-6 w-full max-w-7xl mx-auto px-4 mt-4">
+                    
+                    <!-- Left Column: Component Search & Pick -->
+                    <div class="w-full lg:w-1/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
+                        <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-box-open text-[var(--primary-green)] mr-2"></i> Component Library</h3>
+                        <p class="text-xs text-gray-400 mb-4 leading-relaxed">Search and pick discrete hardware components. Click any chip to add it to your basket below.</p>
                         
-                        <div class="space-y-4">
-                            <label class="matrix-filter-label">
-                                <input type="checkbox" id="filter-dms" class="matrix-filter-checkbox" onchange="updateMatrix()"> DMS
-                            </label>
-                            <label class="matrix-filter-label">
-                                <input type="checkbox" id="filter-adas" class="matrix-filter-checkbox" onchange="updateMatrix()"> ADAS
-                            </label>
-                            <label class="matrix-filter-label">
-                                <input type="checkbox" id="filter-dsc" class="matrix-filter-checkbox" onchange="updateMatrix()"> DSC
-                            </label>
-                            <label class="matrix-filter-label">
-                                <input type="checkbox" id="filter-bsis" class="matrix-filter-checkbox" onchange="updateMatrix()"> BSIS/MOIS
-                            </label>
-                            <label class="matrix-filter-label">
-                                <input type="checkbox" id="filter-avm" class="matrix-filter-checkbox" onchange="updateMatrix()"> AI-AVM
-                            </label>
+                        <div class="relative mb-4">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                            <input type="text" id="componentSearch" placeholder="Find AD Plus 2.0, C29N..." class="w-full bg-black/60 border border-white/20 rounded-lg py-2.5 pl-9 pr-3 text-white outline-none focus:border-[var(--primary-green)] transition-all text-sm" oninput="renderComponents()">
+                        </div>
+                        
+                        <div id="componentsList" class="flex flex-wrap gap-2 overflow-y-auto custom-scroll pr-2 pb-2 flex-grow content-start">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Filters & Formulas -->
+                    <div class="w-full lg:w-2/3 glass-panel p-5 flex flex-col h-[500px] bg-black/40 border border-white/10 rounded-xl">
+                        <h3 class="text-lg font-bold text-white mb-2"><i class="fa-solid fa-wand-magic-sparkles text-[var(--secondary-blue)] mr-2"></i> Composition Discovery</h3>
+                        <p class="text-xs text-gray-400 mb-4 leading-relaxed">Filter official architectures by requested features. Click components inside the formulas to add them to your basket.</p>
+                        
+                        <!-- Feature Filters Row -->
+                        <div class="flex flex-wrap items-center gap-x-5 gap-y-3 mb-4 pb-4 border-b border-white/10">
+                            <label class="matrix-filter-label"><input type="checkbox" id="filter-dms" class="matrix-filter-checkbox" onchange="updateMatrix()"> DMS</label>
+                            <label class="matrix-filter-label"><input type="checkbox" id="filter-adas" class="matrix-filter-checkbox" onchange="updateMatrix()"> ADAS</label>
+                            <label class="matrix-filter-label"><input type="checkbox" id="filter-dsc" class="matrix-filter-checkbox" onchange="updateMatrix()"> DSC</label>
+                            <label class="matrix-filter-label"><input type="checkbox" id="filter-bsis" class="matrix-filter-checkbox" onchange="updateMatrix()"> BSIS/MOIS</label>
+                            <label class="matrix-filter-label"><input type="checkbox" id="filter-avm" class="matrix-filter-checkbox" onchange="updateMatrix()"> AI-AVM</label>
                             
-                            <div class="pt-4 border-t border-white/10 mt-4">
-                                <label class="block text-sm text-gray-400 mb-2">Front/Left/Right/Rear BSD</label>
-                                <select id="filter-bsd" class="w-full bg-black/60 border border-white/20 rounded-lg p-2.5 text-white outline-none focus:border-[var(--primary-green)] transition-all text-sm font-medium" onchange="updateMatrix()">
-                                    <option value="Any">Any Configuration</option>
+                            <div class="flex items-center gap-2 ml-auto">
+                                <label class="text-sm font-bold text-gray-400">BSD Config:</label>
+                                <select id="filter-bsd" class="bg-black/60 border border-white/20 rounded px-2 py-1.5 text-white outline-none focus:border-[var(--primary-green)] text-sm font-medium" onchange="updateMatrix()">
+                                    <option value="Any">Any Config</option>
                                     <option value="NO">NO</option>
                                     <option value="四选二">四选二</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Results Grid -->
-                    <div class="w-full md:w-3/4 flex flex-col gap-4" id="matrixResults">
-                        <!-- Rendered via JS -->
+                        <!-- Results Container -->
+                        <div id="matrixResults" class="overflow-y-auto custom-scroll pr-2 pb-2 flex-grow space-y-3">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM AREA: Validator Basket -->
+                <div class="w-full max-w-7xl mx-auto px-4 mt-6 pb-20">
+                    <div class="glass-panel p-6 border-t-4 border-[var(--primary-green)] bg-black/60 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-white"><i class="fa-solid fa-layer-group text-[var(--secondary-blue)] mr-2"></i> Solution Validator</h2>
+                            <button onclick="clearBasket()" class="text-xs text-gray-400 hover:text-white underline"><i class="fa-solid fa-trash-can mr-1"></i> Clear Basket</button>
+                        </div>
+                        
+                        <div class="mb-5">
+                            <div id="basketArea" class="flex flex-wrap gap-3 min-h-[56px] p-3 border border-white/10 rounded-lg bg-black/40 items-center">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <div id="validatorResult" class="rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex items-center justify-center">
+                            <div class="text-center text-gray-500">
+                                <i class="fa-solid fa-microchip text-3xl mb-2 opacity-50"></i>
+                                <p>Select components to validate your solution architecture.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -326,32 +364,59 @@ js_part_2 = r""";
                 // ==========================================
                 // MASTER SWITCH TO ENABLE/DISABLE ALL DOWNLOADS
                 // ==========================================
-                const ENABLE_DOWNLOADS = false; // Change to true to enable ALL downloads (White Papers, Specs, Manuals, etc.)
-                // ==========================================
+                const ENABLE_DOWNLOADS = false; 
 
-                // --- PRODUCT COMBINATION MATRIX DATA ---
-                const matrixData = [
-                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C43", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite / C6 Lite-SA（外扩AHD）", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0-S + CA29P/CA29M", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "AD Plus 2.0-S + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "C6D 7.0", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "NO", sol: "F1N + CA20S + CA29P/CA29M/C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "YES", sol: "M1N/X1N + C29N + CA20S", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO" },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} + C46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
-                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO" },
-                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {C53（左/右） + CA51(可选)}", dms: "NO", adas: "YES", dsc: "YES", bsis: "YES", bsd: "NO", avm: "NO" },
-                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "YES", sol: "M1N2.0 + CA20S + C29N + {C53（左/右） + CA51(可选)}", dms: "YES", adas: "YES", dsc: "NO", bsis: "YES", bsd: "NO", avm: "NO" },
-                  { ai: "5-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM，存储4宫格AVM原始画面)", dms: "NO", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES" },
-                  { ai: "6-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "YES" },
-                  { ai: "6-Channel AI", ch: "7-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM，存储4宫格AVM原始画面)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES" }
+                // --- PRODUCT COMBINATION MATRIX DATA & LOGIC ---
+                // Pre-parsed valid arrays allow the validator to easily match user baskets to actual solutions.
+                const ALL_PRODUCTS = [
+                    "AD Plus 2.0-S", "C6 Lite 2.0-S", "C6 Lite 2.0", "C6 Lite-SA", "C6 Lite", 
+                    "AD Plus 2.0", "C6D 7.0", "ADKIT", "CA29P", "CA29M", "CA20S", 
+                    "C29N", "C40W", "C46", "CA46", "C53", "CA51", "AVM", 
+                    "F1N", "M1N 2.0", "M1N", "X1N", "M3N", "C43", "IPC", "CA42Kit"
                 ];
 
-                // Function to toggle between modes
+                const matrixData = [
+                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C43", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["C43"]] },
+                  { ai: "No AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite / C6 Lite-SA (外扩AHD)", dms: "NO", adas: "NO", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["C6 Lite"], ["C6 Lite-SA"]] },
+                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["C6 Lite 2.0"]] },
+                  { ai: "2-Channel AI", ch: "2-channel monitoring", hdd: "NO", sol: "C6 Lite 2.0-S + CA29P/CA29M", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["C6 Lite 2.0-S", "CA29P"], ["C6 Lite 2.0-S", "CA29M"]] },
+                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "AD Plus 2.0-S + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["AD Plus 2.0-S", "C29N"]] },
+                  { ai: "2-Channel AI", ch: "3-channel monitoring", hdd: "NO", sol: "C6D 7.0", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["C6D 7.0"]] },
+                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["AD Plus 2.0"]] },
+                  { ai: "2-Channel AI", ch: "4-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["AD Plus 2.0", "C29N"]] },
+                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "NO", sol: "F1N + CA20S + CA29P/CA29M/C29N", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["F1N", "CA20S", "CA29P"], ["F1N", "CA20S", "CA29M"], ["F1N", "CA20S", "C29N"]] },
+                  { ai: "2-Channel AI", ch: "5-channel monitoring", hdd: "YES", sol: "M1N/X1N + C29N + CA20S", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "NO",
+                    valid_sets: [["M1N", "C29N", "CA20S"], ["X1N", "C29N", "CA20S"]] },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} + C46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
+                    valid_sets: [["M3N", "ADKIT", "CA20S", "C46"]] },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {C40W + C29N} + CA46*2", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
+                    valid_sets: [["M3N", "ADKIT", "CA20S", "CA46"], ["M3N", "C40W", "C29N", "CA46"]] },
+                  { ai: "4-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M3N + {ADKIT + CA20S} or {CA20S/C40W + C29N} + C46*2 (AHD接口)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "四选二", avm: "NO",
+                    valid_sets: [["M3N", "ADKIT", "CA20S", "C46"], ["M3N", "CA20S", "C29N", "C46"], ["M3N", "C40W", "C29N", "C46"]] },
+                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {C53(左/右) + CA51(可选)}", dms: "NO", adas: "YES", dsc: "YES", bsis: "YES", bsd: "NO", avm: "NO",
+                    valid_sets: [["AD Plus 2.0", "C53"], ["AD Plus 2.0", "C53", "CA51"]] },
+                  { ai: "5-Channel AI", ch: "6-channel monitoring", hdd: "YES", sol: "M1N 2.0 + CA20S + C29N + {C53(左/右) + CA51(可选)}", dms: "YES", adas: "YES", dsc: "NO", bsis: "YES", bsd: "NO", avm: "NO",
+                    valid_sets: [["M1N 2.0", "CA20S", "C29N", "C53"], ["M1N 2.0", "CA20S", "C29N", "C53", "CA51"]] },
+                  { ai: "5-Channel AI", ch: "8-channel monitoring", hdd: "YES", sol: "M1N/X1N + CA20S + {AVM + CA51*4} (MDVR IPC口对接AVM)", dms: "NO", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES",
+                    valid_sets: [["M1N", "CA20S", "AVM", "CA51"], ["X1N", "CA20S", "AVM", "CA51"]] },
+                  { ai: "6-Channel AI", ch: "6-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + {AVM + CA51*4} (Dashcam IPC口对接AVM)", dms: "NO", adas: "YES", dsc: "YES", bsis: "NO", bsd: "NO", avm: "YES",
+                    valid_sets: [["AD Plus 2.0", "AVM", "CA51"]] },
+                  { ai: "6-Channel AI", ch: "7-channel monitoring", hdd: "NO", sol: "AD Plus 2.0 + C29N + {AVM + CA51*4} (Dashcam IPC口对接AVM)", dms: "YES", adas: "YES", dsc: "NO", bsis: "NO", bsd: "NO", avm: "YES",
+                    valid_sets: [["AD Plus 2.0", "C29N", "AVM", "CA51"]] }
+                ];
+
+                let selectedBasket = new Set();
+
+                // Toggle Sub-Tabs
                 function switchSpediaMode(modeId, btnElement) {
                     const container = btnElement.closest('.sub-nav-tabs');
                     container.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -362,72 +427,166 @@ js_part_2 = r""";
                     target.classList.remove('hidden');
                     
                     if (modeId === 'spedia-matrix-mode') {
-                        updateMatrix(); // Load matrix data
+                        renderComponents();
+                        updateMatrix(); 
                     }
                 }
 
-                // Parser logic for "Solution Composition" strings
-                function parseSolutionHtml(sol) {
+                // Render Left Library Panel
+                function renderComponents() {
+                    const query = document.getElementById('componentSearch').value.toLowerCase().trim();
+                    const container = document.getElementById('componentsList');
+                    
+                    let html = '';
+                    ALL_PRODUCTS.forEach(p => {
+                        if (p.toLowerCase().includes(query)) {
+                            const isSelected = selectedBasket.has(p);
+                            const activeClass = isSelected ? "bg-[var(--primary-green)] text-[#050810]" : "bg-black/50 text-gray-300 border-white/20 hover:border-[var(--primary-green)] hover:text-white";
+                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${p}')">${p}</button>`;
+                        }
+                    });
+                    if(html === '') html = '<span class="text-gray-500 text-sm">No components found.</span>';
+                    container.innerHTML = html;
+                }
+
+                // Manage Basket State
+                function toggleBasket(p) {
+                    if (selectedBasket.has(p)) {
+                        selectedBasket.delete(p);
+                    } else {
+                        selectedBasket.add(p);
+                    }
+                    renderComponents(); // update left panel active states
+                    renderBasketUI();
+                    validateCombination();
+                }
+                
+                function clearBasket() {
+                    selectedBasket.clear();
+                    renderComponents();
+                    renderBasketUI();
+                    validateCombination();
+                }
+
+                // Render Bottom Basket UI
+                function renderBasketUI() {
+                    const container = document.getElementById('basketArea');
+                    if (selectedBasket.size === 0) {
+                        container.innerHTML = '<span class="text-gray-500 italic text-sm">No components selected. Click items above to add.</span>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    selectedBasket.forEach(p => {
+                        html += `
+                            <div class="inline-flex items-center bg-[var(--primary-green)] text-[#050810] font-bold px-3 py-1.5 rounded-full text-sm shadow-[0_0_10px_rgba(42,245,152,0.3)] animate-pulse" style="animation-iteration-count: 1;">
+                                ${p}
+                                <button class="ml-2 hover:text-white transition outline-none" onclick="toggleBasket('${p}')"><i class="fa-solid fa-circle-xmark"></i></button>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                }
+
+                // Validator Engine
+                function validateCombination() {
+                    const resEl = document.getElementById('validatorResult');
+                    
+                    if (selectedBasket.size === 0) {
+                        resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex items-center justify-center";
+                        resEl.innerHTML = `
+                            <div class="text-center text-gray-500">
+                                <i class="fa-solid fa-microchip text-3xl mb-2 opacity-50"></i>
+                                <p class="text-sm m-0">Select components to validate your solution architecture.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Sort arrays for deterministic comparison
+                    const basketArr = Array.from(selectedBasket).sort();
+                    let matchedRow = null;
+
+                    for (let row of matrixData) {
+                        for (let vSet of row.valid_sets) {
+                            let vArr = [...vSet].sort();
+                            if (JSON.stringify(basketArr) === JSON.stringify(vArr)) {
+                                matchedRow = row;
+                                break;
+                            }
+                        }
+                        if (matchedRow) break;
+                    }
+
+                    if (matchedRow) {
+                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)]";
+                        resEl.innerHTML = `
+                            <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center">
+                                <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">HDD</div><div class="text-sm font-bold">${matchedRow.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check"></i> YES</span>' : '<span class="text-gray-400">NO</span>'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DMS</div><div class="text-sm font-bold ${matchedRow.dms==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dms}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">ADAS</div><div class="text-sm font-bold ${matchedRow.adas==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.adas}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DSC</div><div class="text-sm font-bold ${matchedRow.dsc==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dsc}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm}</div></div>
+                            </div>
+                        `;
+                    } else {
+                        resEl.className = "rounded-xl border border-red-500/50 p-5 bg-red-500/5 transition-all";
+                        resEl.innerHTML = `
+                            <div class="text-red-400 font-bold text-xl mb-2 flex items-center">
+                                <i class="fa-solid fa-circle-xmark mr-2 text-2xl"></i> Invalid or Incomplete Combination
+                            </div>
+                            <p class="text-sm text-gray-400 m-0">The components currently in your basket do not match any recognized standalone system architecture. Try adding or removing parts based on the official suggestions.</p>
+                        `;
+                    }
+                }
+
+                // Complex Tokenization to make formula strings interactive
+                function makeClickableFormula(sol) {
+                    let res = sol;
+                    let sorted = [...ALL_PRODUCTS].sort((a,b) => b.length - a.length);
+                    
                     let notes = [];
-                    // Extract parenthesis for Implementation Notes
-                    let cleanSol = sol.replace(/（/g, '(').replace(/）/g, ')'); 
-                    cleanSol = cleanSol.replace(/\((.*?)\)/g, (match, p1) => {
+                    // Extract parenthesis
+                    res = res.replace(/（/g, '(').replace(/）/g, ')');
+                    res = res.replace(/\((.*?)\)/g, (match, p1) => {
                         notes.push(p1);
-                        return '';
+                        return `__NOTE${notes.length-1}__`;
                     });
 
-                    // Format paired combinations {}
-                    cleanSol = cleanSol.replace(/\{/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">[</span><span class="inline-flex items-center">');
-                    cleanSol = cleanSol.replace(/\}/g, '</span><span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80">]</span>');
+                    // Tokenize Products (protecting them from partial matches later)
+                    sorted.forEach((p, idx) => {
+                        res = res.split(p).join(`__TKN${idx}__`);
+                    });
 
-                    // Format OR slash
-                    cleanSol = cleanSol.replace(/\s+or\s+/gi, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
-                    cleanSol = cleanSol.replace(/\//g, '<span class="mx-2 text-[10px] font-bold text-white bg-[var(--secondary-blue)]/60 px-1.5 py-0.5 rounded shadow">OR</span>');
+                    // Restore Products as Buttons
+                    sorted.forEach((p, idx) => {
+                        let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
+                        res = res.split(`__TKN${idx}__`).join(btn);
+                    });
 
-                    // Format AND plus
-                    cleanSol = cleanSol.replace(/\s*\+\s*/g, '<span class="mx-2 text-[var(--primary-green)]"><i class="fa-solid fa-plus text-[12px] opacity-80"></i></span>');
+                    // Format Syntax Elements
+                    res = res.replace(/\+/g, '<span class="text-[var(--primary-green)] mx-1 font-black text-sm">+</span>');
+                    res = res.replace(/\bor\b/gi, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
+                    res = res.replace(/\//g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
+                    res = res.replace(/\{/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">[</span>');
+                    res = res.replace(/\}/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-lg">]</span>');
+                    res = res.replace(/\*(\d+)/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
 
-                    // Format quantity multipliers * n
-                    cleanSol = cleanSol.replace(/\*(\d+)/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+                    // Restore Notes as Info blocks
+                    notes.forEach((n, idx) => {
+                        res = res.replace(`__NOTE${idx}__`, `<div class="mt-2 text-[12px] text-gray-400 italic font-normal tracking-wide flex items-center"><i class="fa-solid fa-circle-info mr-1.5 text-[var(--secondary-blue)]/80"></i> ${n}</div>`);
+                    });
 
-                    return { html: cleanSol, notes: notes };
+                    return res;
                 }
 
-                // Render a single product combination card
-                function renderMatrixCard(item) {
-                    const parsed = parseSolutionHtml(item.sol);
-                    
-                    let notesHtml = '';
-                    if (parsed.notes.length > 0) {
-                        notesHtml = parsed.notes.map(n => `<div class="mt-3 text-[13px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1 text-[var(--secondary-blue)]/80"></i> ${n}</div>`).join('');
-                    }
-
-                    return `
-                        <div class="result-card p-6" style="animation: none; opacity: 1; transform: none;">
-                            <div class="flex flex-wrap items-center text-lg font-bold text-white leading-relaxed">
-                                ${parsed.html}
-                            </div>
-                            ${notesHtml}
-                            
-                            <div class="mt-5 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-300">
-                                <div class="bg-black/20 p-2 rounded border border-white/5">
-                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">AI Requirements</span>
-                                    ${item.ai}
-                                </div>
-                                <div class="bg-black/20 p-2 rounded border border-white/5">
-                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">Channel Specs</span>
-                                    ${item.ch}
-                                </div>
-                                <div class="bg-black/20 p-2 rounded border border-white/5">
-                                    <span class="text-gray-500 block text-[10px] uppercase font-bold tracking-wider mb-1">HDD Included</span>
-                                    ${item.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check mr-1"></i> YES</span>' : 'NO'}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Apply filters and update UI
+                // Render Right Configurations Panel
                 function updateMatrix() {
                     const dms = document.getElementById('filter-dms').checked;
                     const adas = document.getElementById('filter-adas').checked;
@@ -442,27 +601,37 @@ js_part_2 = r""";
                     matrixData.forEach(item => {
                         let match = true;
                         
-                        // Checkbox implies MUST HAVE 'YES' if clicked
+                        // Checkbox requires 'YES' if clicked
                         if (dms && item.dms !== 'YES') match = false;
                         if (adas && item.adas !== 'YES') match = false;
                         if (dsc && item.dsc !== 'YES') match = false;
                         if (bsis && item.bsis !== 'YES') match = false;
                         if (avm && item.avm !== 'YES') match = false;
                         
-                        // Select dropdown match
+                        // Dropdown logic
                         if (bsd !== 'Any' && item.bsd !== bsd) match = false;
 
                         if (match) {
-                            html += renderMatrixCard(item);
+                            html += `
+                                <div class="bg-black/30 border border-white/10 rounded-lg p-4 hover:border-white/20 transition-all">
+                                    <div class="leading-loose mb-3">
+                                        ${makeClickableFormula(item.sol)}
+                                    </div>
+                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider">
+                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai}</span>
+                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch}</span>
+                                    </div>
+                                </div>
+                            `;
                         }
                     });
 
                     if (html === '') {
                         html = `
-                            <div class="text-center text-gray-500 py-12 w-full glass-panel rounded-xl">
-                                <i class="fa-solid fa-layer-group text-4xl mb-4 opacity-50"></i>
-                                <h3 class="text-white text-lg mb-2">No Matching Configurations</h3>
-                                <p class="text-sm">Try adjusting your filters to discover valid product combinations.</p>
+                            <div class="text-center text-gray-500 py-10 w-full rounded-xl bg-black/20 border border-white/5">
+                                <i class="fa-solid fa-filter-circle-xmark text-3xl mb-3 opacity-50"></i>
+                                <h3 class="text-white text-base mb-1">No Matching Architectures</h3>
+                                <p class="text-xs">Adjust your filters to discover valid configurations.</p>
                             </div>
                         `;
                     }
@@ -611,7 +780,6 @@ js_part_2 = r""";
                         const delay = index * 0.05;
                         let downHTML = '';
                         
-                        // ALL downloads are blocked if ENABLE_DOWNLOADS is false
                         if (item.file) {
                             let singleLabel = item.term.includes("DMS") ? "Download DMS vs. DSC white paper" : "Download Document";
                             if (ENABLE_DOWNLOADS) {
@@ -684,8 +852,6 @@ js_part_2 = r""";
                     overlay.classList.add('active');
                 };
 
-                // --- FIXED: GET CENTER ANIMATION SAFE ---
-                // Navigates the DOM hierarchy to find the exact relative center of a node without relying on the animated bounding box.
                 function getCenterSafe(node) {
                     let x = node.offsetWidth / 2;
                     let y = node.offsetHeight / 2;
@@ -706,7 +872,6 @@ js_part_2 = r""";
                     const overlay = document.getElementById('relevanceModal');
                     const modalBox = overlay.querySelector('.modal-box');
                     
-                    // Match the overlay height to the full document height dynamically
                     const docHeight = Math.max(
                         document.body.scrollHeight, document.documentElement.scrollHeight,
                         document.body.offsetHeight, document.documentElement.offsetHeight,
@@ -714,17 +879,13 @@ js_part_2 = r""";
                     );
                     overlay.style.height = docHeight + 'px';
                     
-                    // FIX: Dynamically anchor the modal perfectly to where the user scrolled/clicked!
                     if (btnElement) {
                         const rect = btnElement.getBoundingClientRect();
-                        // Get absolute Y position in the document
                         const absoluteY = rect.top + window.scrollY; 
                         
-                        // Center the modal over the button (Modal defaults to ~600px tall)
                         let boxHeight = modalBox.offsetHeight || 600;
                         let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
                         
-                        // Boundaries
                         if (boxTop < 20) boxTop = 20; 
                         if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
                         
@@ -782,7 +943,6 @@ js_part_2 = r""";
 
                     overlay.classList.add('active');
 
-                    // FIX: Calculate Auto-Pan using offset geometry to ignore CSS scale animations
                     setTimeout(() => {
                         const vp = document.getElementById('graphViewport');
                         const ct = document.getElementById('graphContainer');
@@ -804,7 +964,6 @@ js_part_2 = r""";
                     }, 50);
                 };
 
-                // FIX: drawLines completely bypasses getBoundingClientRect for animation immunity
                 function drawLines() {
                     const svg = document.getElementById('graphLines');
                     svg.innerHTML = '';
@@ -860,20 +1019,15 @@ js_part_2 = r""";
 
                 window.closeModal = function() { document.getElementById('relevanceModal').classList.remove('active'); };
                 
-                // --- COMPLETELY FIXED "SEE DETAILS" LOGIC ---
-                // Instead of reloading the parent URL and breaking the Streamlit iframe,
-                // it seamlessly updates the internal text box and live searches instantly!
                 window.masterSearch = function(name) {
                     closeModal();
                     const searchInput = document.getElementById('searchInput');
                     searchInput.value = name;
                     performSearch();
                     
-                    // Native smooth scroll back to the search bar!
                     document.getElementById('searchWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 };
 
-                // Mascot mouse tracking
                 document.addEventListener('mousemove', (e) => {
                     const mascotImg = document.getElementById('mascotImage');
                     if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
@@ -883,7 +1037,6 @@ js_part_2 = r""";
                     mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
                 });
 
-                // Pan Logic
                 const vp = document.getElementById('graphViewport');
                 const ct = document.getElementById('graphContainer');
                 if (vp) {
@@ -893,7 +1046,6 @@ js_part_2 = r""";
                     vp.onclick = (e) => { if(!hasGraphDragged && !e.target.closest('.node-related') && !document.getElementById('modalChildExplanation').contains(e.target)) document.getElementById('modalChildExplanation').classList.remove('active'); };
                 }
         
-                // Observe modal resize to redraw lines dynamically
                 if (typeof ResizeObserver !== 'undefined') {
                     const modalBox = document.querySelector('.modal-box');
                     if (modalBox) {
