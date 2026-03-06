@@ -247,6 +247,27 @@ css_and_html = r"""
             
             <!-- MODE 2: PRODUCT MATRIX -->
             <div id="spedia-matrix-mode" class="spedia-mode hidden w-full">
+                
+                <!-- DESCRIPTION INFO BOX -->
+                <div class="w-full max-w-7xl mx-auto px-4 mt-6 mb-4 fade-up">
+                    <div class="glass-panel p-6 border border-white/10 rounded-xl bg-black/40 text-gray-300 text-sm leading-relaxed shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
+                        <h2 class="text-xl font-bold text-white mb-3"><i class="fa-solid fa-circle-info text-[var(--secondary-blue)] mr-2"></i> What is the Product Matrix?</h2>
+                        <p class="mb-5">The <strong>Product Matrix</strong> is an intelligent, interactive configuration tool designed to help you quickly build, discover, and validate official Streamax hardware architectures. It bridges the gap between individual hardware components and complex, fully-integrated fleet solutions.</p>
+                        
+                        <h3 class="text-md font-bold text-white mb-3"><i class="fa-solid fa-rocket text-[var(--primary-green)] mr-2"></i> How to Use It</h3>
+                        <ul class="space-y-3 pl-2">
+                            <li><strong class="text-[var(--primary-green)]">1. Pick & Search (Left Panel - Component Library):</strong> Use the search bar to find individual discrete components (e.g., <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>). Click on any component "chip" to instantly add it to your working Basket at the bottom of the screen.</li>
+                            <li><strong class="text-[var(--secondary-blue)]">2. Filter by Features (Right Panel - Composition Discovery):</strong> Not sure what components you need? Check the feature boxes (like <em>DMS</em>, <em>ADAS</em>, or <em>Blind Spot Detection</em>) to filter the official Streamax master configurations. Every formula displayed is interactive—click any product inside the formula string to add it directly to your Basket.</li>
+                            <li><strong class="text-yellow-500">3. Validate & Expand (Bottom Panel - Solution Validator):</strong> As you add components to your Basket, the Validator engine works in real time. 
+                                <ul class="list-disc pl-6 mt-2 text-gray-400 space-y-1">
+                                    <li>If your selection matches an official architecture perfectly, it will display a <strong class="text-[var(--primary-green)]">Valid Solution Confirmed</strong> badge along with full technical specs.</li>
+                                    <li>If your selection is incomplete, it will flash an <strong class="text-yellow-500">Incomplete Combination</strong> warning and intelligently suggest the exact missing components you need to add to complete the system!</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
                 <!-- TOP AREA: Grid Layout -->
                 <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 1.5rem; width: 100%; max-width: 80rem; margin: 1rem auto 0; padding: 0 1rem;">
                     
