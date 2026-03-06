@@ -4,17 +4,22 @@ import ssl
 import time
 
 def verify_streamax_credentials(email, password):
+    # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
+    clean_email = email.strip()
+    email_lower = clean_email.lower()
+    
     # Test Easter Egg Overrides and Bypass
-    if email == "jerry_test" and password == "testme":
+    if email_lower == "jerry_test" and password == "testme":
         return True, "Jerry"
-    if email == "hekun_test" and password == "testme":
+    if email_lower == "hekun_test" and password == "testme":
         return True, "Hekun"
-    if email == "zntang_test" and password == "testme":
+    if email_lower == "zntang_test" and password == "testme":
         return True, "ZNTang"
-    if email == "test_account" and password == "testme":
+    if email_lower == "test_account" and password == "testme":
         return True, "Success"
         
-    if not email.endswith("@streamax.com"):
+    # 2. 使用全小写的 email_lower 来做后缀检查，避免大小写导致报错
+    if not email_lower.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
     if not password:
         return False, "Password cannot be empty."
@@ -22,11 +27,11 @@ def verify_streamax_credentials(email, password):
     try:
         context = ssl.create_default_context()
         server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=10, context=context)
-        server.login(email, password)
+        # 3. 使用清除过空格的 clean_email 发送给服务器进行验证
+        server.login(clean_email, password)
         server.quit()
         
         # Special Easter Egg Logins (Must pass real SMTP Auth first!)
-        email_lower = email.lower()
         if email_lower == "jerry@streamax.com":
             return True, "Jerry"
         elif email_lower == "hekun@streamax.com":
@@ -125,7 +130,7 @@ def render_login():
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>欢迎老大检阅销售Toolkit</h2>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>做大做强，创造辉煌</h2>
                 <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
