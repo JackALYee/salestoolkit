@@ -414,15 +414,18 @@ js_code = f"""
 
                 // Render Left Library Panel
                 function renderComponents() {
-                    const query = document.getElementById('componentSearch').value.toLowerCase().trim();
+                    const searchEl = document.getElementById('componentSearch');
+                    const query = searchEl ? searchEl.value.toLowerCase().trim() : '';
                     const container = document.getElementById('componentsList');
+                    if (!container) return;
                     
                     let html = '';
                     ALL_PRODUCTS.forEach(p => {
-                        if (p.toLowerCase().includes(query)) {
-                            const isSelected = selectedBasket.has(p);
+                        const safeP = p ? String(p) : '';
+                        if (safeP.toLowerCase().includes(query)) {
+                            const isSelected = selectedBasket.has(safeP);
                             const activeClass = isSelected ? "bg-[var(--primary-green)] text-[#050810]" : "bg-black/50 text-gray-300 border-white/20 hover:border-[var(--primary-green)] hover:text-white";
-                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${p}')">${p}</button>`;
+                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${safeP}')">${safeP}</button>`;
                         }
                     });
                     if(html === '') html = '<span class="text-gray-500 text-sm">No components found.</span>';
@@ -820,8 +823,9 @@ js_code = f"""
                     }).join('');
                 }
 
-                // Attach event listeners safely
-                document.addEventListener('DOMContentLoaded', () => {
+                // --- APP INITIALIZATION ---
+                function initStreamaxpedia() {
+                    // 1. Search Engine Bindings
                     const searchInput = document.getElementById('searchInput');
                     const clearBtn = document.getElementById('clearBtn');
                     
@@ -837,255 +841,8 @@ js_code = f"""
                             performSearch();
                         });
                     }
-                });
 
-                // Function to pop up the security warning modal
-                window.showSecurityWarning = function(btnElement) {
-                    const overlay = document.getElementById('securityModal');
-                    const modalBox = overlay.querySelector('.modal-box');
-                    
-                    if (!overlay || !modalBox) return;
-
-                    const docHeight = Math.max(
-                        document.body.scrollHeight, document.documentElement.scrollHeight,
-                        document.body.offsetHeight, document.documentElement.offsetHeight,
-                        document.documentElement.clientHeight
-                    );
-                    overlay.style.height = docHeight + 'px';
-                    
-                    if (btnElement) {
-                        const rect = btnElement.getBoundingClientRect();
-                        const absoluteY = rect.top + window.scrollY; 
-                        
-                        let boxHeight = modalBox.offsetHeight || 350;
-                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
-                        
-                        if (boxTop < 20) boxTop = 20; 
-                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
-                        
-                        modalBox.style.top = boxTop + 'px';
-                    } else {
-                        modalBox.style.top = (window.scrollY + 100) + 'px';
-                    }
-                    
-                    overlay.classList.add('active');
-                };
-
-                function getCenterSafe(node) {
-                    let x = node.offsetWidth / 2;
-                    let y = node.offsetHeight / 2;
-                    let current = node;
-                    while (current && current.id !== 'graphContainer') {
-                        x += current.offsetLeft;
-                        y += current.offsetTop;
-                        current = current.offsetParent;
-                    }
-                    return { x, y };
-                }
-
-                // --- GRAPH LOGIC ---
-                window.openRelevanceGraph = function(termName, btnElement) {
-                    const termData = terminologyDB.find(t => t.term === termName);
-                    if (!termData || !termData.related) return;
-
-                    const overlay = document.getElementById('relevanceModal');
-                    const modalBox = overlay.querySelector('.modal-box');
-                    
-                    if (!overlay || !modalBox) return;
-
-                    const docHeight = Math.max(
-                        document.body.scrollHeight, document.documentElement.scrollHeight,
-                        document.body.offsetHeight, document.documentElement.offsetHeight,
-                        document.documentElement.clientHeight
-                    );
-                    overlay.style.height = docHeight + 'px';
-                    
-                    if (btnElement) {
-                        const rect = btnElement.getBoundingClientRect();
-                        const absoluteY = rect.top + window.scrollY; 
-                        
-                        let boxHeight = modalBox.offsetHeight || 600;
-                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
-                        
-                        if (boxTop < 20) boxTop = 20; 
-                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
-                        
-                        modalBox.style.top = boxTop + 'px';
-                    } else {
-                        modalBox.style.top = (window.scrollY + 100) + 'px';
-                    }
-
-                    const expBox = document.getElementById('modalChildExplanation');
-                    if (expBox) expBox.classList.remove('active');
-                    
-                    const masterNode = document.getElementById('graphMasterNode');
-                    if (masterNode) masterNode.innerText = termData.term;
-
-                    const dist1 = termData.related || [];
-                    const allRelatedTermsSet = new Set(dist1);
-                    dist1.forEach(d1 => {
-                        const d1Data = terminologyDB.find(t => t.term === d1);
-                        if (d1Data && d1Data.related) d1Data.related.forEach(d2 => { if (d2 !== termName) allRelatedTermsSet.add(d2); });
-                    });
-
-                    const allRelated = Array.from(allRelatedTermsSet);
-                    const clusters = [], visited = new Set();
-
-                    allRelated.forEach(term => {
-                        if (!visited.has(term)) {
-                            const cluster = [], queue = [term];
-                            visited.add(term);
-                            while (queue.length > 0) {
-                                const curr = queue.shift();
-                                cluster.push(curr);
-                                const currData = terminologyDB.find(t => t.term === curr);
-                                if (currData && currData.related) {
-                                    currData.related.forEach(n => {
-                                        if (allRelated.includes(n) && !visited.has(n)) { visited.add(n); queue.push(n); }
-                                    });
-                                }
-                            }
-                            clusters.push(cluster);
-                        }
-                    });
-
-                    clusters.forEach(c => c.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a)?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b)?.category || '');
-                        return catA.localeCompare(catB);
-                    }));
-                    clusters.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a[0])?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b[0])?.category || '');
-                        return catA.localeCompare(catB);
-                    });
-
-                    const grouped = clusters.flat();
-                    const relatedNodesContainer = document.getElementById('graphRelatedNodes');
-                    if (relatedNodesContainer) relatedNodesContainer.innerHTML = '';
-
-                    grouped.forEach(rTerm => {
-                        const n = document.createElement('div');
-                        n.className = 'round-node node-related';
-                        if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
-                        n.innerText = rTerm; n.dataset.term = rTerm;
-                        n.onclick = (e) => { if (hasGraphDragged) return; showChildTerm(rTerm); };
-                        if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
-                    });
-
-                    overlay.classList.add('active');
-
-                    setTimeout(() => {
-                        const vp = document.getElementById('graphViewport');
-                        const ct = document.getElementById('graphContainer');
-                        const mn = document.getElementById('graphMasterNode');
-                        
-                        if (!vp || !ct || !mn) return;
-
-                        ct.style.transform = 'translate(0,0)';
-                        
-                        const vpWidth = vp.offsetWidth;
-                        const vpHeight = vp.offsetHeight;
-                        const masterCenter = getCenterSafe(mn);
-                        
-                        graphTranslateX = (vpWidth * 0.3) - masterCenter.x;
-                        graphTranslateY = (vpHeight * 0.5) - masterCenter.y;
-                        
-                        ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
-                        drawLines();
-                        
-                        if (document.fonts) document.fonts.ready.then(() => drawLines());
-                    }, 50);
-                };
-
-                function drawLines() {
-                    const svg = document.getElementById('graphLines');
-                    if (!svg) return;
-                    svg.innerHTML = '';
-                    
-                    const mNode = document.getElementById('graphMasterNode');
-                    if (!mNode) return;
-                    
-                    const mCenter = getCenterSafe(mNode);
-                    const mData = terminologyDB.find(t => t.term === mNode.innerText);
-                    const d1Terms = mData?.related || [];
-                    const nodes = Array.from(document.querySelectorAll('.node-related'));
-                    const drawn = new Set();
-
-                    nodes.forEach(n => {
-                        if (d1Terms.includes(n.dataset.term)) {
-                            const nc = getCenterSafe(n);
-                            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                            l.setAttribute('x1', mCenter.x); l.setAttribute('y1', mCenter.y);
-                            l.setAttribute('x2', nc.x); l.setAttribute('y2', nc.y);
-                            l.setAttribute('stroke', 'rgba(255,255,255,0.15)'); l.setAttribute('stroke-width', '2');
-                            svg.appendChild(l);
-                        }
-                    });
-
-                    nodes.forEach(na => {
-                        const da = terminologyDB.find(t => t.term === na.dataset.term);
-                        if (da && da.related) {
-                            da.related.forEach(tb => {
-                                const nb = nodes.find(n => n.dataset.term === tb);
-                                if (nb) {
-                                    const key = [na.dataset.term, tb].sort().join('|');
-                                    if (!drawn.has(key)) {
-                                        drawn.add(key);
-                                        const ca = getCenterSafe(na), cb = getCenterSafe(nb);
-                                        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                                        const midX = Math.max(ca.x, cb.x) + (Math.abs(ca.y - cb.y) * 0.35);
-                                        const midY = (ca.y + cb.y) / 2;
-                                        p.setAttribute('d', `M ${ca.x} ${ca.y} Q ${midX} ${midY} ${cb.x} ${cb.y}`);
-                                        p.setAttribute('stroke', 'rgba(255,255,255,0.15)'); p.setAttribute('stroke-width', '2'); p.setAttribute('fill', 'none');
-                                        svg.appendChild(p);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-
-                window.showChildTerm = function(name) {
-                    const d = terminologyDB.find(t => t.term === name);
-                    if (!d) return;
-                    const b = document.getElementById('modalChildExplanation');
-                    if (!b) return;
-                    
-                    const safeTerm = d.term || '';
-                    const safeDesc = d.desc || '';
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
-                    b.classList.add('active');
-                };
-
-                window.closeModal = function() { 
-                    const modal = document.getElementById('relevanceModal');
-                    if (modal) modal.classList.remove('active'); 
-                };
-                
-                window.masterSearch = function(name) {
-                    closeModal();
-                    const searchInput = document.getElementById('searchInput');
-                    if (searchInput) {
-                        searchInput.value = name;
-                        performSearch();
-                    }
-                    const searchWrapper = document.getElementById('searchWrapper');
-                    if (searchWrapper) {
-                        searchWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                };
-
-                document.addEventListener('mousemove', (e) => {
-                    const mascotImg = document.getElementById('mascotImage');
-                    if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
-                    const x = (e.clientX / window.innerWidth - 0.5) * 40; 
-                    const y = (e.clientY / window.innerHeight - 0.5) * -40; 
-                    const translateX = (e.clientX / window.innerWidth - 0.5) * 15;
-                    mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
-                });
-
-                document.addEventListener('DOMContentLoaded', () => {
+                    // 2. Relevance Graph Bindings
                     const vp = document.getElementById('graphViewport');
                     const ct = document.getElementById('graphContainer');
                     if (vp && ct) {
@@ -1111,7 +868,10 @@ js_code = f"""
                             }).observe(modalBox);
                         }
                     }
-                });
+                }
+                
+                // Execute immediately bypassing DOMContentLoaded timing issues in iframes
+                initStreamaxpedia();
                 
                 window.viewSecurityPolicy = function() {
                     try {
