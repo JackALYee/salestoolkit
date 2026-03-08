@@ -666,34 +666,34 @@ js_code = f"""
                     res = res.replace(/\*(\d+)/g, '__MULT$1__');
 
                     // Group Preceding Elements (Product Token or Brackets) with their associated Note
-                    res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div class="relative inline-flex flex-col items-center justify-center align-middle mx-0.5">$1$2</div>');
+                    res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div style="position: relative; display: inline-block; margin: 0 2px;">$1$2</div>');
                     // Wrap any stray notes to give them a relative positioning anchor too
-                    res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div class="relative inline-flex flex-col items-center justify-center align-middle mx-0.5">$2</div>');
+                    res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div style="position: relative; display: inline-block; margin: 0 2px;">$2</div>');
 
-                    // Apply HTML replacements to syntax placeholders
-                    res = res.replace(/__OR__/g, '<span class="text-gray-400 mx-2 text-[10px] uppercase font-bold bg-white/10 px-1 rounded shadow">OR</span>');
-                    res = res.replace(/__SLASH__/g, '<span class="text-gray-400 mx-1 font-bold">/</span>');
-                    res = res.replace(/__PLUS__/g, '<span class="text-[var(--primary-green)] mx-2 font-black text-sm">+</span>');
-                    res = res.replace(/__LBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-xl">[</span>');
-                    res = res.replace(/__RBRACE__/g, '<span class="text-[var(--secondary-blue)] font-black mx-1 opacity-80 text-xl">]</span>');
-                    res = res.replace(/__MULT(\d+)__/g, '<span class="ml-0.5 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
+                    // Apply HTML replacements to syntax placeholders (strictly inline items)
+                    res = res.replace(/__OR__/g, '<span style="margin: 0 6px; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #94a3b8; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; vertical-align: middle;">OR</span>');
+                    res = res.replace(/__SLASH__/g, '<span style="margin: 0 4px; font-weight: bold; color: #94a3b8; display: inline-block; vertical-align: middle;">/</span>');
+                    res = res.replace(/__PLUS__/g, '<span style="margin: 0 6px; color: #2AF598; font-weight: 900; font-size: 1rem; display: inline-block; vertical-align: middle;">+</span>');
+                    res = res.replace(/__LBRACE__/g, '<span style="margin: 0 2px; color: #009EFD; font-weight: 900; font-size: 1.25rem; display: inline-block; vertical-align: middle;">[</span>');
+                    res = res.replace(/__RBRACE__/g, '<span style="margin: 0 2px; color: #009EFD; font-weight: 900; font-size: 1.25rem; display: inline-block; vertical-align: middle;">]</span>');
+                    res = res.replace(/__MULT(\d+)__/g, '<span style="margin-left: 2px; font-size: 11px; font-weight: bold; padding: 2px 6px; background: rgba(255,255,255,0.2); color: white; border-radius: 4px; display: inline-block; vertical-align: middle;">x$1</span>');
 
-                    // Restore Products as Buttons
+                    // Restore Products as Buttons (strictly inline items)
                     sortedProducts.forEach((p, idx) => {
                         if (p) {
-                            let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-colors shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
+                            let btn = `<button type="button" class="bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-colors shadow-sm whitespace-nowrap" style="display: inline-flex; align-items: center; vertical-align: middle;" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
                             res = res.split(`__TKN${idx}__`).join(btn);
                         }
                     });
 
-                    // Restore Notes as anchored tags beneath the item
+                    // Restore Notes as absolute positioned tags beneath the item (they will NOT affect the row's inline flow)
                     notes.forEach((n, idx) => {
-                        let noteHtml = `<span class="absolute top-full mt-1.5 text-[10px] text-gray-300 font-medium italic tracking-wide whitespace-nowrap text-center bg-black/60 px-1.5 py-0.5 rounded border border-white/10 z-10 shadow-lg">${n}</span>`;
+                        let noteHtml = `<span style="position: absolute; top: 100%; margin-top: 6px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #cbd5e1; font-weight: 500; font-style: italic; white-space: nowrap; background: rgba(0,0,0,0.85); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(42,245,152,0.4); z-index: 10; line-height: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;">${n}</span>`;
                         res = res.split(`__NOTE${idx}__`).join(noteHtml);
                     });
 
-                    // Wrap everything in a horizontal inline flow
-                    return `<div class="flex flex-row items-center flex-nowrap overflow-x-auto overflow-y-hidden pb-8 pt-2 px-2 custom-scroll w-full" style="min-height: 80px;">${res}</div>`;
+                    // Wrap everything in a strict horizontal inline flow with padding to avoid clipping the absolute tooltips
+                    return `<div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 28px; padding-top: 8px; padding-left: 4px; padding-right: 4px; width: 100%; white-space: nowrap; scrollbar-width: thin;">${res}</div>`;
                 }
 
                 // Validator Engine with dynamic suggestions
@@ -842,7 +842,7 @@ js_code = f"""
                         if (match) {
                             const formulaStr = item.composition || item.sol || "";
                             html += `
-                                <div class="bg-black/30 border border-white/10 rounded-lg p-2 hover:border-white/20 transition-all flex flex-col overflow-hidden">
+                                <div class="bg-black/30 border border-white/10 rounded-lg p-2 hover:border-white/20 transition-all flex flex-col overflow-hidden mb-3">
                                     ${makeClickableFormula(formulaStr)}
                                     <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mt-1 ml-2">
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai || 'N/A'}</span>
