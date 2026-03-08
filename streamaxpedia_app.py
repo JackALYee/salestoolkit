@@ -358,7 +358,7 @@ css_and_html = r"""
                     <div class="graph-viewport" id="graphViewport">
                         <div class="graph-container" id="graphContainer">
                             <svg class="graph-lines" id="graphLines" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"></svg>
-                            <div class="round-node node-master" id="graphMasterNode"></div>
+                            <div class="round-node master" id="graphMasterNode"></div>
                             <div class="graph-col" id="graphRelatedNodes"></div>
                         </div>
                         <div id="modalChildExplanation"></div>
@@ -1116,33 +1116,56 @@ js_code = f"""
                 window.viewSecurityPolicy = function() {
                     try {
                         if (pdfBase64 && pdfBase64.length > 0) {
-                            // Decode base64 to a standard Blob representing the PDF
-                            const byteCharacters = atob(pdfBase64);
-                            const byteNumbers = new Array(byteCharacters.length);
-                            for (let i = 0; i < byteCharacters.length; i++) {
-                                byteNumbers[i] = byteCharacters.charCodeAt(i);
-                            }
-                            const byteArray = new Uint8Array(byteNumbers);
-                            const blob = new Blob([byteArray], { type: 'application/pdf' });
+                            // HTML wrapper to display the PDF inline via an object tag
+                            const htmlContent = `
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <title>Streamax Security Policy</title>
+                                    <style>
+                                        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #333; }
+                                        object { width: 100%; height: 100%; border: none; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf">
+                                        <p>Your browser does not support displaying PDFs inline. 
+                                        <a href="data:application/pdf;base64,${pdfBase64}" download="Streamax_Security_Policy.pdf" style="color: #2AF598;">Click here to download the policy instead.</a></p>
+                                    </object>
+                                </body>
+                                </html>
+                            `;
+                            
+                            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
                             const url = URL.createObjectURL(blob);
                             
                             const newWindow = window.open(url, '_blank');
                             
-                            // If pop-ups are blocked, download it automatically
+                            // If pop-ups are blocked, fallback to direct PDF download
                             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                                const pdfBlobData = atob(pdfBase64);
+                                const pdfByteNumbers = new Array(pdfBlobData.length);
+                                for (let i = 0; i < pdfBlobData.length; i++) {
+                                    pdfByteNumbers[i] = pdfBlobData.charCodeAt(i);
+                                }
+                                const pdfByteArray = new Uint8Array(pdfByteNumbers);
+                                const pdfBlob = new Blob([pdfByteArray], { type: 'application/pdf' });
+                                const pdfUrl = URL.createObjectURL(pdfBlob);
+                                
                                 const a = document.createElement('a');
-                                a.href = url;
+                                a.href = pdfUrl;
                                 a.download = 'Streamax_Security_Policy.pdf';
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
                                 alert("Popup blocked! The PDF document has been downloaded to your computer instead.");
+                                setTimeout(() => URL.revokeObjectURL(pdfUrl), 5000);
                             }
                             
                             setTimeout(() => URL.revokeObjectURL(url), 5000);
                             
                         } else {
-                            // Fallback to HTML if PDF is missing from the server
+                            // Fallback if PDF is missing from the server
                             alert("The original PDF file was not found on the server. Please contact your administrator.");
                         }
                     } catch (e) {
