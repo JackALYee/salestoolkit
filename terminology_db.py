@@ -560,7 +560,7 @@ for combo in PRODUCT_COMBINATIONS:
 
     # --- 4. AUTO-LINK KNOWLEDGE GRAPH ---
     for prod_name in products_involved:
-        db_entry = next((item for item in TERMINOLOGY_DB if item["term"].lower() == prod_name.lower()), None)
+        db_entry = next((item for item in TERMINOLOGY_DB if item.get("term", "").lower() == prod_name.lower()), None)
         if not db_entry:
             db_entry = {
                 "term": prod_name, 
@@ -577,16 +577,28 @@ for combo in PRODUCT_COMBINATIONS:
             if prod_name != other_prod and other_prod not in db_entry["related"]:
                 db_entry["related"].append(other_prod)
 
-# Resolve final bidirectional links
+
+# --- 5. SANITIZE DATA FOR FRONTEND ---
+# Strictly enforce string attributes so JavaScript `toLowerCase()` never crashes!
+for item in TERMINOLOGY_DB:
+    item["term"] = str(item.get("term", ""))
+    item["desc"] = str(item.get("desc", ""))
+    item["category"] = str(item.get("category", ""))
+    item["exact"] = bool(item.get("exact", False))
+    if "related" not in item or not isinstance(item["related"], list):
+        item["related"] = []
+    item["related"] = [str(r) for r in item["related"] if r]
+
+
+# --- 6. RESOLVE BIDIRECTIONAL LINKS ---
 for item in TERMINOLOGY_DB:
     if "related" in item:
         for related_term in item["related"]:
             target = next((t for t in TERMINOLOGY_DB if t["term"].lower() == related_term.lower()), None)
             if target:
-                if "related" not in target:
-                    target["related"] = []
                 if item["term"] not in target["related"]:
                     target["related"].append(item["term"])
+
 
 # Export sorted list (longest first, to prevent tokenizing bugs in JS)
 ALL_PRODUCTS = sorted(list(ALL_PRODUCTS_SET), key=len, reverse=True)
