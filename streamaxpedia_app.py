@@ -450,22 +450,56 @@ css_and_html = r"""
                         <p class="text-xs text-gray-400 mb-4 leading-relaxed">Filter official architectures by requested features. Click components inside the formulas to add them to your basket.</p>
                         
                         <!-- Feature Filters Row -->
-                        <div class="flex flex-wrap items-center gap-x-5 gap-y-3 mb-4 pb-4 border-b border-white/10">
-                            <label class="matrix-filter-label"><input type="checkbox" id="filter-dms" class="matrix-filter-checkbox" onchange="updateMatrix()"> DMS</label>
-                            <label class="matrix-filter-label"><input type="checkbox" id="filter-adas" class="matrix-filter-checkbox" onchange="updateMatrix()"> ADAS</label>
-                            <label class="matrix-filter-label"><input type="checkbox" id="filter-dsc" class="matrix-filter-checkbox" onchange="updateMatrix()"> DSC</label>
-                            <label class="matrix-filter-label"><input type="checkbox" id="filter-bsis" class="matrix-filter-checkbox" onchange="updateMatrix()"> BSIS/MOIS</label>
-                            <label class="matrix-filter-label"><input type="checkbox" id="filter-avm" class="matrix-filter-checkbox" onchange="updateMatrix()"> AI-AVM</label>
-                            
-                            <div class="flex items-center gap-2 ml-auto">
-                                <label class="text-sm font-bold text-gray-400">BSD Config:</label>
-                                <select id="filter-bsd" class="bg-black/60 border border-white/20 rounded px-2 py-1.5 text-white outline-none focus:border-[var(--primary-green)] text-sm font-medium" onchange="updateMatrix()">
-                                    <option value="Any">Any Config</option>
-                                    <option value="NO">NO</option>
-                                    <option value="四选一">四选一</option>
-                                    <option value="四选二">四选二</option>
-                                    <option value="后BSD">后BSD</option>
-                                </select>
+                        <div class="flex flex-col gap-3 mb-4 pb-4 border-b border-white/10">
+                            <!-- Top row: Checkboxes -->
+                            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                <label class="matrix-filter-label"><input type="checkbox" id="filter-dms" class="matrix-filter-checkbox" onchange="updateMatrix()"> DMS</label>
+                                <label class="matrix-filter-label"><input type="checkbox" id="filter-adas" class="matrix-filter-checkbox" onchange="updateMatrix()"> ADAS</label>
+                                <label class="matrix-filter-label"><input type="checkbox" id="filter-dsc" class="matrix-filter-checkbox" onchange="updateMatrix()"> DSC</label>
+                                <label class="matrix-filter-label"><input type="checkbox" id="filter-bsis" class="matrix-filter-checkbox" onchange="updateMatrix()"> BSIS/MOIS</label>
+                                <label class="matrix-filter-label"><input type="checkbox" id="filter-avm" class="matrix-filter-checkbox" onchange="updateMatrix()"> AI-AVM</label>
+                            </div>
+                            <!-- Bottom row: Dropdowns -->
+                            <div class="flex flex-wrap items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">AI Reqs:</label>
+                                    <select id="filter-ai" class="bg-black/60 border border-white/20 rounded px-2 py-1 text-white outline-none focus:border-[var(--primary-green)] text-xs font-medium" onchange="updateMatrix()">
+                                        <option value="Any">Any</option>
+                                        <option value="No AI">No AI</option>
+                                        <option value="2-Channel AI">2-Channel AI</option>
+                                        <option value="3-Channel AI">3-Channel AI</option>
+                                        <option value="4-Channel AI">4-Channel AI</option>
+                                        <option value="5-Channel AI">5-Channel AI</option>
+                                        <option value="6-Channel AI">6-Channel AI</option>
+                                        <option value="8-Channel AI">8-Channel AI</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Channels:</label>
+                                    <select id="filter-ch" class="bg-black/60 border border-white/20 rounded px-2 py-1 text-white outline-none focus:border-[var(--primary-green)] text-xs font-medium" onchange="updateMatrix()">
+                                        <option value="Any">Any</option>
+                                        <option value="2-channel monitoring">2-Ch</option>
+                                        <option value="3-channel monitoring">3-Ch</option>
+                                        <option value="4-channel monitoring">4-Ch</option>
+                                        <option value="5-channel monitoring">5-Ch</option>
+                                        <option value="6-channel monitoring">6-Ch</option>
+                                        <option value="7-channel monitoring">7-Ch</option>
+                                        <option value="8-channel monitoring">8-Ch</option>
+                                        <option value="9-channel monitoring">9-Ch</option>
+                                        <option value="11-channel monitoring">11-Ch</option>
+                                        <option value="12-channel monitoring">12-Ch</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-2 ml-auto">
+                                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">BSD Config:</label>
+                                    <select id="filter-bsd" class="bg-black/60 border border-white/20 rounded px-2 py-1 text-white outline-none focus:border-[var(--primary-green)] text-xs font-medium" onchange="updateMatrix()">
+                                        <option value="Any">Any</option>
+                                        <option value="NO">NO</option>
+                                        <option value="四选一">四选一</option>
+                                        <option value="四选二">四选二</option>
+                                        <option value="后BSD">后BSD</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -813,6 +847,8 @@ js_code = """
                     const bsisEl = document.getElementById('filter-bsis');
                     const avmEl = document.getElementById('filter-avm');
                     const bsdEl = document.getElementById('filter-bsd');
+                    const aiEl = document.getElementById('filter-ai');
+                    const chEl = document.getElementById('filter-ch');
 
                     const dms = dmsEl ? dmsEl.checked : false;
                     const adas = adasEl ? adasEl.checked : false;
@@ -820,6 +856,8 @@ js_code = """
                     const bsis = bsisEl ? bsisEl.checked : false;
                     const avm = avmEl ? avmEl.checked : false;
                     const bsd = bsdEl ? bsdEl.value : 'Any';
+                    const ai = aiEl ? aiEl.value : 'Any';
+                    const ch = chEl ? chEl.value : 'Any';
 
                     const container = document.getElementById('matrixResults');
                     if (!container) return;
@@ -838,6 +876,8 @@ js_code = """
                         
                         // Dropdown logic
                         if (bsd !== 'Any' && item.bsd !== bsd) match = false;
+                        if (ai !== 'Any' && item.ai !== ai) match = false;
+                        if (ch !== 'Any' && item.ch !== ch) match = false;
 
                         if (match) {
                             const formulaStr = item.composition || item.sol || "";
