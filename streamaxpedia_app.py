@@ -1,9 +1,25 @@
 import json
+import os
+import base64
 from terminology_db import TERMINOLOGY_DB, PRODUCT_COMBINATIONS, ALL_PRODUCTS
 
 db_json = json.dumps(TERMINOLOGY_DB)
 matrix_json = json.dumps(PRODUCT_COMBINATIONS)
 products_json = json.dumps(ALL_PRODUCTS)
+
+# Ensure robust path resolution for GitHub / Streamlit Cloud deployment
+current_dir = os.path.dirname(os.path.abspath(__file__))
+pdf_path = os.path.join(current_dir, "关于严禁核心技术资料公网发布的安全管控通知-CN.pdf")
+
+pdf_base64 = ""
+try:
+    if os.path.exists(pdf_path):
+        with open(pdf_path, "rb") as f:
+            pdf_base64 = base64.b64encode(f.read()).decode('utf-8')
+    else:
+        print(f"Streamlit Cloud Warning: PDF not found at {pdf_path}")
+except Exception as e:
+    print(f"Error reading PDF: {e}")
 
 css_and_html = r"""
         <!-- SECTION: STREAMAXPEDIA -->
@@ -369,11 +385,12 @@ css_and_html = r"""
             </div>
 """
 
-js_code = """
+js_code = f"""
             <script>
-                const terminologyDB = """ + db_json + """;
-                const matrixData = """ + matrix_json + """;
-                const ALL_PRODUCTS = """ + products_json + """;
+                const terminologyDB = {db_json};
+                const matrixData = {matrix_json};
+                const ALL_PRODUCTS = {products_json};
+                const pdfBase64 = "{pdf_base64}";
                 
                 const ENABLE_DOWNLOADS = false;
 """ + r"""
@@ -1098,23 +1115,38 @@ js_code = """
                 
                 window.viewSecurityPolicy = function() {
                     try {
-                        const blob = new Blob([policyHtmlContent], { type: 'text/html;charset=utf-8' });
-                        const url = URL.createObjectURL(blob);
-                        const newWindow = window.open(url, '_blank');
-                        
-                        if (!newWindow) {
-                            // Fallback: If popup is blocked, download the policy instead
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'Streamax_Security_Policy.html';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
+                        if (pdfBase64 && pdfBase64.length > 0) {
+                            // Decode base64 to a standard Blob representing the PDF
+                            const byteCharacters = atob(pdfBase64);
+                            const byteNumbers = new Array(byteCharacters.length);
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], { type: 'application/pdf' });
+                            const url = URL.createObjectURL(blob);
+                            
+                            const newWindow = window.open(url, '_blank');
+                            
+                            // If pop-ups are blocked, download it automatically
+                            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'Streamax_Security_Policy.pdf';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                alert("Popup blocked! The PDF document has been downloaded to your computer instead.");
+                            }
+                            
+                            setTimeout(() => URL.revokeObjectURL(url), 5000);
+                            
+                        } else {
+                            // Fallback to HTML if PDF is missing from the server
+                            alert("The original PDF file was not found on the server. Please contact your administrator.");
                         }
-                        
-                        setTimeout(() => URL.revokeObjectURL(url), 2000);
                     } catch (e) {
-                        alert('请允许浏览器弹出窗口以查看该政策文件。 / Please allow pop-ups to view the policy.');
+                        alert('Error attempting to render the document. Please allow pop-ups or check your browser settings.');
                     }
                 };
             </script>
