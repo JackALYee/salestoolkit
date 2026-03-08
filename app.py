@@ -112,7 +112,7 @@ else:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streamax Sales Toolkit | Aurora Flow</title>
     
-    <!-- Tailwind CSS (for TCO Calculator) -->
+    <!-- Tailwind CSS (for Layouts) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Fonts -->
@@ -343,6 +343,67 @@ else:
         @keyframes fadeInDown {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- PRODUCT INTRO CUSTOM CSS --- */
+        .intro-details {
+            background: var(--glass-bg);
+            border: var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 30px;
+        }
+        .intro-details[open] {
+            border-color: rgba(42, 245, 152, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .intro-summary {
+            padding: 16px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary-green);
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            list-style: none;
+        }
+        .intro-summary::-webkit-details-marker {
+            display: none;
+        }
+        .intro-summary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .intro-details[open] .intro-summary .chevron {
+            transform: rotate(180deg);
+        }
+        .intro-content {
+            padding: 24px;
+            background: rgba(0, 0, 0, 0.15);
+            font-size: 0.9rem;
+            color: var(--text-grey);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .intro-block-title {
+            color: var(--text-white);
+            font-size: 1.05rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .intro-list {
+            margin-left: 28px;
+            list-style-type: disc;
+            margin-bottom: 15px;
+        }
+        .intro-list li {
+            margin-bottom: 6px;
+            line-height: 1.6;
         }
 
         /* --- SECTION 2: PROSPECTING STYLES --- */
@@ -897,6 +958,94 @@ else:
     </header>
 
     <div class="container">
+        
+        <!-- Product Introduction (Collapsible) -->
+        <div class="fade-up" style="margin-bottom: 30px;">
+            <style>
+                .intro-details { background: var(--glass-bg); border: var(--glass-border); border-radius: 12px; overflow: hidden; transition: all 0.3s ease; }
+                .intro-details[open] { border-color: rgba(42, 245, 152, 0.3); box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+                .intro-summary { padding: 16px 24px; cursor: pointer; font-weight: 600; color: var(--primary-green); display: flex; align-items: center; justify-content: space-between; user-select: none; background: rgba(0,0,0,0.2); }
+                .intro-summary:hover { background: rgba(255,255,255,0.05); }
+                .intro-details[open] .intro-summary .chevron { transform: rotate(180deg); }
+                .chevron { transition: transform 0.3s ease; color: var(--text-grey); }
+                .intro-content { padding: 24px; background: rgba(0, 0, 0, 0.15); font-size: 0.9rem; color: var(--text-grey); line-height: 1.6; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+                .intro-content h4 { color: var(--text-white); font-size: 1.05rem; margin-top: 15px; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+                .intro-content ul { margin-left: 5px; list-style-type: disc; margin-bottom: 15px; }
+                .intro-content li { margin-bottom: 6px; }
+                .intro-content strong { color: var(--primary-green); font-weight: 600; }
+            </style>
+            <details class="intro-details">
+                <summary class="intro-summary">
+                    <span><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 产品介绍 / 使用指南</span>
+                    <i class="fa-solid fa-chevron-down chevron"></i>
+                </summary>
+                <div class="intro-content">
+                    <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
+                        专为锐明销售人员打造的<strong>“数字瑞士军刀”</strong>。将销售过程中所需的工具、话术、产品信息和计算器集成到统一的平台中。核心目标是帮助新老销售快速上手，更专业、高效地与客户沟通并达成交易。
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamax 百科全书 (Streamaxpedia)</h4>
+                            <p class="mb-3 text-xs text-gray-400">销售人员的“知识库”和“产品搭配指南”。分为两个主要模式：</p>
+                            <ul class="text-sm">
+                                <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
+                                <li><strong>产品矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
+                                <li><strong>安全下载：</strong>遵循公司信息安全规范，点击核心技术资料下载时会触发“下载受限”警告并显示管控通知。</li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. 客户开发流程 (Prospecting Flow)</h4>
+                            <p class="mb-3 text-xs text-gray-400">针对销售漏斗最前端的指导工具：</p>
+                            <ul class="text-sm">
+                                <li>清晰展示企业销售的 <strong>7 个步骤图</strong>（从初步接触到最终成交）。</li>
+                                <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯演讲 (Elevator Pitch)，支持一键复制使用。</li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-search text-purple-400"></i> 3. 需求探索会议 (Discovery Meeting)</h4>
+                            <p class="mb-3 text-xs text-gray-400">成功约到客户后，帮助销售问出正确问题：</p>
+                            <ul class="text-sm">
+                                <li>提供结构化的<strong>“问题银行”</strong>。</li>
+                                <li>区分 TSP 和最终用户，从业务模式、痛点分析到部署限制和预算，指导销售一步步深入挖掘真实需求。</li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. 幻灯片演示 (Presentation)</h4>
+                            <p class="mb-3 text-xs text-gray-400">向客户展示 Streamax 价值主张的核心剧本：</p>
+                            <ul class="text-sm">
+                                <li><strong>视觉化呈现：</strong>内置 CSS 动态插图，形象解释司机行为风险、资产安全风险等。</li>
+                                <li><strong>闭环之旅：</strong>生动的动画演示，展示卡车从出发前、行驶中到到达后的 10 个关键环节中，Streamax 如何全程保驾护航，并提供配套演讲词。</li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. 价值与回报计算器 (Value Calculator)</h4>
+                            <p class="mb-3 text-xs text-gray-400">用数据说话，向客户证明系统能省钱：</p>
+                            <ul class="text-sm">
+                                <li><strong>TCO 计算器：</strong>输入车队规模、里程等数据，动态计算燃油、安全和保险费用的节省额及 ROI。</li>
+                                <li><strong>IFTA 优化器：</strong>北美货运特定工具。计算跨州燃油税，智能提示最佳加油州。</li>
+                                <li><strong>订阅经济计算器：</strong>内部工具。计算硬件成本、平台费与订阅费间的利润率和回本周期。</li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-panel p-5">
+                            <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. 邮件营销工具 (Drip Mailer)</h4>
+                            <p class="mb-3 text-xs text-gray-400">自动化的邮件群发扩展应用：</p>
+                            <ul class="text-sm">
+                                <li><strong>个性化签名：</strong>内置极简、带头像、带Logo三种专业排版。</li>
+                                <li><strong>动态撰写预览：</strong>支持 {first_name}, {company} 等变量替换，所见即所得。</li>
+                                <li><strong>自动化发送：</strong>上传 CSV 名单，设置发送延迟，系统将在工作时间随机时间点模拟人工发送，并提供详细执行日志。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </div>
+
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
             <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
