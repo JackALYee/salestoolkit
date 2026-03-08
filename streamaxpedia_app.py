@@ -452,12 +452,12 @@ css_and_html = r"""
 
                             <!-- Chinese Content -->
                             <div id="matrix-intro-zh" class="hidden">
-                                <p class="mb-5 text-gray-300 text-sm"><strong>产品组合矩阵 (Product Matrix)</strong> 是一个智能的、交互式的配置工具，旨在帮助您快速构建、发现和验证官方的 Streamax 硬件架构。它弥补了独立硬件组件与复杂的全集成车队解决方案之间的空白。</p>
+                                <p class="mb-5 text-gray-300 text-sm"><strong>产品组合矩阵 (Product Matrix)</strong> 是一个智能的、交互式的配置工具，旨在帮助您快速构建、发现和验证官方的锐明硬件架构。它弥补了独立硬件组件与复杂的全集成车队解决方案之间的空白。</p>
                                 
                                 <h3 class="text-md font-bold text-white mb-3"><i class="fa-solid fa-rocket text-[var(--primary-green)] mr-2"></i> 如何使用</h3>
                                 <ul class="space-y-3 pl-2 text-sm text-gray-300">
                                     <li><strong class="text-[var(--primary-green)]">1. 挑选与搜索 (左侧面板 - 组件库):</strong> 使用搜索栏查找独立的硬件组件（例如 <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>）。点击任何组件“名牌”即可将其立即添加到屏幕底部的方案验证器中。</li>
-                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置筛选):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤 Streamax 官方推荐配置。每一个显示的方案都是可交互的——点击任何产品即可将其直接添加到方案验证器中。</li>
+                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置筛选):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤锐明官方推荐配置。每一个显示的方案都是可交互的——点击任何产品即可将其直接添加到方案验证器中。</li>
                                     <li><strong class="text-yellow-500">3. 验证与扩展 (底部面板 - 方案验证器):</strong> 当您向方案验证器添加组件时，验证引擎会实时工作。
                                         <ul class="list-disc pl-6 mt-2 text-gray-400 space-y-1">
                                             <li>如果您的选择与官方架构完全匹配，它将显示<strong class="text-[var(--primary-green)]">有效方案已确认</strong>徽章以及完整的技术规格。</li>
