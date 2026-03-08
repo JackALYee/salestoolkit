@@ -667,48 +667,82 @@ js_code = """
                 }
 
                 // --- SEARCH ENGINE LOGIC ---
+                function highlightText(text, query) {
+                    if (!text) return '';
+                    const strText = String(text);
+                    if (!query) return strText;
+                    
+                    // Simple escape
+                    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\\\]/g, '\\$&');
+                    const regex = new RegExp(`(${escapedQuery})(?![^<]*>)`, 'gi');
+                    return strText.replace(regex, '<span class="highlight">$1</span>');
+                }
+
                 function performSearch() {
+                    const searchInput = document.getElementById('searchInput');
+                    const clearBtn = document.getElementById('clearBtn');
+                    const resultsContainer = document.getElementById('resultsContainer');
+                    const searchWrapper = document.getElementById('searchWrapper');
+                    const statsBar = document.getElementById('statsBar');
+                    const mascotImg = document.getElementById('mascotImage');
+                    const resultCount = document.getElementById('resultCount');
+                    
+                    if (!searchInput) return;
+
                     const rawQuery = searchInput.value.trim();
                     const query = rawQuery.toLowerCase();
                     
                     if (query.length > 0) {
-                        searchWrapper.classList.add('active-search');
-                        clearBtn.style.display = 'block';
+                        if (searchWrapper) searchWrapper.classList.add('active-search');
+                        if (clearBtn) clearBtn.style.display = 'block';
                     } else {
-                        searchWrapper.classList.remove('active-search');
-                        clearBtn.style.display = 'none';
-                        resultsContainer.innerHTML = '';
-                        statsBar.classList.remove('show');
-                        document.getElementById('mascotImage').src = currentMascotSrc;
-                        document.getElementById('mascotImage').classList.remove('jumping-heart');
+                        if (searchWrapper) searchWrapper.classList.remove('active-search');
+                        if (clearBtn) clearBtn.style.display = 'none';
+                        if (resultsContainer) resultsContainer.innerHTML = '';
+                        if (statsBar) statsBar.classList.remove('show');
+                        if (mascotImg) {
+                            mascotImg.src = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500';
+                            mascotImg.classList.remove('jumping-heart');
+                        }
                         return;
                     }
 
-                    const isExactMatch = terminologyDB.some(item => item.exact && item.term.toLowerCase() === rawQuery.toLowerCase());
-                    const mascotImg = document.getElementById('mascotImage');
-                    if (isExactMatch) {
-                        mascotImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff3366"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
-                        mascotImg.classList.add('jumping-heart');
-                    } else {
-                        mascotImg.src = currentMascotSrc;
-                        mascotImg.classList.remove('jumping-heart');
+                    // Bulletproof search logic with fallback strings to prevent toLowerCase() crashes
+                    const isExactMatch = terminologyDB.some(item => {
+                        const termSafe = item.term ? String(item.term) : '';
+                        return item.exact && termSafe.toLowerCase() === rawQuery.toLowerCase();
+                    });
+                    
+                    if (mascotImg) {
+                        if (isExactMatch) {
+                            mascotImg.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff3366"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+                            mascotImg.classList.add('jumping-heart');
+                        } else {
+                            mascotImg.src = 'https://drive.google.com/thumbnail?id=1bXf5psHrw4LOk0oMAkTJRL15_mLCabad&sz=w500';
+                            mascotImg.classList.remove('jumping-heart');
+                        }
                     }
 
                     const scoredResults = terminologyDB.map(item => {
                         let score = 0;
+                        const safeTerm = item.term ? String(item.term).toLowerCase() : '';
+                        const safeDesc = item.desc ? String(item.desc).toLowerCase() : '';
+                        const safeCat = item.category ? String(item.category).toLowerCase() : '';
+
                         if (item.exact) {
-                            if (item.term.toLowerCase() === rawQuery.toLowerCase()) score += 1000;
+                            if (safeTerm === rawQuery.toLowerCase()) score += 1000;
                         } else {
-                            const lowerTerm = item.term.toLowerCase();
-                            const lowerDesc = item.desc.toLowerCase();
-                            const lowerCat = item.category ? item.category.toLowerCase() : '';
-                            if (lowerTerm === query) score += 1000;
-                            else if (lowerTerm.includes(query)) score += 500;
-                            if (item.related && item.related.some(r => r.toLowerCase() === query)) score += 400;
-                            else if (item.related && item.related.some(r => r.toLowerCase().includes(query))) score += 300;
-                            if (lowerCat === query) score += 50;
-                            else if (lowerCat.includes(query)) score += 20;
-                            if (lowerDesc.includes(query)) score += 10;
+                            if (safeTerm === query) score += 1000;
+                            else if (safeTerm.includes(query)) score += 500;
+                            
+                            if (item.related && Array.isArray(item.related)) {
+                                if (item.related.some(r => r && String(r).toLowerCase() === query)) score += 400;
+                                else if (item.related.some(r => r && String(r).toLowerCase().includes(query))) score += 300;
+                            }
+                            
+                            if (safeCat === query) score += 50;
+                            else if (safeCat.includes(query)) score += 20;
+                            if (safeDesc.includes(query)) score += 10;
                         }
                         return { item, score };
                     }).filter(scoredItem => scoredItem.score > 0);
@@ -716,8 +750,10 @@ js_code = """
                     scoredResults.sort((a, b) => b.score - a.score);
                     const results = scoredResults.map(s => s.item);
 
-                    statsBar.classList.add('show');
-                    resultCount.textContent = results.length;
+                    if (statsBar) statsBar.classList.add('show');
+                    if (resultCount) resultCount.textContent = results.length;
+
+                    if (!resultsContainer) return;
 
                     if (results.length === 0) {
                         resultsContainer.innerHTML = `
@@ -733,7 +769,7 @@ js_code = """
                         let downHTML = '';
                         
                         if (item.file) {
-                            let singleLabel = item.term.includes("DMS") ? "Download DMS vs. DSC white paper" : "Download Document";
+                            let singleLabel = (item.term && item.term.includes("DMS")) ? "Download DMS vs. DSC white paper" : "Download Document";
                             if (ENABLE_DOWNLOADS) {
                                 downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</a>`;
                             } else {
@@ -741,7 +777,7 @@ js_code = """
                             }
                         }
                         
-                        if (item.files) {
+                        if (item.files && Array.isArray(item.files)) {
                             item.files.forEach(f => {
                                 if (ENABLE_DOWNLOADS) {
                                     downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`;
@@ -751,7 +787,7 @@ js_code = """
                             });
                         }
                         
-                        let relHTML = item.related ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        let relHTML = (item.related && item.related.length > 0) ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
@@ -767,18 +803,23 @@ js_code = """
                     }).join('');
                 }
 
-                // Live Keystroke listener instead of waiting for "Enter"
-                const searchInput = document.getElementById('searchInput');
-                const clearBtn = document.getElementById('clearBtn');
-                const resultsContainer = document.getElementById('resultsContainer');
-                const searchWrapper = document.getElementById('searchWrapper');
-                const statsBar = document.getElementById('statsBar');
-                const resultCount = document.getElementById('resultCount');
-
-                searchInput.addEventListener('input', performSearch);
-                
-                clearBtn.addEventListener('click', () => {
-                    searchInput.value = ''; searchInput.focus(); performSearch();
+                // Attach event listeners safely
+                document.addEventListener('DOMContentLoaded', () => {
+                    const searchInput = document.getElementById('searchInput');
+                    const clearBtn = document.getElementById('clearBtn');
+                    
+                    if (searchInput) {
+                        searchInput.addEventListener('input', performSearch);
+                    }
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', () => {
+                            if (searchInput) {
+                                searchInput.value = ''; 
+                                searchInput.focus(); 
+                            }
+                            performSearch();
+                        });
+                    }
                 });
 
                 // Function to pop up the security warning modal
@@ -786,6 +827,8 @@ js_code = """
                     const overlay = document.getElementById('securityModal');
                     const modalBox = overlay.querySelector('.modal-box');
                     
+                    if (!overlay || !modalBox) return;
+
                     const docHeight = Math.max(
                         document.body.scrollHeight, document.documentElement.scrollHeight,
                         document.body.offsetHeight, document.documentElement.offsetHeight,
@@ -831,6 +874,8 @@ js_code = """
                     const overlay = document.getElementById('relevanceModal');
                     const modalBox = overlay.querySelector('.modal-box');
                     
+                    if (!overlay || !modalBox) return;
+
                     const docHeight = Math.max(
                         document.body.scrollHeight, document.documentElement.scrollHeight,
                         document.body.offsetHeight, document.documentElement.offsetHeight,
@@ -853,8 +898,11 @@ js_code = """
                         modalBox.style.top = (window.scrollY + 100) + 'px';
                     }
 
-                    document.getElementById('modalChildExplanation').classList.remove('active');
-                    document.getElementById('graphMasterNode').innerText = termData.term;
+                    const expBox = document.getElementById('modalChildExplanation');
+                    if (expBox) expBox.classList.remove('active');
+                    
+                    const masterNode = document.getElementById('graphMasterNode');
+                    if (masterNode) masterNode.innerText = termData.term;
 
                     const dist1 = termData.related || [];
                     const allRelatedTermsSet = new Set(dist1);
@@ -884,12 +932,20 @@ js_code = """
                         }
                     });
 
-                    clusters.forEach(c => c.sort((a,b) => (terminologyDB.find(t=>t.term===a)?.category||'').localeCompare((terminologyDB.find(t=>t.term===b)?.category||''))));
-                    clusters.sort((a,b) => (terminologyDB.find(t=>t.term===a[0])?.category||'').localeCompare((terminologyDB.find(t=>t.term===b[0])?.category||'')));
+                    clusters.forEach(c => c.sort((a,b) => {
+                        const catA = (terminologyDB.find(t=>t.term===a)?.category || '');
+                        const catB = (terminologyDB.find(t=>t.term===b)?.category || '');
+                        return catA.localeCompare(catB);
+                    }));
+                    clusters.sort((a,b) => {
+                        const catA = (terminologyDB.find(t=>t.term===a[0])?.category || '');
+                        const catB = (terminologyDB.find(t=>t.term===b[0])?.category || '');
+                        return catA.localeCompare(catB);
+                    });
 
                     const grouped = clusters.flat();
                     const relatedNodesContainer = document.getElementById('graphRelatedNodes');
-                    relatedNodesContainer.innerHTML = '';
+                    if (relatedNodesContainer) relatedNodesContainer.innerHTML = '';
 
                     grouped.forEach(rTerm => {
                         const n = document.createElement('div');
@@ -897,7 +953,7 @@ js_code = """
                         if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
                         n.innerText = rTerm; n.dataset.term = rTerm;
                         n.onclick = (e) => { if (hasGraphDragged) return; showChildTerm(rTerm); };
-                        relatedNodesContainer.appendChild(n);
+                        if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
                     });
 
                     overlay.classList.add('active');
@@ -907,6 +963,8 @@ js_code = """
                         const ct = document.getElementById('graphContainer');
                         const mn = document.getElementById('graphMasterNode');
                         
+                        if (!vp || !ct || !mn) return;
+
                         ct.style.transform = 'translate(0,0)';
                         
                         const vpWidth = vp.offsetWidth;
@@ -925,9 +983,12 @@ js_code = """
 
                 function drawLines() {
                     const svg = document.getElementById('graphLines');
+                    if (!svg) return;
                     svg.innerHTML = '';
                     
                     const mNode = document.getElementById('graphMasterNode');
+                    if (!mNode) return;
+                    
                     const mCenter = getCenterSafe(mNode);
                     const mData = terminologyDB.find(t => t.term === mNode.innerText);
                     const d1Terms = mData?.related || [];
@@ -972,19 +1033,30 @@ js_code = """
                     const d = terminologyDB.find(t => t.term === name);
                     if (!d) return;
                     const b = document.getElementById('modalChildExplanation');
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${d.term}</div><div style="font-size:0.95rem; color:#A0AEC0;">${d.desc}</div><button class="see-details-btn" onclick="masterSearch('${d.term}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
+                    if (!b) return;
+                    
+                    const safeTerm = d.term || '';
+                    const safeDesc = d.desc || '';
+                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
                     b.classList.add('active');
                 };
 
-                window.closeModal = function() { document.getElementById('relevanceModal').classList.remove('active'); };
+                window.closeModal = function() { 
+                    const modal = document.getElementById('relevanceModal');
+                    if (modal) modal.classList.remove('active'); 
+                };
                 
                 window.masterSearch = function(name) {
                     closeModal();
                     const searchInput = document.getElementById('searchInput');
-                    searchInput.value = name;
-                    performSearch();
-                    
-                    document.getElementById('searchWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (searchInput) {
+                        searchInput.value = name;
+                        performSearch();
+                    }
+                    const searchWrapper = document.getElementById('searchWrapper');
+                    if (searchWrapper) {
+                        searchWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
                 };
 
                 document.addEventListener('mousemove', (e) => {
@@ -996,25 +1068,33 @@ js_code = """
                     mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
                 });
 
-                const vp = document.getElementById('graphViewport');
-                const ct = document.getElementById('graphContainer');
-                if (vp) {
-                    vp.onmousedown = (e) => { isGraphDragging = true; hasGraphDragged = false; graphStartX = e.clientX - graphTranslateX; graphStartY = e.clientY - graphTranslateY; };
-                    window.addEventListener('mousemove', (e) => { if(isGraphDragging) { if(Math.abs(e.clientX - graphStartX - graphTranslateX)>3 || Math.abs(e.clientY - graphStartY - graphTranslateY)>3) hasGraphDragged = true; graphTranslateX = e.clientX - graphStartX; graphTranslateY = e.clientY - graphStartY; ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`; } });
-                    window.addEventListener('mouseup', () => isGraphDragging = false);
-                    vp.onclick = (e) => { if(!hasGraphDragged && !e.target.closest('.node-related') && !document.getElementById('modalChildExplanation').contains(e.target)) document.getElementById('modalChildExplanation').classList.remove('active'); };
-                }
-        
-                if (typeof ResizeObserver !== 'undefined') {
-                    const modalBox = document.querySelector('.modal-box');
-                    if (modalBox) {
-                        new ResizeObserver(() => {
-                            if (document.getElementById('relevanceModal').classList.contains('active')) {
-                                drawLines();
+                document.addEventListener('DOMContentLoaded', () => {
+                    const vp = document.getElementById('graphViewport');
+                    const ct = document.getElementById('graphContainer');
+                    if (vp && ct) {
+                        vp.onmousedown = (e) => { isGraphDragging = true; hasGraphDragged = false; graphStartX = e.clientX - graphTranslateX; graphStartY = e.clientY - graphTranslateY; };
+                        window.addEventListener('mousemove', (e) => { if(isGraphDragging) { if(Math.abs(e.clientX - graphStartX - graphTranslateX)>3 || Math.abs(e.clientY - graphStartY - graphTranslateY)>3) hasGraphDragged = true; graphTranslateX = e.clientX - graphStartX; graphTranslateY = e.clientY - graphStartY; ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`; } });
+                        window.addEventListener('mouseup', () => isGraphDragging = false);
+                        vp.onclick = (e) => { 
+                            const modalChild = document.getElementById('modalChildExplanation');
+                            if(!hasGraphDragged && !e.target.closest('.node-related') && modalChild && !modalChild.contains(e.target)) {
+                                modalChild.classList.remove('active'); 
                             }
-                        }).observe(modalBox);
+                        };
                     }
-                }
+            
+                    if (typeof ResizeObserver !== 'undefined') {
+                        const modalBox = document.querySelector('.modal-box');
+                        if (modalBox) {
+                            new ResizeObserver(() => {
+                                const modal = document.getElementById('relevanceModal');
+                                if (modal && modal.classList.contains('active')) {
+                                    drawLines();
+                                }
+                            }).observe(modalBox);
+                        }
+                    }
+                });
             </script>
         </div>
 """
