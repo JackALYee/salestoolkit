@@ -110,7 +110,7 @@ else:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamax Sales Toolkit | Aurora Flow</title>
+    <title>Streamax Sales Toolkit</title>
     
     <!-- Tailwind CSS (for Layouts) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -952,7 +952,8 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 1.0 • Trucking BU • Jan 2026</div>
+            <div class="header-meta fade-up">Version 3.1 • 货运产品线 Trucking BU • Mar 2026</div>
+            <div class="header-meta fade-up">试用版反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
 
@@ -977,7 +978,7 @@ else:
             <details class="intro-details">
                 <summary class="intro-summary">
                     <div class="flex items-center justify-between w-full pr-4">
-                        <span id="app-intro-title" class="flex items-center"><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> North America Sales Toolkit / User Guide</span>
+                        <span id="app-intro-title" class="flex items-center"><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> Streamax Sales Toolkit User Guide</span>
                         
                         <!-- Language Toggle -->
                         <div class="flex items-center bg-black/50 border border-white/20 rounded-full p-1 cursor-pointer ml-4" onclick="toggleAppIntroLang(event)">
