@@ -72,7 +72,7 @@ email_tool_content = r"""
 
 # --- CONFIG & LAYOUT ---
 st.set_page_config(
-    page_title="Streamax Sales Toolkit | Aurora Flow",
+    page_title="Streamax Sales Toolkit",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
