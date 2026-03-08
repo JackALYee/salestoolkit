@@ -1115,59 +1115,80 @@ js_code = f"""
                 
                 window.viewSecurityPolicy = function() {
                     try {
-                        if (pdfBase64 && pdfBase64.length > 0) {
-                            // HTML wrapper to display the PDF inline via an object tag
-                            const htmlContent = `
-                                <!DOCTYPE html>
-                                <html>
-                                <head>
-                                    <title>Streamax Security Policy</title>
-                                    <style>
-                                        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #333; }
-                                        object { width: 100%; height: 100%; border: none; }
-                                    </style>
-                                </head>
-                                <body>
-                                    <object data="data:application/pdf;base64,${pdfBase64}" type="application/pdf">
-                                        <p>Your browser does not support displaying PDFs inline. 
-                                        <a href="data:application/pdf;base64,${pdfBase64}" download="Streamax_Security_Policy.pdf" style="color: #2AF598;">Click here to download the policy instead.</a></p>
-                                    </object>
-                                </body>
-                                </html>
-                            `;
-                            
-                            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-                            const url = URL.createObjectURL(blob);
-                            
-                            const newWindow = window.open(url, '_blank');
-                            
-                            // If pop-ups are blocked, fallback to direct PDF download
-                            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                                const pdfBlobData = atob(pdfBase64);
-                                const pdfByteNumbers = new Array(pdfBlobData.length);
-                                for (let i = 0; i < pdfBlobData.length; i++) {
-                                    pdfByteNumbers[i] = pdfBlobData.charCodeAt(i);
-                                }
-                                const pdfByteArray = new Uint8Array(pdfByteNumbers);
-                                const pdfBlob = new Blob([pdfByteArray], { type: 'application/pdf' });
-                                const pdfUrl = URL.createObjectURL(pdfBlob);
-                                
-                                const a = document.createElement('a');
-                                a.href = pdfUrl;
-                                a.download = 'Streamax_Security_Policy.pdf';
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                alert("Popup blocked! The PDF document has been downloaded to your computer instead.");
-                                setTimeout(() => URL.revokeObjectURL(pdfUrl), 5000);
-                            }
-                            
-                            setTimeout(() => URL.revokeObjectURL(url), 5000);
-                            
-                        } else {
-                            // Fallback if PDF is missing from the server
-                            alert("The original PDF file was not found on the server. Please contact your administrator.");
+                        const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于严禁核心技术资料公网发布的安全管控通知</title>
+    <style>
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 40px; line-height: 1.8; color: #333; max-width: 800px; margin: 0 auto; background: #f8fafc; }
+        .paper-card { background: #fff; padding: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 8px; }
+        h2 { text-align: center; border-bottom: 2px solid #cc0000; padding-bottom: 10px; color: #cc0000; margin-bottom: 5px; }
+        .doc-num { text-align: right; font-weight: bold; margin-bottom: 30px; font-size: 14px; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 30px; }
+        p { text-indent: 2em; margin-bottom: 15px; text-align: justify; }
+        .section-title { font-weight: bold; font-size: 18px; margin-top: 25px; margin-bottom: 10px; text-indent: 0; }
+        .footer { margin-top: 50px; text-align: right; }
+        .fallback-btn { display: inline-block; margin-top: 40px; padding: 12px 24px; background: #0f172a; color: #2AF598; text-decoration: none; font-weight: bold; border-radius: 6px; font-family: "Inter", sans-serif; transition: all 0.3s; }
+        .fallback-btn:hover { background: #1e293b; color: #fff; box-shadow: 0 4px 15px rgba(42,245,152,0.3); }
+        .print-btn { display: inline-block; margin-top: 40px; margin-right: 15px; padding: 12px 24px; background: #f1f5f9; color: #334155; text-decoration: none; font-weight: bold; border-radius: 6px; font-family: "Inter", sans-serif; border: 1px solid #cbd5e1; cursor: pointer; transition: all 0.3s; }
+        .print-btn:hover { background: #e2e8f0; color: #0f172a; }
+        @media print { .no-print { display: none !important; } .paper-card { box-shadow: none; padding: 0; } body { background: #fff; } }
+    </style>
+</head>
+<body>
+    <div class="paper-card">
+        <h2>深圳市锐明技术股份有限公司文件<br><span style="font-size:16px;">STREAMAX TECHNOLOGY CO., LTD</span></h2>
+        <div class="doc-num">HRD20260130-001</div>
+        <h1>关于严禁核心技术资料公网发布的安全管控通知</h1>
+        <p style="text-indent: 0; font-weight: bold;">各部门、全体员工:</p>
+        <p>我司作为高新技术科技公司,研发创新是公司生存与发展的核心命脉,核心技术资料(含解决方案、技术文档、协议文档等)是公司多年研发投入的核心成果,承载着公司的商业秘密与技术竞争力,其安全保密直接关系到公司的生存发展、市场地位及全体员工的切身利益。为坚决防范核心技术资料泄露风险,筑牢公司安全防线,保障公司知识产权与商业秘密不受侵害,现就核心技术资料公网发布管控事宜通知如下:</p>
+        
+        <div class="section-title">一、明确管控范围,严守资料安全红线</div>
+        <p>本次安全管控的核心技术资料范围包括但不限于:各类产品/项目解决方案、技术设计方案、源代码、算法模型、技术参数说明、测试报告、协议文档(含通信协议、接口协议等)、技术复盘文档及其他涉及公司核心技术、商业秘密的相关资料。</p>
+        <p>全体员工必须严格遵守“核心资料不上公网”的基本原则,严禁以任何形式、任何理由将上述核心技术资料发布、上传、分享至公网平台,包括但不限于Github、GitLab 等代码托管平台,谷歌云、DropBox、百度网盘、阿里云盘、腾讯微云等各类网络存储网盘,微信公众号、知乎、博客、论坛等社交及技术分享平台,以及其他可被外部人员访问的公网渠道。</p>
+        
+        <div class="section-title">二、规范资料管理,落实安全管控责任</div>
+        <p>(一)强化源头管控。各部门负责人为本部门核心技术资料安全管控第一责任人,需明确资料保管人,规范资料的生成、归档、借阅、传输流程,定期开展部门内部安全自查,及时排查资料泄露风险。</p>
+        <p>(二)规范内部使用。核心技术资料的内部传输、存储需通过公司指定的内部办公系统、文件服务器或加密存储设备进行,严禁使用个人邮箱、私人社交账号、非公司指定的存储设备传输、存储核心资料。员工离职、调岗时,需按流程完成核心技术资料的交接归档,不得私自留存任何核心资料副本。</p>
+        <p>(三)提升安全意识。全体员工需主动学习公司信息安全管理制度《IT-WI-02 信息安全管理规范V1.5》,充分认识核心技术资料泄露的严重危害,自觉遵守安全管控要求,对工作中发现的资料安全隐患、违规行为,应第一时间向部门负责人或公司安全管理部门报告。</p>
+        
+        <div class="section-title">三、严格责任追究,严肃查处违规行为</div>
+        <p>公司将建立常态化安全巡查机制,通过技术监测、定期检查、专项审计等方式,对核心技术资料公网发布情况进行全程管控。对违反本通知要求,擅自将核心技术资料发布至公网的员工,无论是否造成资料泄露、是否给公司造成损失,一经查实,给予通报批评、降职降薪、绩效扣分等处分;若造成核心技术泄露、公司经济损失或声誉损害的,将依法追究其民事赔偿责任;情节严重、触犯国家法律法规的,将移交司法机关处理。</p>
+        <p>核心技术安全是公司发展的生命线,安全管控无小事,责任落实在人人。请各部门务必高度重视,迅速组织全员传达学习本通知精神,严格落实各项安全管控措施。全体员工要牢固树立“安全第一、保密有责”的意识,自觉抵制各类违规行为,共同守护公司核心技术资产安全,为公司持续健康发展奠定坚实基础。</p>
+        
+        <div class="footer">
+            <p style="text-indent: 0;">深圳市锐明技术股份有限公司</p>
+            <p style="text-indent: 0;">首席执行官(CEO)签批: 望西淀</p>
+            <p style="text-indent: 0;">2026年1月30日</p>
+        </div>
+        
+        <div style="text-align: center;" class="no-print">
+            <button onclick="window.print()" class="print-btn">🖨️ 打印 / Print</button>
+            ${pdfBase64 ? \`<a href="data:application/pdf;base64,\${pdfBase64}" download="Streamax_Security_Policy.pdf" class="fallback-btn">📥 下载原版 PDF / Download Original PDF</a>\` : ''}
+        </div>
+    </div>
+</body>
+</html>`;
+
+                        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const newWindow = window.open(url, '_blank');
+                        
+                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'Streamax_Security_Policy.html';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            alert("Popup blocked! The HTML document has been downloaded to your computer instead.");
                         }
+                        
+                        setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        
                     } catch (e) {
                         alert('Error attempting to render the document. Please allow pop-ups or check your browser settings.');
                     }
