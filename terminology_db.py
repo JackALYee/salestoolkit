@@ -381,9 +381,9 @@ TERMINOLOGY_DB = [
     { "term": "Kalman Filter", "category": "Data & Metrics", "desc": "An algorithm that estimates the internal state of a linear dynamic system from a series of noisy measurements. Widely used in telematics to smooth GPS trajectories, fuse sensor data, and precisely estimate vehicle position and velocity.", "related": ["Dead Reckoning GPS"] },
     
     # Team
-    { "term": "Jerry Li", "category": "TEAM", "desc": "Jerry Li，6爷，产品市场总监。<br><br>名言：“这里有一把野生的枪🥰”", "exact": True },
-    { "term": "Ryan He", "category": "TEAM", "desc": "堃哥，全国熬夜加班总冠军，货运产品线总监。<br><br>名言：“干就完了！”", "related": ["Jerry Li"], "exact": True },
-    { "term": "Jack Yi", "category": "TEAM", "desc": "不太正经程序员，梦想做一名理工科市场推广大师，尽量别找我写PPT。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry Li"], "exact": True }
+    { "term": "Jerry Li", "category": "TEAM", "desc": "J总/6哥，商务环球飞行大师，全产品线特聘救火员，推推乐御用荷官，锐明产品市场总监。<br><br>名言：“这里有一把野生的枪🥰”", "exact": True },
+    { "term": "Ryan He", "category": "TEAM", "desc": "堃哥，南山智园爆肝王，全国熬夜加班总冠军，推推乐开房专员，锐明货运产品线总监。<br><br>名言：“干就完了！”", "related": ["Jerry Li"], "exact": True },
+    { "term": "Jack Yi", "category": "TEAM", "desc": "杰克，理工科市场推广练习生，为爱发电型上班族，尽量别找他写PPT，也无法接受椰子鸡。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry Li"], "exact": True }
 ]
 
 
