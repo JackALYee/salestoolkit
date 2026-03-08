@@ -476,17 +476,21 @@ for combo in PRODUCT_COMBINATIONS:
     text = text.replace('M1N2.0', 'M1N 2.0')
     text = text.replace('C6D7.0', 'C6D 7.0')
     text = text.replace('X3NPro', 'X3N Pro')
+    text = text.replace('CA42kit', 'CA42 Kit 2.0')
+    
+    combo["composition"] = text # Crucial for UI matching!
     
     # Extract parenthesis notes
     notes = re.findall(r'\((.*?)\)', text)
     clean = re.sub(r'\(.*?\)', '', text)
     
     # Extract smart loose Chinese (e.g. "存储4宫格") and treat as notes
-    loose_chinese = re.findall(r'[\u4e00-\u9fff]+[^\+/{]*', clean)
+    loose_chinese = re.findall(r'[\u4e00-\u9fff]+[^\+/{}]*', clean)
     notes.extend([lc.strip() for lc in loose_chinese if lc.strip()])
     
     # Strip loose Chinese and ANY preceding dash/hyphen/space so it doesn't leave "C53-"
-    clean = re.sub(r'[-_\s]*[\u4e00-\u9fff]+[^\+/{]*', '', clean)
+    # Make sure NOT to strip valid structural characters like '}' or '*'
+    clean = re.sub(r'[-_\s]*[\u4e00-\u9fff]+[^\+/{}\*]*', '', clean)
     clean = re.sub(r'\bor\b', '/', clean)
     combo["notes"] = notes
     
