@@ -503,7 +503,7 @@ css_and_html = r"""
             <!-- RELEVANCE GRAPH MODAL -->
             <div class="modal-overlay" id="relevanceModal">
                 <div class="modal-box">
-                    <button class="close-modal" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="close-modal" onclick="window.closeModal()"><i class="fa-solid fa-xmark"></i></button>
                     <h3 style="color: var(--text-white); font-size: 1.2rem; margin-bottom: 5px; z-index: 10;">Relevance Graph</h3>
                     
                     <div class="graph-viewport" id="graphViewport">
@@ -520,7 +520,7 @@ css_and_html = r"""
             <!-- SECURITY WARNING MODAL WITH POLICY EMBED -->
             <div class="modal-overlay" id="securityModal">
                 <div class="modal-box" style="width: 550px; height: auto; min-height: unset; padding: 40px; text-align: center; background: rgba(5, 8, 16, 0.98); border: 1px solid rgba(255, 71, 87, 0.3); box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
-                    <button class="close-modal" onclick="document.getElementById('securityModal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="close-modal" onclick="window.closeModal()"><i class="fa-solid fa-xmark"></i></button>
                     <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #ff4757; margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(255, 71, 87, 0.4));"></i>
                     <h3 style="color: var(--text-white); font-size: 1.4rem; margin-bottom: 15px;">Access Denied / 下载受限</h3>
                     <p style="color: var(--text-grey); font-size: 0.95rem; line-height: 1.6; margin-bottom: 0;">
@@ -529,8 +529,8 @@ css_and_html = r"""
                         根据公司信息安全管理规范，严禁将核心技术资料（含白皮书、规格书、手册等）发布或下载至公网环境。
                     </p>
                     <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
-                        <button class="see-details-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white;" onclick="document.getElementById('securityModal').classList.remove('active')">Cancel / 取消</button>
-                        <button class="see-details-btn" style="background: #ff4757; color: white;" onclick="viewSecurityPolicy()"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Policy / 查看管控通知</button>
+                        <button class="see-details-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: white;" onclick="window.closeModal()">Cancel / 取消</button>
+                        <button class="see-details-btn" style="background: #ff4757; color: white;" onclick="window.viewSecurityPolicy()"><i class="fa-solid fa-arrow-up-right-from-square"></i> View Policy / 查看管控通知</button>
                     </div>
                 </div>
             </div>
@@ -972,7 +972,7 @@ js_code = """
                             if (ENABLE_DOWNLOADS) {
                                 downHTML += `<a href="${item.file}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</a>`;
                             } else {
-                                downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</button>`;
+                                downHTML += `<button onclick="window.showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${singleLabel}</button>`;
                             }
                         }
                         
@@ -981,12 +981,12 @@ js_code = """
                                 if (ENABLE_DOWNLOADS) {
                                     downHTML += `<a href="${f.url}" target="_blank" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</a>`;
                                 } else {
-                                    downHTML += `<button onclick="showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</button>`;
+                                    downHTML += `<button onclick="window.showSecurityWarning(this)" class="download-btn"><i class="fa-solid fa-file-pdf"></i> ${f.label}</button>`;
                                 }
                             });
                         }
                         
-                        let relHTML = (item.related && item.related.length > 0) ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        let relHTML = (item.related && item.related.length > 0) ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="window.openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
                         
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
@@ -1001,6 +1001,251 @@ js_code = """
                         `;
                     }).join('');
                 }
+
+                // --- MODAL & GRAPH LOGIC ---
+                window.showSecurityWarning = function(btnElement) {
+                    const overlay = document.getElementById('securityModal');
+                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    
+                    if (!overlay || !modalBox) return;
+
+                    const docHeight = Math.max(
+                        document.body.scrollHeight, document.documentElement.scrollHeight,
+                        document.body.offsetHeight, document.documentElement.offsetHeight,
+                        document.documentElement.clientHeight
+                    );
+                    overlay.style.height = docHeight + 'px';
+                    
+                    if (btnElement) {
+                        const rect = btnElement.getBoundingClientRect();
+                        const absoluteY = rect.top + window.scrollY; 
+                        
+                        let boxHeight = modalBox.offsetHeight || 350;
+                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
+                        
+                        if (boxTop < 20) boxTop = 20; 
+                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
+                        
+                        modalBox.style.top = boxTop + 'px';
+                    } else {
+                        modalBox.style.top = (window.scrollY + 100) + 'px';
+                    }
+                    
+                    overlay.classList.add('active');
+                };
+
+                function getCenterSafe(node) {
+                    let x = node.offsetWidth / 2;
+                    let y = node.offsetHeight / 2;
+                    let current = node;
+                    while (current && current.id !== 'graphContainer') {
+                        x += current.offsetLeft;
+                        y += current.offsetTop;
+                        current = current.offsetParent;
+                    }
+                    return { x, y };
+                }
+
+                let isGraphDragging = false;
+                let hasGraphDragged = false;
+                let graphStartX = 0;
+                let graphStartY = 0;
+                let graphTranslateX = 0;
+                let graphTranslateY = 0;
+
+                window.openRelevanceGraph = function(termName, btnElement) {
+                    const termData = terminologyDB.find(t => t.term === termName);
+                    if (!termData || !termData.related) return;
+
+                    const overlay = document.getElementById('relevanceModal');
+                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    
+                    if (!overlay || !modalBox) return;
+
+                    const docHeight = Math.max(
+                        document.body.scrollHeight, document.documentElement.scrollHeight,
+                        document.body.offsetHeight, document.documentElement.offsetHeight,
+                        document.documentElement.clientHeight
+                    );
+                    overlay.style.height = docHeight + 'px';
+                    
+                    if (btnElement) {
+                        const rect = btnElement.getBoundingClientRect();
+                        const absoluteY = rect.top + window.scrollY; 
+                        
+                        let boxHeight = modalBox.offsetHeight || 600;
+                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
+                        
+                        if (boxTop < 20) boxTop = 20; 
+                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
+                        
+                        modalBox.style.top = boxTop + 'px';
+                    } else {
+                        modalBox.style.top = (window.scrollY + 100) + 'px';
+                    }
+
+                    const expBox = document.getElementById('modalChildExplanation');
+                    if (expBox) expBox.classList.remove('active');
+                    
+                    const masterNode = document.getElementById('graphMasterNode');
+                    if (masterNode) masterNode.innerText = termData.term;
+
+                    const dist1 = termData.related || [];
+                    const allRelatedTermsSet = new Set(dist1);
+                    dist1.forEach(d1 => {
+                        const d1Data = terminologyDB.find(t => t.term === d1);
+                        if (d1Data && d1Data.related) d1Data.related.forEach(d2 => { if (d2 !== termName) allRelatedTermsSet.add(d2); });
+                    });
+
+                    const allRelated = Array.from(allRelatedTermsSet);
+                    const clusters = [], visited = new Set();
+
+                    allRelated.forEach(term => {
+                        if (!visited.has(term)) {
+                            const cluster = [], queue = [term];
+                            visited.add(term);
+                            while (queue.length > 0) {
+                                const curr = queue.shift();
+                                cluster.push(curr);
+                                const currData = terminologyDB.find(t => t.term === curr);
+                                if (currData && currData.related) {
+                                    currData.related.forEach(n => {
+                                        if (allRelated.includes(n) && !visited.has(n)) { visited.add(n); queue.push(n); }
+                                    });
+                                }
+                            }
+                            clusters.push(cluster);
+                        }
+                    });
+
+                    clusters.forEach(c => c.sort((a,b) => {
+                        const catA = (terminologyDB.find(t=>t.term===a)?.category || '');
+                        const catB = (terminologyDB.find(t=>t.term===b)?.category || '');
+                        return catA.localeCompare(catB);
+                    }));
+                    clusters.sort((a,b) => {
+                        const catA = (terminologyDB.find(t=>t.term===a[0])?.category || '');
+                        const catB = (terminologyDB.find(t=>t.term===b[0])?.category || '');
+                        return catA.localeCompare(catB);
+                    });
+
+                    const grouped = clusters.flat();
+                    const relatedNodesContainer = document.getElementById('graphRelatedNodes');
+                    if (relatedNodesContainer) relatedNodesContainer.innerHTML = '';
+
+                    grouped.forEach(rTerm => {
+                        const n = document.createElement('div');
+                        n.className = 'round-node node-related';
+                        if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
+                        n.innerText = rTerm; n.dataset.term = rTerm;
+                        n.onclick = (e) => { if (hasGraphDragged) return; window.showChildTerm(rTerm); };
+                        if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
+                    });
+
+                    overlay.classList.add('active');
+
+                    setTimeout(() => {
+                        const vp = document.getElementById('graphViewport');
+                        const ct = document.getElementById('graphContainer');
+                        const mn = document.getElementById('graphMasterNode');
+                        
+                        if (!vp || !ct || !mn) return;
+
+                        ct.style.transform = 'translate(0,0)';
+                        
+                        const vpWidth = vp.offsetWidth;
+                        const vpHeight = vp.offsetHeight;
+                        const masterCenter = getCenterSafe(mn);
+                        
+                        graphTranslateX = (vpWidth * 0.3) - masterCenter.x;
+                        graphTranslateY = (vpHeight * 0.5) - masterCenter.y;
+                        
+                        ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
+                        drawLines();
+                        
+                        if (document.fonts) document.fonts.ready.then(() => drawLines());
+                    }, 50);
+                };
+
+                function drawLines() {
+                    const svg = document.getElementById('graphLines');
+                    if (!svg) return;
+                    svg.innerHTML = '';
+                    
+                    const mNode = document.getElementById('graphMasterNode');
+                    if (!mNode) return;
+                    
+                    const mCenter = getCenterSafe(mNode);
+                    const mData = terminologyDB.find(t => t.term === mNode.innerText);
+                    const d1Terms = mData?.related || [];
+                    const nodes = Array.from(document.querySelectorAll('.node-related'));
+                    const drawn = new Set();
+
+                    nodes.forEach(n => {
+                        if (d1Terms.includes(n.dataset.term)) {
+                            const nc = getCenterSafe(n);
+                            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            l.setAttribute('x1', mCenter.x); l.setAttribute('y1', mCenter.y);
+                            l.setAttribute('x2', nc.x); l.setAttribute('y2', nc.y);
+                            l.setAttribute('stroke', 'rgba(255,255,255,0.15)'); l.setAttribute('stroke-width', '2');
+                            svg.appendChild(l);
+                        }
+                    });
+
+                    nodes.forEach(na => {
+                        const da = terminologyDB.find(t => t.term === na.dataset.term);
+                        if (da && da.related) {
+                            da.related.forEach(tb => {
+                                const nb = nodes.find(n => n.dataset.term === tb);
+                                if (nb) {
+                                    const key = [na.dataset.term, tb].sort().join('|');
+                                    if (!drawn.has(key)) {
+                                        drawn.add(key);
+                                        const ca = getCenterSafe(na), cb = getCenterSafe(nb);
+                                        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                                        const midX = Math.max(ca.x, cb.x) + (Math.abs(ca.y - cb.y) * 0.35);
+                                        const midY = (ca.y + cb.y) / 2;
+                                        p.setAttribute('d', `M ${ca.x} ${ca.y} Q ${midX} ${midY} ${cb.x} ${cb.y}`);
+                                        p.setAttribute('stroke', 'rgba(255,255,255,0.15)'); p.setAttribute('stroke-width', '2'); p.setAttribute('fill', 'none');
+                                        svg.appendChild(p);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+
+                window.showChildTerm = function(name) {
+                    const d = terminologyDB.find(t => t.term === name);
+                    if (!d) return;
+                    const b = document.getElementById('modalChildExplanation');
+                    if (!b) return;
+                    
+                    const safeTerm = d.term || '';
+                    const safeDesc = d.desc || '';
+                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="window.masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
+                    b.classList.add('active');
+                };
+
+                window.closeModal = function() { 
+                    const modal = document.getElementById('relevanceModal');
+                    if (modal) modal.classList.remove('active'); 
+                    const secModal = document.getElementById('securityModal');
+                    if (secModal) secModal.classList.remove('active');
+                };
+                
+                window.masterSearch = function(name) {
+                    window.closeModal();
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = name;
+                        performSearch();
+                    }
+                    const searchWrapper = document.getElementById('searchWrapper');
+                    if (searchWrapper) {
+                        searchWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                };
 
                 // --- APP INITIALIZATION ---
                 function initStreamaxpedia() {
