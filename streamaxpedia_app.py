@@ -358,7 +358,7 @@ css_and_html = r"""
                     <div class="graph-viewport" id="graphViewport">
                         <div class="graph-container" id="graphContainer">
                             <svg class="graph-lines" id="graphLines" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"></svg>
-                            <div class="round-node node-master" id="graphMasterNode"></div>
+                            <div class="round-node master" id="graphMasterNode"></div>
                             <div class="graph-col" id="graphRelatedNodes"></div>
                         </div>
                         <div id="modalChildExplanation"></div>
@@ -414,15 +414,18 @@ js_code = f"""
 
                 // Render Left Library Panel
                 function renderComponents() {
-                    const query = document.getElementById('componentSearch').value.toLowerCase().trim();
+                    const searchEl = document.getElementById('componentSearch');
+                    const query = searchEl ? searchEl.value.toLowerCase().trim() : '';
                     const container = document.getElementById('componentsList');
+                    if (!container) return;
                     
                     let html = '';
                     ALL_PRODUCTS.forEach(p => {
-                        if (p.toLowerCase().includes(query)) {
-                            const isSelected = selectedBasket.has(p);
+                        const safeP = p ? String(p) : '';
+                        if (safeP.toLowerCase().includes(query)) {
+                            const isSelected = selectedBasket.has(safeP);
                             const activeClass = isSelected ? "bg-[var(--primary-green)] text-[#050810]" : "bg-black/50 text-gray-300 border-white/20 hover:border-[var(--primary-green)] hover:text-white";
-                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${p}')">${p}</button>`;
+                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${safeP}')">${safeP}</button>`;
                         }
                     });
                     if(html === '') html = '<span class="text-gray-500 text-sm">No components found.</span>';
@@ -478,7 +481,8 @@ js_code = f"""
 
                 // Complex Tokenization to make formula strings interactive
                 function makeClickableFormula(sol) {
-                    let res = sol;
+                    let res = sol ? String(sol) : "";
+                    if (!res) return "";
                     let notes = [];
                     
                     // Extract parenthesis
@@ -489,8 +493,10 @@ js_code = f"""
                     });
 
                     // Tokenize Products safely
-                    ALL_PRODUCTS.forEach((p, idx) => {
-                        res = res.split(p).join(`__TKN${idx}__`);
+                    (ALL_PRODUCTS || []).forEach((p, idx) => {
+                        if (p) {
+                            res = res.split(p).join(`__TKN${idx}__`);
+                        }
                     });
 
                     // Safely replace syntax with placeholders first
@@ -510,9 +516,11 @@ js_code = f"""
                     res = res.replace(/__MULT(\d+)__/g, '<span class="ml-1 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded">x$1</span>');
 
                     // Restore Products as Buttons
-                    ALL_PRODUCTS.forEach((p, idx) => {
-                        let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
-                        res = res.split(`__TKN${idx}__`).join(btn);
+                    (ALL_PRODUCTS || []).forEach((p, idx) => {
+                        if (p) {
+                            let btn = `<button type="button" class="inline-block bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-0.5 rounded text-[12px] font-bold cursor-pointer transition-colors mx-0.5 shadow-sm whitespace-nowrap" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
+                            res = res.split(`__TKN${idx}__`).join(btn);
+                        }
                     });
 
                     // Restore Notes as Info blocks
@@ -526,6 +534,7 @@ js_code = f"""
                 // Validator Engine with dynamic suggestions
                 function validateCombination() {
                     const resEl = document.getElementById('validatorResult');
+                    if (!resEl) return;
                     
                     if (selectedBasket.size === 0) {
                         resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex flex-col items-center justify-center";
@@ -543,8 +552,9 @@ js_code = f"""
                     let matchedRow = null;
                     let suggestionsMap = new Map();
 
-                    for (let row of matrixData) {
-                        for (let vSet of row.valid_sets) {
+                    for (let row of (matrixData || [])) {
+                        const validSets = row.valid_sets || [];
+                        for (let vSet of validSets) {
                             let vArr = [...vSet].sort();
                             
                             // Check Exact Match
@@ -585,6 +595,7 @@ js_code = f"""
 
                     // Apply Final UI
                     if (matchedRow) {
+                        const formulaStr = matchedRow.composition || matchedRow.sol || "Unknown Architecture";
                         resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col";
                         resEl.innerHTML = `
                             <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center">
@@ -594,19 +605,19 @@ js_code = f"""
                             <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg p-4 mb-4">
                                 <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider mb-2 font-bold"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
                                 <div class="leading-loose text-lg">
-                                    ${makeClickableFormula(matchedRow.composition)}
+                                    ${makeClickableFormula(formulaStr)}
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai || 'N/A'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch || 'N/A'}</div></div>
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">HDD</div><div class="text-sm font-bold">${matchedRow.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check"></i> YES</span>' : '<span class="text-gray-400">NO</span>'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DMS</div><div class="text-sm font-bold ${matchedRow.dms==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dms}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">ADAS</div><div class="text-sm font-bold ${matchedRow.adas==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.adas}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DSC</div><div class="text-sm font-bold ${matchedRow.dsc==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dsc}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DMS</div><div class="text-sm font-bold ${matchedRow.dms==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dms || 'NO'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">ADAS</div><div class="text-sm font-bold ${matchedRow.adas==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.adas || 'NO'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DSC</div><div class="text-sm font-bold ${matchedRow.dsc==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dsc || 'NO'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis || 'NO'}</div></div>
+                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm || 'NO'}</div></div>
                             </div>
                             ${suggestionsHtml}
                         `;
@@ -633,17 +644,26 @@ js_code = f"""
 
                 // Render Right Configurations Panel
                 function updateMatrix() {
-                    const dms = document.getElementById('filter-dms').checked;
-                    const adas = document.getElementById('filter-adas').checked;
-                    const dsc = document.getElementById('filter-dsc').checked;
-                    const bsis = document.getElementById('filter-bsis').checked;
-                    const avm = document.getElementById('filter-avm').checked;
-                    const bsd = document.getElementById('filter-bsd').value;
+                    const dmsEl = document.getElementById('filter-dms');
+                    const adasEl = document.getElementById('filter-adas');
+                    const dscEl = document.getElementById('filter-dsc');
+                    const bsisEl = document.getElementById('filter-bsis');
+                    const avmEl = document.getElementById('filter-avm');
+                    const bsdEl = document.getElementById('filter-bsd');
+
+                    const dms = dmsEl ? dmsEl.checked : false;
+                    const adas = adasEl ? adasEl.checked : false;
+                    const dsc = dscEl ? dscEl.checked : false;
+                    const bsis = bsisEl ? bsisEl.checked : false;
+                    const avm = avmEl ? avmEl.checked : false;
+                    const bsd = bsdEl ? bsdEl.value : 'Any';
 
                     const container = document.getElementById('matrixResults');
+                    if (!container) return;
+
                     let html = '';
 
-                    matrixData.forEach(item => {
+                    (matrixData || []).forEach(item => {
                         let match = true;
                         
                         // Checkbox requires 'YES' if clicked
@@ -657,14 +677,15 @@ js_code = f"""
                         if (bsd !== 'Any' && item.bsd !== bsd) match = false;
 
                         if (match) {
+                            const formulaStr = item.composition || item.sol || "";
                             html += `
                                 <div class="bg-black/30 border border-white/10 rounded-lg p-4 hover:border-white/20 transition-all">
                                     <div class="leading-loose mb-3">
-                                        ${makeClickableFormula(item.composition)}
+                                        ${makeClickableFormula(formulaStr)}
                                     </div>
                                     <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider">
-                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai}</span>
-                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch}</span>
+                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai || 'N/A'}</span>
+                                        <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch || 'N/A'}</span>
                                     </div>
                                 </div>
                             `;
@@ -820,8 +841,9 @@ js_code = f"""
                     }).join('');
                 }
 
-                // Attach event listeners safely
-                document.addEventListener('DOMContentLoaded', () => {
+                // --- APP INITIALIZATION ---
+                function initStreamaxpedia() {
+                    // 1. Search Engine Bindings
                     const searchInput = document.getElementById('searchInput');
                     const clearBtn = document.getElementById('clearBtn');
                     
@@ -837,255 +859,8 @@ js_code = f"""
                             performSearch();
                         });
                     }
-                });
 
-                // Function to pop up the security warning modal
-                window.showSecurityWarning = function(btnElement) {
-                    const overlay = document.getElementById('securityModal');
-                    const modalBox = overlay.querySelector('.modal-box');
-                    
-                    if (!overlay || !modalBox) return;
-
-                    const docHeight = Math.max(
-                        document.body.scrollHeight, document.documentElement.scrollHeight,
-                        document.body.offsetHeight, document.documentElement.offsetHeight,
-                        document.documentElement.clientHeight
-                    );
-                    overlay.style.height = docHeight + 'px';
-                    
-                    if (btnElement) {
-                        const rect = btnElement.getBoundingClientRect();
-                        const absoluteY = rect.top + window.scrollY; 
-                        
-                        let boxHeight = modalBox.offsetHeight || 350;
-                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
-                        
-                        if (boxTop < 20) boxTop = 20; 
-                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
-                        
-                        modalBox.style.top = boxTop + 'px';
-                    } else {
-                        modalBox.style.top = (window.scrollY + 100) + 'px';
-                    }
-                    
-                    overlay.classList.add('active');
-                };
-
-                function getCenterSafe(node) {
-                    let x = node.offsetWidth / 2;
-                    let y = node.offsetHeight / 2;
-                    let current = node;
-                    while (current && current.id !== 'graphContainer') {
-                        x += current.offsetLeft;
-                        y += current.offsetTop;
-                        current = current.offsetParent;
-                    }
-                    return { x, y };
-                }
-
-                // --- GRAPH LOGIC ---
-                window.openRelevanceGraph = function(termName, btnElement) {
-                    const termData = terminologyDB.find(t => t.term === termName);
-                    if (!termData || !termData.related) return;
-
-                    const overlay = document.getElementById('relevanceModal');
-                    const modalBox = overlay.querySelector('.modal-box');
-                    
-                    if (!overlay || !modalBox) return;
-
-                    const docHeight = Math.max(
-                        document.body.scrollHeight, document.documentElement.scrollHeight,
-                        document.body.offsetHeight, document.documentElement.offsetHeight,
-                        document.documentElement.clientHeight
-                    );
-                    overlay.style.height = docHeight + 'px';
-                    
-                    if (btnElement) {
-                        const rect = btnElement.getBoundingClientRect();
-                        const absoluteY = rect.top + window.scrollY; 
-                        
-                        let boxHeight = modalBox.offsetHeight || 600;
-                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
-                        
-                        if (boxTop < 20) boxTop = 20; 
-                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
-                        
-                        modalBox.style.top = boxTop + 'px';
-                    } else {
-                        modalBox.style.top = (window.scrollY + 100) + 'px';
-                    }
-
-                    const expBox = document.getElementById('modalChildExplanation');
-                    if (expBox) expBox.classList.remove('active');
-                    
-                    const masterNode = document.getElementById('graphMasterNode');
-                    if (masterNode) masterNode.innerText = termData.term;
-
-                    const dist1 = termData.related || [];
-                    const allRelatedTermsSet = new Set(dist1);
-                    dist1.forEach(d1 => {
-                        const d1Data = terminologyDB.find(t => t.term === d1);
-                        if (d1Data && d1Data.related) d1Data.related.forEach(d2 => { if (d2 !== termName) allRelatedTermsSet.add(d2); });
-                    });
-
-                    const allRelated = Array.from(allRelatedTermsSet);
-                    const clusters = [], visited = new Set();
-
-                    allRelated.forEach(term => {
-                        if (!visited.has(term)) {
-                            const cluster = [], queue = [term];
-                            visited.add(term);
-                            while (queue.length > 0) {
-                                const curr = queue.shift();
-                                cluster.push(curr);
-                                const currData = terminologyDB.find(t => t.term === curr);
-                                if (currData && currData.related) {
-                                    currData.related.forEach(n => {
-                                        if (allRelated.includes(n) && !visited.has(n)) { visited.add(n); queue.push(n); }
-                                    });
-                                }
-                            }
-                            clusters.push(cluster);
-                        }
-                    });
-
-                    clusters.forEach(c => c.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a)?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b)?.category || '');
-                        return catA.localeCompare(catB);
-                    }));
-                    clusters.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a[0])?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b[0])?.category || '');
-                        return catA.localeCompare(catB);
-                    });
-
-                    const grouped = clusters.flat();
-                    const relatedNodesContainer = document.getElementById('graphRelatedNodes');
-                    if (relatedNodesContainer) relatedNodesContainer.innerHTML = '';
-
-                    grouped.forEach(rTerm => {
-                        const n = document.createElement('div');
-                        n.className = 'round-node node-related';
-                        if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
-                        n.innerText = rTerm; n.dataset.term = rTerm;
-                        n.onclick = (e) => { if (hasGraphDragged) return; showChildTerm(rTerm); };
-                        if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
-                    });
-
-                    overlay.classList.add('active');
-
-                    setTimeout(() => {
-                        const vp = document.getElementById('graphViewport');
-                        const ct = document.getElementById('graphContainer');
-                        const mn = document.getElementById('graphMasterNode');
-                        
-                        if (!vp || !ct || !mn) return;
-
-                        ct.style.transform = 'translate(0,0)';
-                        
-                        const vpWidth = vp.offsetWidth;
-                        const vpHeight = vp.offsetHeight;
-                        const masterCenter = getCenterSafe(mn);
-                        
-                        graphTranslateX = (vpWidth * 0.3) - masterCenter.x;
-                        graphTranslateY = (vpHeight * 0.5) - masterCenter.y;
-                        
-                        ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
-                        drawLines();
-                        
-                        if (document.fonts) document.fonts.ready.then(() => drawLines());
-                    }, 50);
-                };
-
-                function drawLines() {
-                    const svg = document.getElementById('graphLines');
-                    if (!svg) return;
-                    svg.innerHTML = '';
-                    
-                    const mNode = document.getElementById('graphMasterNode');
-                    if (!mNode) return;
-                    
-                    const mCenter = getCenterSafe(mNode);
-                    const mData = terminologyDB.find(t => t.term === mNode.innerText);
-                    const d1Terms = mData?.related || [];
-                    const nodes = Array.from(document.querySelectorAll('.node-related'));
-                    const drawn = new Set();
-
-                    nodes.forEach(n => {
-                        if (d1Terms.includes(n.dataset.term)) {
-                            const nc = getCenterSafe(n);
-                            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                            l.setAttribute('x1', mCenter.x); l.setAttribute('y1', mCenter.y);
-                            l.setAttribute('x2', nc.x); l.setAttribute('y2', nc.y);
-                            l.setAttribute('stroke', 'rgba(255,255,255,0.15)'); l.setAttribute('stroke-width', '2');
-                            svg.appendChild(l);
-                        }
-                    });
-
-                    nodes.forEach(na => {
-                        const da = terminologyDB.find(t => t.term === na.dataset.term);
-                        if (da && da.related) {
-                            da.related.forEach(tb => {
-                                const nb = nodes.find(n => n.dataset.term === tb);
-                                if (nb) {
-                                    const key = [na.dataset.term, tb].sort().join('|');
-                                    if (!drawn.has(key)) {
-                                        drawn.add(key);
-                                        const ca = getCenterSafe(na), cb = getCenterSafe(nb);
-                                        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                                        const midX = Math.max(ca.x, cb.x) + (Math.abs(ca.y - cb.y) * 0.35);
-                                        const midY = (ca.y + cb.y) / 2;
-                                        p.setAttribute('d', `M ${ca.x} ${ca.y} Q ${midX} ${midY} ${cb.x} ${cb.y}`);
-                                        p.setAttribute('stroke', 'rgba(255,255,255,0.15)'); p.setAttribute('stroke-width', '2'); p.setAttribute('fill', 'none');
-                                        svg.appendChild(p);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-
-                window.showChildTerm = function(name) {
-                    const d = terminologyDB.find(t => t.term === name);
-                    if (!d) return;
-                    const b = document.getElementById('modalChildExplanation');
-                    if (!b) return;
-                    
-                    const safeTerm = d.term || '';
-                    const safeDesc = d.desc || '';
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
-                    b.classList.add('active');
-                };
-
-                window.closeModal = function() { 
-                    const modal = document.getElementById('relevanceModal');
-                    if (modal) modal.classList.remove('active'); 
-                };
-                
-                window.masterSearch = function(name) {
-                    closeModal();
-                    const searchInput = document.getElementById('searchInput');
-                    if (searchInput) {
-                        searchInput.value = name;
-                        performSearch();
-                    }
-                    const searchWrapper = document.getElementById('searchWrapper');
-                    if (searchWrapper) {
-                        searchWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                };
-
-                document.addEventListener('mousemove', (e) => {
-                    const mascotImg = document.getElementById('mascotImage');
-                    if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
-                    const x = (e.clientX / window.innerWidth - 0.5) * 40; 
-                    const y = (e.clientY / window.innerHeight - 0.5) * -40; 
-                    const translateX = (e.clientX / window.innerWidth - 0.5) * 15;
-                    mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
-                });
-
-                document.addEventListener('DOMContentLoaded', () => {
+                    // 2. Relevance Graph Bindings
                     const vp = document.getElementById('graphViewport');
                     const ct = document.getElementById('graphContainer');
                     if (vp && ct) {
@@ -1111,40 +886,87 @@ js_code = f"""
                             }).observe(modalBox);
                         }
                     }
-                });
+                }
+                
+                // Execute immediately bypassing DOMContentLoaded timing issues in iframes
+                initStreamaxpedia();
                 
                 window.viewSecurityPolicy = function() {
                     try {
-                        if (pdfBase64 && pdfBase64.length > 0) {
-                            // Decode base64 to a standard Blob representing the PDF
-                            const byteCharacters = atob(pdfBase64);
-                            const byteNumbers = new Array(byteCharacters.length);
-                            for (let i = 0; i < byteCharacters.length; i++) {
-                                byteNumbers[i] = byteCharacters.charCodeAt(i);
-                            }
-                            const byteArray = new Uint8Array(byteNumbers);
-                            const blob = new Blob([byteArray], { type: 'application/pdf' });
-                            const url = URL.createObjectURL(blob);
-                            
-                            const newWindow = window.open(url, '_blank');
-                            
-                            // If pop-ups are blocked, download it automatically
-                            if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = 'Streamax_Security_Policy.pdf';
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                alert("Popup blocked! The PDF document has been downloaded to your computer instead.");
-                            }
-                            
-                            setTimeout(() => URL.revokeObjectURL(url), 5000);
-                            
-                        } else {
-                            // Fallback to HTML if PDF is missing from the server
-                            alert("The original PDF file was not found on the server. Please contact your administrator.");
+                        const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于严禁核心技术资料公网发布的安全管控通知</title>
+    <style>
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 40px; line-height: 1.8; color: #333; max-width: 800px; margin: 0 auto; background: #f8fafc; }
+        .paper-card { background: #fff; padding: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 8px; }
+        h2 { text-align: center; border-bottom: 2px solid #cc0000; padding-bottom: 10px; color: #cc0000; margin-bottom: 5px; }
+        .doc-num { text-align: right; font-weight: bold; margin-bottom: 30px; font-size: 14px; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 30px; }
+        p { text-indent: 2em; margin-bottom: 15px; text-align: justify; }
+        .section-title { font-weight: bold; font-size: 18px; margin-top: 25px; margin-bottom: 10px; text-indent: 0; }
+        .footer { margin-top: 50px; text-align: right; }
+        .fallback-btn { display: inline-block; margin-top: 40px; padding: 12px 24px; background: #0f172a; color: #2AF598; text-decoration: none; font-weight: bold; border-radius: 6px; font-family: "Inter", sans-serif; transition: all 0.3s; }
+        .fallback-btn:hover { background: #1e293b; color: #fff; box-shadow: 0 4px 15px rgba(42,245,152,0.3); }
+        .print-btn { display: inline-block; margin-top: 40px; margin-right: 15px; padding: 12px 24px; background: #f1f5f9; color: #334155; text-decoration: none; font-weight: bold; border-radius: 6px; font-family: "Inter", sans-serif; border: 1px solid #cbd5e1; cursor: pointer; transition: all 0.3s; }
+        .print-btn:hover { background: #e2e8f0; color: #0f172a; }
+        @media print { .no-print { display: none !important; } .paper-card { box-shadow: none; padding: 0; } body { background: #fff; } }
+    </style>
+</head>
+<body>
+    <div class="paper-card">
+        <h2>深圳市锐明技术股份有限公司文件<br><span style="font-size:16px;">STREAMAX TECHNOLOGY CO., LTD</span></h2>
+        <div class="doc-num">HRD20260130-001</div>
+        <h1>关于严禁核心技术资料公网发布的安全管控通知</h1>
+        <p style="text-indent: 0; font-weight: bold;">各部门、全体员工:</p>
+        <p>我司作为高新技术科技公司,研发创新是公司生存与发展的核心命脉,核心技术资料(含解决方案、技术文档、协议文档等)是公司多年研发投入的核心成果,承载着公司的商业秘密与技术竞争力,其安全保密直接关系到公司的生存发展、市场地位及全体员工的切身利益。为坚决防范核心技术资料泄露风险,筑牢公司安全防线,保障公司知识产权与商业秘密不受侵害,现就核心技术资料公网发布管控事宜通知如下:</p>
+        
+        <div class="section-title">一、明确管控范围,严守资料安全红线</div>
+        <p>本次安全管控的核心技术资料范围包括但不限于:各类产品/项目解决方案、技术设计方案、源代码、算法模型、技术参数说明、测试报告、协议文档(含通信协议、接口协议等)、技术复盘文档及其他涉及公司核心技术、商业秘密的相关资料。</p>
+        <p>全体员工必须严格遵守“核心资料不上公网”的基本原则,严禁以任何形式、任何理由将上述核心技术资料发布、上传、分享至公网平台,包括但不限于Github、GitLab 等代码托管平台,谷歌云、DropBox、百度网盘、阿里云盘、腾讯微云等各类网络存储网盘,微信公众号、知乎、博客、论坛等社交及技术分享平台,以及其他可被外部人员访问的公网渠道。</p>
+        
+        <div class="section-title">二、规范资料管理,落实安全管控责任</div>
+        <p>(一)强化源头管控。各部门负责人为本部门核心技术资料安全管控第一责任人,需明确资料保管人,规范资料的生成、归档、借阅、传输流程,定期开展部门内部安全自查,及时排查资料泄露风险。</p>
+        <p>(二)规范内部使用。核心技术资料的内部传输、存储需通过公司指定的内部办公系统、文件服务器或加密存储设备进行,严禁使用个人邮箱、私人社交账号、非公司指定的存储设备传输、存储核心资料。员工离职、调岗时,需按流程完成核心技术资料的交接归档,不得私自留存任何核心资料副本。</p>
+        <p>(三)提升安全意识。全体员工需主动学习公司信息安全管理制度《IT-WI-02 信息安全管理规范V1.5》,充分认识核心技术资料泄露的严重危害,自觉遵守安全管控要求,对工作中发现的资料安全隐患、违规行为,应第一时间向部门负责人或公司安全管理部门报告。</p>
+        
+        <div class="section-title">三、严格责任追究,严肃查处违规行为</div>
+        <p>公司将建立常态化安全巡查机制,通过技术监测、定期检查、专项审计等方式,对核心技术资料公网发布情况进行全程管控。对违反本通知要求,擅自将核心技术资料发布至公网的员工,无论是否造成资料泄露、是否给公司造成损失,一经查实,给予通报批评、降职降薪、绩效扣分等处分;若造成核心技术泄露、公司经济损失或声誉损害的,将依法追究其民事赔偿责任;情节严重、触犯国家法律法规的,将移交司法机关处理。</p>
+        <p>核心技术安全是公司发展的生命线,安全管控无小事,责任落实在人人。请各部门务必高度重视,迅速组织全员传达学习本通知精神,严格落实各项安全管控措施。全体员工要牢固树立“安全第一、保密有责”的意识,自觉抵制各类违规行为,共同守护公司核心技术资产安全,为公司持续健康发展奠定坚实基础。</p>
+        
+        <div class="footer">
+            <p style="text-indent: 0;">深圳市锐明技术股份有限公司</p>
+            <p style="text-indent: 0;">首席执行官(CEO)签批: 望西淀</p>
+            <p style="text-indent: 0;">2026年1月30日</p>
+        </div>
+        
+        <div style="text-align: center;" class="no-print">
+            <button onclick="window.print()" class="print-btn">🖨️ 打印 / Print</button>
+            ${pdfBase64 ? \`<a href="data:application/pdf;base64,\${pdfBase64}" download="Streamax_Security_Policy.pdf" class="fallback-btn">📥 下载原版 PDF / Download Original PDF</a>\` : ''}
+        </div>
+    </div>
+</body>
+</html>`;
+
+                        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const newWindow = window.open(url, '_blank');
+                        
+                        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'Streamax_Security_Policy.html';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            alert("Popup blocked! The HTML document has been downloaded to your computer instead.");
                         }
+                        
+                        setTimeout(() => URL.revokeObjectURL(url), 5000);
+                        
                     } catch (e) {
                         alert('Error attempting to render the document. Please allow pop-ups or check your browser settings.');
                     }
