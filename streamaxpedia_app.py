@@ -22,6 +22,9 @@ for combo in PRODUCT_COMBINATIONS:
     text = text.replace('X3NPro', 'X3N Pro')
     text = text.replace('CA42kit', 'CA42 Kit 2.0')
     
+    # FIX: Handle known DB typo in architecture formula where a stray brace was left after parenthesis
+    text = text.replace(') }', ')') 
+    
     combo["composition"] = text # Crucial for UI matching!
     
     # Extract parenthesis notes
@@ -452,13 +455,13 @@ css_and_html = r"""
 
                             <!-- Chinese Content -->
                             <div id="matrix-intro-zh" class="hidden">
-                                <p class="mb-5 text-gray-300 text-sm"><strong>产品组合矩阵 (Product Matrix)</strong> 是一个智能的、交互式的配置工具，旨在帮助您快速构建、发现和验证官方的锐明硬件架构。它弥补了独立硬件组件与复杂的全集成车队解决方案之间的空白。</p>
+                                <p class="mb-5 text-gray-300 text-sm"><strong>产品组合矩阵 (Product Matrix)</strong> 是一个智能的、交互式的配置工具，旨在帮助您快速构建、发现和验证官方的 Streamax 硬件架构。它弥补了独立硬件组件与复杂的全集成车队解决方案之间的空白。</p>
                                 
                                 <h3 class="text-md font-bold text-white mb-3"><i class="fa-solid fa-rocket text-[var(--primary-green)] mr-2"></i> 如何使用</h3>
                                 <ul class="space-y-3 pl-2 text-sm text-gray-300">
-                                    <li><strong class="text-[var(--primary-green)]">1. 挑选与搜索 (左侧面板 - 组件库):</strong> 使用搜索栏查找独立的硬件组件（例如 <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>）。点击任何组件“名牌”即可将其立即添加到屏幕底部的方案验证器中。</li>
-                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置筛选):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤锐明官方推荐配置。每一个显示的方案都是可交互的——点击任何产品即可将其直接添加到方案验证器中。</li>
-                                    <li><strong class="text-yellow-500">3. 验证与扩展 (底部面板 - 方案验证器):</strong> 当您向方案验证器添加组件时，验证引擎会实时工作。
+                                    <li><strong class="text-[var(--primary-green)]">1. 挑选与搜索 (左侧面板 - 组件库):</strong> 使用搜索栏查找独立的硬件组件（例如 <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>）。点击任何组件“芯片”即可将其立即添加到屏幕底部的购物车中。</li>
+                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置发现):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤 Streamax 官方推荐配置。每一个显示的方案都是可交互的——点击公式字符串中的任何产品即可将其直接添加到购物车中。</li>
+                                    <li><strong class="text-yellow-500">3. 验证与扩展 (底部面板 - 方案验证器):</strong> 当您向购物车添加组件时，验证引擎会实时工作。
                                         <ul class="list-disc pl-6 mt-2 text-gray-400 space-y-1">
                                             <li>如果您的选择与官方架构完全匹配，它将显示<strong class="text-[var(--primary-green)]">有效方案已确认</strong>徽章以及完整的技术规格。</li>
                                             <li>如果您的选择不完整，它会闪烁<strong class="text-yellow-500">组合不完整</strong>警告，并智能提示您需要添加的确切缺失组件以完成系统配置！</li>
@@ -738,22 +741,37 @@ js_code = """
                 function makeClickableFormula(sol) {
                     let res = sol ? String(sol) : "";
                     if (!res) return "";
-                    let notes = [];
                     
-                    // Extract parenthesis first
+                    let notes = [];
+                    let longNotes = [];
+                    
+                    // 1. Extract Parenthesis First
                     res = res.replace(/（/g, '(').replace(/）/g, ')');
                     res = res.replace(/\s*\((.*?)\)/g, (match, p1) => {
-                        notes.push(p1.trim());
-                        return `__NOTE${notes.length-1}__`;
+                        let text = p1.trim();
+                        // If it's a long explanation (>8 chars), treat as a solution-level note
+                        if (text.length > 8) {
+                            longNotes.push(text);
+                            return ``; // Remove from the horizontal inline flow entirely
+                        } else {
+                            notes.push(text);
+                            return `__NOTE${notes.length-1}__`; // Keep short hints inline
+                        }
                     });
 
-                    // Extract loose Chinese (including preceding hyphens) e.g. "-左"
+                    // 2. Extract Loose Chinese Hints (including preceding hyphens, e.g., "-左")
                     res = res.replace(/[-\s]*([\u4e00-\u9fa5]+[^+\/{}\*\(\)]*)/g, (match, p1) => {
-                        notes.push(p1.replace(/^[-_\s]+/, '').trim());
-                        return `__NOTE${notes.length-1}__`;
+                        let text = p1.replace(/^[-_\s]+/, '').trim();
+                        if (text.length > 8) {
+                            longNotes.push(text);
+                            return ``;
+                        } else {
+                            notes.push(text);
+                            return `__NOTE${notes.length-1}__`;
+                        }
                     });
 
-                    // Tokenize Products safely (Longest first to prevent partial matches)
+                    // 3. Tokenize Products (Longest first to prevent partial matches)
                     const sortedProducts = [...(ALL_PRODUCTS || [])].sort((a, b) => b.length - a.length);
                     sortedProducts.forEach((p, idx) => {
                         if (p) {
@@ -761,7 +779,7 @@ js_code = """
                         }
                     });
 
-                    // Safely replace syntax with placeholders first
+                    // 4. Safely Replace Syntax with Placeholders
                     res = res.replace(/\s+or\s+/gi, '__OR__');
                     res = res.replace(/\//g, '__SLASH__');
                     res = res.replace(/\{/g, '__LBRACE__');
@@ -769,9 +787,9 @@ js_code = """
                     res = res.replace(/\s*\+\s*/g, '__PLUS__');
                     res = res.replace(/\*(\d+)/g, '__MULT$1__');
 
-                    // Group Preceding Elements (Product Token or Brackets) with their associated Note
+                    // Group Preceding Elements (Product Token or Brackets) with their associated short Note
                     res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div style="position: relative; display: inline-block; margin: 0 2px;">$1$2</div>');
-                    // Wrap any stray notes to give them a relative positioning anchor too
+                    // Wrap any stray short notes to give them a relative positioning anchor too
                     res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div style="position: relative; display: inline-block; margin: 0 2px;">$2</div>');
 
                     // Apply HTML replacements to syntax placeholders (strictly inline items)
@@ -790,14 +808,37 @@ js_code = """
                         }
                     });
 
-                    // Restore Notes as absolute positioned tags beneath the item (they will NOT affect the row's inline flow)
+                    // Restore SHORT Notes as absolute positioned tags beneath the item (they will NOT affect the row's inline flow)
                     notes.forEach((n, idx) => {
                         let noteHtml = `<span style="position: absolute; top: 100%; margin-top: 6px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #cbd5e1; font-weight: 500; font-style: italic; white-space: nowrap; background: rgba(0,0,0,0.85); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(42,245,152,0.4); z-index: 10; line-height: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;">${n}</span>`;
                         res = res.split(`__NOTE${idx}__`).join(noteHtml);
                     });
 
-                    // Wrap everything in a strict horizontal inline flow with padding to avoid clipping the absolute tooltips
-                    return `<div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 28px; padding-top: 8px; padding-left: 4px; padding-right: 4px; width: 100%; white-space: nowrap; scrollbar-width: thin;">${res}</div>`;
+                    // 5. Generate UI for LONG solution-level notes
+                    let longNotesHtml = '';
+                    if (longNotes.length > 0) {
+                        let combinedNotes = longNotes.join('<br><br>');
+                        // Place a discrete, absolute "Solution Note" tab on the top right
+                        longNotesHtml = `
+                        <div class="absolute right-0 top-0 z-20 group">
+                            <div class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border-l border-b border-yellow-400/30 rounded-bl-lg rounded-tr-lg cursor-help transition-all group-hover:bg-yellow-400 group-hover:text-[#050810]">
+                                <i class="fa-solid fa-lightbulb"></i> Solution Note
+                            </div>
+                            <div class="absolute top-full right-0 mt-1 w-max max-w-[300px] whitespace-normal bg-[#0B1221] text-gray-200 font-medium text-xs p-3 rounded-lg border border-yellow-400/40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] shadow-[0_15px_35px_rgba(0,0,0,0.8)] text-left leading-relaxed">
+                                ${combinedNotes}
+                            </div>
+                        </div>`;
+                    }
+
+                    // 6. Wrap everything in a unified container. 
+                    // Dynamic padding-right ensures the scroll bar doesn't hide text underneath the absolute Solution Note tab!
+                    return `
+                    <div class="relative w-full">
+                        ${longNotesHtml}
+                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 24px; padding-top: 8px; padding-left: 4px; padding-right: ${longNotes.length > 0 ? '90px' : '4px'}; width: 100%; white-space: nowrap; scrollbar-width: thin;">
+                            ${res}
+                        </div>
+                    </div>`;
                 }
 
                 // Validator Engine with dynamic suggestions
@@ -871,8 +912,8 @@ js_code = """
                                 <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
                             </div>
                             
-                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg p-4 mb-4 flex flex-col overflow-hidden">
-                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mb-1"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
+                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg pb-3 mb-4 flex flex-col overflow-visible relative">
+                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mb-1 mt-3 ml-4"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
                                 ${makeClickableFormula(formulaStr)}
                             </div>
 
@@ -952,9 +993,9 @@ js_code = """
                         if (match) {
                             const formulaStr = item.composition || item.sol || "";
                             html += `
-                                <div class="bg-black/30 border border-white/10 rounded-lg p-2 hover:border-white/20 transition-all flex flex-col overflow-hidden mb-3">
+                                <div class="bg-black/30 border border-white/10 rounded-lg pb-3 hover:border-white/20 transition-all flex flex-col overflow-visible mb-3 relative">
                                     ${makeClickableFormula(formulaStr)}
-                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mt-1 ml-2">
+                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mt-1 ml-4">
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai || 'N/A'}</span>
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch || 'N/A'}</span>
                                     </div>
