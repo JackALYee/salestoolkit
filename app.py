@@ -952,7 +952,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version BETA 2.1 • Trucking BU • Mar 2026</div>
+            <div class="header-meta fade-up">Version BETA 2.4 • 货运产品线 Trucking BU • Mar 2026</div>
             <div class="header-meta fade-up">试用版问题反馈：jcyi@streamax.com</div>
         </div>
     </header>
@@ -990,8 +990,8 @@ else:
                             <p class="mb-3 text-xs text-gray-400">销售人员的“知识库”和“产品搭配指南”。分为两个主要模式：</p>
                             <ul class="text-sm">
                                 <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
-                                <li><strong>产品矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
-                                <li><strong>安全下载：</strong>遵循公司信息安全规范，点击核心技术资料下载时会触发“下载受限”警告并显示管控通知。</li>
+                                <li><strong>产品组合矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
+
                             </ul>
                         </div>
 
