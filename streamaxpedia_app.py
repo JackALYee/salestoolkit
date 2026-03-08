@@ -1095,6 +1095,28 @@ js_code = """
                         }
                     }
                 });
+                
+                window.viewSecurityPolicy = function() {
+                    try {
+                        const blob = new Blob([policyHtmlContent], { type: 'text/html;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const newWindow = window.open(url, '_blank');
+                        
+                        if (!newWindow) {
+                            // Fallback: If popup is blocked, download the policy instead
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'Streamax_Security_Policy.html';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        }
+                        
+                        setTimeout(() => URL.revokeObjectURL(url), 2000);
+                    } catch (e) {
+                        alert('请允许浏览器弹出窗口以查看该政策文件。 / Please allow pop-ups to view the policy.');
+                    }
+                };
             </script>
         </div>
 """
