@@ -461,7 +461,6 @@ PRODUCT_COMBINATIONS = [
     {"ai": "8-Channel AI", "ch": "12-channel monitoring", "hdd": "YES（Pro可选大硬盘）", "composition": "X3NPro-H0404+{C29N+C40W}+{C53-左+CA51-前}+{C53-右+CA51-后}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"}
 ]
 
-
 # --- 3. RECURSIVE ARCHITECTURE PARSER ---
 ALL_PRODUCTS_SET = set()
 
@@ -471,6 +470,13 @@ for combo in PRODUCT_COMBINATIONS:
     # Standardize string
     text = raw.replace('（', '(').replace('）', ')').replace('＋', '+')
     
+    # Normalize common component names so they don't break logic
+    text = text.replace('Power Box Max', 'PBM')
+    text = text.replace('C6 Lite2.0', 'C6 Lite 2.0')
+    text = text.replace('M1N2.0', 'M1N 2.0')
+    text = text.replace('C6D7.0', 'C6D 7.0')
+    text = text.replace('X3NPro', 'X3N Pro')
+    
     # Extract parenthesis notes
     notes = re.findall(r'\((.*?)\)', text)
     clean = re.sub(r'\(.*?\)', '', text)
@@ -479,8 +485,8 @@ for combo in PRODUCT_COMBINATIONS:
     loose_chinese = re.findall(r'[\u4e00-\u9fff]+[^\+/{]*', clean)
     notes.extend([lc.strip() for lc in loose_chinese if lc.strip()])
     
-    # Strip loose Chinese to leave pure architecture logic
-    clean = re.sub(r'[\u4e00-\u9fff]+[^\+/{]*', '', clean)
+    # Strip loose Chinese and ANY preceding dash/hyphen/space so it doesn't leave "C53-"
+    clean = re.sub(r'[-_\s]*[\u4e00-\u9fff]+[^\+/{]*', '', clean)
     clean = re.sub(r'\bor\b', '/', clean)
     combo["notes"] = notes
     
@@ -513,8 +519,13 @@ for combo in PRODUCT_COMBINATIONS:
                 if a.startswith('{') and a.endswith('}'):
                     alt_res.extend(parse_expr(a[1:-1]))
                 else:
-                    # Strip multipliers like *4
-                    a_clean = re.sub(r'\*\s*\d+', '', a).strip()
+                    # Strip multipliers gracefully whether they are *4 or 1*
+                    a_clean = re.sub(r'\b\d+\s*\*', '', a)
+                    a_clean = re.sub(r'\*\s*\d+\b', '', a_clean)
+                    
+                    # Hard strip any final brackets that leaked from typos in the raw string
+                    a_clean = a_clean.replace('{', '').replace('}', '').strip()
+                    
                     if a_clean:
                         alt_res.append([a_clean])
             if alt_res:
