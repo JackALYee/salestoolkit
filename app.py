@@ -952,8 +952,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version BETA 2.4 • 货运产品线 Trucking BU • Mar 2026</div>
-            <div class="header-meta fade-up">试用版问题反馈：jcyi@streamax.com</div>
+            <div class="header-meta fade-up">Version 1.0 • Trucking BU • Jan 2026</div>
         </div>
     </header>
 
@@ -974,72 +973,149 @@ else:
                 .intro-content li { margin-bottom: 6px; }
                 .intro-content strong { color: var(--primary-green); font-weight: 600; }
             </style>
+            
             <details class="intro-details">
                 <summary class="intro-summary">
-                    <span><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 使用指南</span>
+                    <div class="flex items-center justify-between w-full pr-4">
+                        <span id="app-intro-title" class="flex items-center"><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> North America Sales Toolkit / User Guide</span>
+                        
+                        <!-- Language Toggle -->
+                        <div class="flex items-center bg-black/50 border border-white/20 rounded-full p-1 cursor-pointer ml-4" onclick="toggleAppIntroLang(event)">
+                            <div id="app-lang-en" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors">EN</div>
+                            <div id="app-lang-zh" class="px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors">中文</div>
+                        </div>
+                    </div>
                     <i class="fa-solid fa-chevron-down chevron"></i>
                 </summary>
-                <div class="intro-content">
-                    <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
-                        专为锐明销售人员打造的<strong>“数字瑞士军刀”</strong>。将销售过程中所需的工具、话术、产品信息和计算器集成到统一的平台中。核心目标是帮助新老销售快速上手，更专业、高效地与客户沟通并达成交易。
-                    </p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamax 百科全书 (Streamaxpedia)</h4>
-                            <p class="mb-3 text-xs text-gray-400">销售人员的“知识库”和“产品搭配指南”。分为两个主要模式：</p>
-                            <ul class="text-sm">
-                                <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
-                                <li><strong>产品组合矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
+                
+                <div class="intro-content relative">
+                    <!-- ================= ENGLISH CONTENT ================= -->
+                    <div id="app-intro-en" class="block">
+                        <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
+                            A <strong>"digital Swiss Army knife"</strong> built exclusively for Streamax sales representatives. It integrates essential tools, scripts, product information, and calculators required throughout the sales process into a unified platform. The core objective is to help new reps onboard quickly, and enable all sales staff to communicate more professionally and efficiently with clients to close deals.
+                        </p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamaxpedia</h4>
+                                <p class="mb-3 text-xs text-gray-400">The "knowledge base" and "product architecture guide" for sales. Features two main modes:</p>
+                                <ul class="text-sm">
+                                    <li><strong>Search Engine Mode:</strong> Type any relevant term (e.g., "ADAS", "MDVR") for quick retrieval. Click the <strong>Relevance</strong> button to open a dynamic topology graph showing product ecosystem connections.</li>
+                                    <li><strong>Product Matrix Mode:</strong> A smart hardware configurator. Select components on the left, filter solutions by function on the right. The bottom <strong>Solution Validator</strong> automatically checks if the selection is a valid official architecture and intelligently suggests missing components.</li>
+                                </ul>
+                            </div>
 
-                            </ul>
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. Prospecting Flow</h4>
+                                <p class="mb-3 text-xs text-gray-400">A top-of-funnel guidance tool for the sales pipeline:</p>
+                                <ul class="text-sm">
+                                    <li>Clearly displays the <strong>7-step enterprise sales process</strong> (from initial contact to final close).</li>
+                                    <li><strong>Script Library:</strong> Differentiates between TSP channel partners and end-user fleets, providing various styles of email templates, cold call scripts, and elevator pitches ready to be copied and used.</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-search text-purple-400"></i> 3. Discovery Meeting</h4>
+                                <p class="mb-3 text-xs text-gray-400">Helps sales reps ask the right questions after successfully booking a client:</p>
+                                <ul class="text-sm">
+                                    <li>Provides a structured <strong>"Question Bank"</strong>.</li>
+                                    <li>Differentiates between TSPs and end users, guiding sales step-by-step to uncover true needs—from business models and pain points to deployment constraints and budgets.</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. Presentation</h4>
+                                <p class="mb-3 text-xs text-gray-400">The core playbook for showcasing the Streamax value proposition to clients:</p>
+                                <ul class="text-sm">
+                                    <li><strong>Visualizations:</strong> Built-in dynamic CSS illustrations to vividly explain driver behavior risks, asset security risks, etc.</li>
+                                    <li><strong>Closed-Loop Journey:</strong> A lively animated demonstration showing how Streamax protects a truck across 10 critical touchpoints—from pre-departure and driving to arrival—complete with matching speaker scripts.</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. Value Calculator</h4>
+                                <p class="mb-3 text-xs text-gray-400">Use data to prove to clients that the system saves money:</p>
+                                <ul class="text-sm">
+                                    <li><strong>TCO Calculator:</strong> Input fleet size, mileage, and other data to dynamically calculate savings in fuel, safety claims, and insurance, generating the ROI.</li>
+                                    <li><strong>IFTA Optimizer:</strong> A specific tool for North American trucking. Calculates cross-state fuel taxes and smartly suggests the best states for refueling.</li>
+                                    <li><strong>Subscription Calculator:</strong> An internal tool. Calculates the profit margin and payback period based on hardware costs, platform fees, and subscription rates.</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. Drip Mailer</h4>
+                                <p class="mb-3 text-xs text-gray-400">An automated mass email extension app for the Toolkit:</p>
+                                <ul class="text-sm">
+                                    <li><strong>Personalized Signatures:</strong> Three built-in professional layouts (minimalist, with avatar, with logo).</li>
+                                    <li><strong>Dynamic Compose & Preview:</strong> Supports variable replacement like <code>{first_name}</code> and <code>{company}</code> with WYSIWYG preview.</li>
+                                    <li><strong>Automated Sending:</strong> Upload a CSV list and set send delays. The system simulates manual sending at random times during business hours and provides detailed execution logs.</li>
+                                </ul>
+                            </div>
                         </div>
+                    </div>
 
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. 客户开发流程 (Prospecting Flow)</h4>
-                            <p class="mb-3 text-xs text-gray-400">针对销售漏斗最前端的指导工具：</p>
-                            <ul class="text-sm">
-                                <li>清晰展示企业销售的 <strong>7 个步骤图</strong>（从初步接触到最终成交）。</li>
-                                <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯演讲 (Elevator Pitch)，支持一键复制使用。</li>
-                            </ul>
-                        </div>
+                    <!-- ================= CHINESE CONTENT ================= -->
+                    <div id="app-intro-zh" class="hidden">
+                        <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
+                            专为锐明销售人员打造的<strong>“数字瑞士军刀”</strong>。将销售过程中所需的工具、话术、产品信息和计算器集成到统一的平台中。核心目标是帮助新老销售快速上手，更专业、高效地与客户沟通并达成交易。
+                        </p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamax 百科全书 (Streamaxpedia)</h4>
+                                <p class="mb-3 text-xs text-gray-400">销售人员的“知识库”和“产品搭配指南”。分为两个主要模式：</p>
+                                <ul class="text-sm">
+                                    <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
+                                    <li><strong>产品组合矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
+                                </ul>
+                            </div>
 
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-search text-purple-400"></i> 3. 需求探索会议 (Discovery Meeting)</h4>
-                            <p class="mb-3 text-xs text-gray-400">成功约到客户后，帮助销售问出正确问题：</p>
-                            <ul class="text-sm">
-                                <li>提供结构化的<strong>“问题银行”</strong>。</li>
-                                <li>区分 TSP 和最终用户，从业务模式、痛点分析到部署限制和预算，指导销售一步步深入挖掘真实需求。</li>
-                            </ul>
-                        </div>
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. 客户开发流程 (Prospecting Flow)</h4>
+                                <p class="mb-3 text-xs text-gray-400">针对销售漏斗最前端的指导工具：</p>
+                                <ul class="text-sm">
+                                    <li>清晰展示企业销售的 <strong>7 个步骤图</strong>（从初步接触到最终成交）。</li>
+                                    <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯演讲 (Elevator Pitch)，支持一键复制使用。</li>
+                                </ul>
+                            </div>
 
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. 幻灯片演示 (Presentation)</h4>
-                            <p class="mb-3 text-xs text-gray-400">向客户展示 Streamax 价值主张的核心剧本：</p>
-                            <ul class="text-sm">
-                                <li><strong>视觉化呈现：</strong>内置 CSS 动态插图，形象解释司机行为风险、资产安全风险等。</li>
-                                <li><strong>闭环之旅：</strong>生动的动画演示，展示卡车从出发前、行驶中到到达后的 10 个关键环节中，Streamax 如何全程保驾护航，并提供配套演讲词。</li>
-                            </ul>
-                        </div>
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-search text-purple-400"></i> 3. 需求探索会议 (Discovery Meeting)</h4>
+                                <p class="mb-3 text-xs text-gray-400">成功约到客户后，帮助销售问出正确问题：</p>
+                                <ul class="text-sm">
+                                    <li>提供结构化的<strong>“问题银行”</strong>。</li>
+                                    <li>区分 TSP 和最终用户，从业务模式、痛点分析到部署限制和预算，指导销售一步步深入挖掘真实需求。</li>
+                                </ul>
+                            </div>
 
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. 价值与回报计算器 (Value Calculator)</h4>
-                            <p class="mb-3 text-xs text-gray-400">用数据说话，向客户证明系统能省钱：</p>
-                            <ul class="text-sm">
-                                <li><strong>TCO 计算器：</strong>输入车队规模、里程等数据，动态计算燃油、安全和保险费用的节省额及 ROI。</li>
-                                <li><strong>IFTA 优化器：</strong>北美货运特定工具。计算跨州燃油税，智能提示最佳加油州。</li>
-                                <li><strong>订阅经济计算器：</strong>内部工具。计算硬件成本、平台费与订阅费间的利润率和回本周期。</li>
-                            </ul>
-                        </div>
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. 幻灯片演示 (Presentation)</h4>
+                                <p class="mb-3 text-xs text-gray-400">向客户展示 Streamax 价值主张的核心剧本：</p>
+                                <ul class="text-sm">
+                                    <li><strong>视觉化呈现：</strong>内置 CSS 动态插图，形象解释司机行为风险、资产安全风险等。</li>
+                                    <li><strong>闭环之旅：</strong>生动的动画演示，展示卡车从出发前、行驶中到到达后的 10 个关键环节中，Streamax 如何全程保驾护航，并提供配套演讲词。</li>
+                                </ul>
+                            </div>
 
-                        <div class="glass-panel p-5">
-                            <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. 邮件营销工具 (Drip Mailer)</h4>
-                            <p class="mb-3 text-xs text-gray-400">自动化的邮件群发扩展应用：</p>
-                            <ul class="text-sm">
-                                <li><strong>个性化签名：</strong>内置极简、带头像、带Logo三种专业排版。</li>
-                                <li><strong>动态撰写预览：</strong>支持 {first_name}, {company} 等变量替换，所见即所得。</li>
-                                <li><strong>自动化发送：</strong>上传 CSV 名单，设置发送延迟，系统将在工作时间随机时间点模拟人工发送，并提供详细执行日志。</li>
-                            </ul>
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. 价值与回报计算器 (Value Calculator)</h4>
+                                <p class="mb-3 text-xs text-gray-400">用数据说话，向客户证明系统能省钱：</p>
+                                <ul class="text-sm">
+                                    <li><strong>TCO 计算器：</strong>输入车队规模、里程等数据，动态计算燃油、安全和保险费用的节省额及 ROI。</li>
+                                    <li><strong>IFTA 优化器：</strong>北美货运特定工具。计算跨州燃油税，智能提示最佳加油州。</li>
+                                    <li><strong>订阅经济计算器：</strong>内部工具。计算硬件成本、平台费与订阅费间的利润率和回本周期。</li>
+                                </ul>
+                            </div>
+
+                            <div class="glass-panel p-5">
+                                <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. 邮件营销工具 (Drip Mailer)</h4>
+                                <p class="mb-3 text-xs text-gray-400">自动化的邮件群发扩展应用：</p>
+                                <ul class="text-sm">
+                                    <li><strong>个性化签名：</strong>内置极简、带头像、带Logo三种专业排版。</li>
+                                    <li><strong>动态撰写预览：</strong>支持 {first_name}, {company} 等变量替换，所见即所得。</li>
+                                    <li><strong>自动化发送：</strong>上传 CSV 名单，设置发送延迟，系统将在工作时间随机时间点模拟人工发送，并提供详细执行日志。</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1048,6 +1124,7 @@ else:
 
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
+            <!-- Set Streamaxpedia as default internal tab -->
             <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
             </button>
@@ -1063,15 +1140,11 @@ else:
             <button class="nav-btn" onclick="switchTab('value-calculator', this)">
                 <i data-lucide="calculator"></i> Value Calculator
             </button>
-            <!-- REVERTED: Now triggers the internal HTML tab correctly! -->
             <button class="nav-btn" onclick="switchTab('email-tool', this)">
                 <i data-lucide="mail"></i> Email Tool
             </button>
         </nav>
-"""
-
-    # 2. Base HTML closing tags
-    html_tail = r"""
+        
         <div style="height: 100px;"></div>
     </div>
 
@@ -1079,8 +1152,68 @@ else:
     <div id="toast">Copied to Clipboard!</div>
 
     <script>
+        // --- INLINE STREAMLIT COMPONENT BRIDGE ---
+        // This fully eliminates the need for the external CDN and prevents any "SyntaxError: Cannot use import statement outside a module"
+        const Streamlit = {
+            setComponentReady: function() {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1}, "*");
+            },
+            setFrameHeight: function(height) {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: height}, "*");
+            },
+            setComponentValue: function(value) {
+                window.parent.postMessage({isStreamlitMessage: true, type: "streamlit:setComponentValue", value: value}, "*");
+            },
+            events: {
+                addEventListener: function(type, callback) {
+                    window.addEventListener("message", function(event) {
+                        if (event.data && event.data.type === type) {
+                            callback(event);
+                        }
+                    });
+                }
+            },
+            RENDER_EVENT: "streamlit:render"
+        };
+
+        function onRender(event) {
+            Streamlit.setFrameHeight(1800);
+        }
+        Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+        Streamlit.setComponentReady();
+        setInterval(() => { Streamlit.setFrameHeight(1800); }, 1000);
+
         // --- ICONS INITIALIZATION ---
         lucide.createIcons();
+
+        // --- APP INTRO LANGUAGE TOGGLE LOGIC ---
+        function toggleAppIntroLang(e) {
+            // Prevent the details tab from collapsing when clicking the button
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const enContent = document.getElementById('app-intro-en');
+            const zhContent = document.getElementById('app-intro-zh');
+            const enBtn = document.getElementById('app-lang-en');
+            const zhBtn = document.getElementById('app-lang-zh');
+            const titleSpan = document.getElementById('app-intro-title');
+
+            if (enContent.classList.contains('hidden')) {
+                // Switch to EN
+                enContent.classList.remove('hidden');
+                zhContent.classList.add('hidden');
+                enBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors";
+                zhBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors";
+                titleSpan.innerHTML = '<i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> North America Sales Toolkit / User Guide';
+            } else {
+                // Switch to ZH
+                enContent.classList.add('hidden');
+                zhContent.classList.remove('hidden');
+                zhBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors";
+                enBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors";
+                titleSpan.innerHTML = '<i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 使用指南';
+            }
+        }
 
         // --- TAB SWITCHING LOGIC ---
         function switchTab(tabId, btnElement) {
