@@ -976,7 +976,7 @@ else:
             </style>
             <details class="intro-details">
                 <summary class="intro-summary">
-                    <span><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 产品介绍 / 使用指南</span>
+                    <span><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 使用指南</span>
                     <i class="fa-solid fa-chevron-down chevron"></i>
                 </summary>
                 <div class="intro-content">
