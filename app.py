@@ -1076,7 +1076,7 @@ else:
                                 <p class="mb-3 text-xs text-gray-400">针对销售漏斗最前端的指导工具：</p>
                                 <ul class="text-sm">
                                     <li>清晰展示企业销售的 <strong>7 个步骤图</strong>（从初步接触到最终成交）。</li>
-                                    <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯演讲 (Elevator Pitch)，支持一键复制使用。</li>
+                                    <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯临时演讲 (Elevator Pitch)，支持一键复制使用。</li>
                                 </ul>
                             </div>
 
@@ -1084,7 +1084,7 @@ else:
                                 <h4><i class="fa-solid fa-search text-purple-400"></i> 3. 需求探索会议 (Discovery Meeting)</h4>
                                 <p class="mb-3 text-xs text-gray-400">成功约到客户后，帮助销售问出正确问题：</p>
                                 <ul class="text-sm">
-                                    <li>提供结构化的<strong>“问题银行”</strong>。</li>
+                                    <li>提供结构化的<strong>“问题库”</strong>。</li>
                                     <li>区分 TSP 和最终用户，从业务模式、痛点分析到部署限制和预算，指导销售一步步深入挖掘真实需求。</li>
                                 </ul>
                             </div>
@@ -1093,7 +1093,7 @@ else:
                                 <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. 幻灯片演示 (Presentation)</h4>
                                 <p class="mb-3 text-xs text-gray-400">向客户展示 Streamax 价值主张的核心剧本：</p>
                                 <ul class="text-sm">
-                                    <li><strong>视觉化呈现：</strong>内置 CSS 动态插图，形象解释司机行为风险、资产安全风险等。</li>
+                                    <li><strong>视觉化呈现：</strong>内置动态插图，形象解释司机行为风险、资产安全风险等。</li>
                                     <li><strong>闭环之旅：</strong>生动的动画演示，展示卡车从出发前、行驶中到到达后的 10 个关键环节中，Streamax 如何全程保驾护航，并提供配套演讲词。</li>
                                 </ul>
                             </div>
