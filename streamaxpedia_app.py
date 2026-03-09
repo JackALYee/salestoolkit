@@ -36,6 +36,7 @@ for combo in PRODUCT_COMBINATIONS:
     notes.extend([lc.strip() for lc in loose_chinese if lc.strip()])
     
     # Strip loose Chinese and ANY preceding dash/hyphen/space so it doesn't leave "C53-"
+    # Make sure NOT to strip valid structural characters like '}' or '*'
     clean = re.sub(r'[-_\s]*[\u4e00-\u9fff]+[^\+/{}\*]*', '', clean)
     clean = re.sub(r'\bor\b', '/', clean)
     combo["notes"] = notes
@@ -551,7 +552,7 @@ css_and_html = r"""
                         </div>
 
                         <!-- Results Container -->
-                        <div id="matrixResults" class="overflow-y-auto custom-scroll pr-2 pb-2 flex-grow space-y-3">
+                        <div id="matrixResults" class="overflow-y-auto custom-scroll pr-2 pb-2 flex-grow space-y-3 relative">
                             <!-- Populated by JS -->
                         </div>
                     </div>
@@ -571,10 +572,10 @@ css_and_html = r"""
                             </div>
                         </div>
 
-                        <div id="validatorResult" class="rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex items-center justify-center">
+                        <div id="validatorResult" class="rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex items-center justify-center w-full">
                             <div class="text-center text-gray-500">
                                 <i class="fa-solid fa-microchip text-3xl mb-2 opacity-50"></i>
-                                <p>Select components to validate your solution architecture.</p>
+                                <p class="text-sm m-0">Select components to validate your solution architecture.</p>
                             </div>
                         </div>
                     </div>
@@ -683,7 +684,7 @@ js_code = """
                         if (safeP.toLowerCase().includes(query)) {
                             const isSelected = selectedBasket.has(safeP);
                             const activeClass = isSelected ? "bg-[var(--primary-green)] text-[#050810]" : "bg-black/50 text-gray-300 border-white/20 hover:border-[var(--primary-green)] hover:text-white";
-                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass}" onclick="toggleBasket('${safeP}')">${safeP}</button>`;
+                            html += `<button type="button" class="border px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm ${activeClass} flex-shrink-0" onclick="toggleBasket('${safeP}')">${safeP}</button>`;
                         }
                     });
                     if(html === '') html = '<span class="text-gray-500 text-sm">No components found.</span>';
@@ -737,37 +738,34 @@ js_code = """
                     container.innerHTML = html;
                 }
 
-                // Horizontal Flow Formula Renderer with Smart Anchoring for Chinese Hints
+                // Horizontal Flow Formula Renderer with Robust Flex-Shrink Zero Stacking
                 function makeClickableFormula(sol) {
                     let res = sol ? String(sol) : "";
                     if (!res) return "";
                     
-                    let notes = [];
                     let longNotes = [];
                     
                     // 1. Extract Parenthesis First
                     res = res.replace(/（/g, '(').replace(/）/g, ')');
                     res = res.replace(/\s*\((.*?)\)/g, (match, p1) => {
                         let text = p1.trim();
-                        // If it's a long explanation (>8 chars), treat as a solution-level note
-                        if (text.length > 8) {
+                        // If it's a long explanation (>12 chars), treat as a solution-level note
+                        if (text.length > 12) {
                             longNotes.push(text);
                             return ``; // Remove from the horizontal inline flow entirely
                         } else {
-                            notes.push(text);
-                            return `__NOTE${notes.length-1}__`; // Keep short hints inline
+                            return `__NOTE__${text}__`; // Keep short hints inline
                         }
                     });
 
-                    // 2. Extract Loose Chinese Hints (including preceding hyphens, e.g., "-左")
+                    // 2. Extract loose Chinese (including preceding hyphens) e.g. "-左"
                     res = res.replace(/[-\s]*([\u4e00-\u9fa5]+[^+\/{}\*\(\)]*)/g, (match, p1) => {
                         let text = p1.replace(/^[-_\s]+/, '').trim();
-                        if (text.length > 8) {
+                        if (text.length > 12) {
                             longNotes.push(text);
                             return ``;
                         } else {
-                            notes.push(text);
-                            return `__NOTE${notes.length-1}__`;
+                            return `__NOTE__${text}__`;
                         }
                     });
 
@@ -787,56 +785,72 @@ js_code = """
                     res = res.replace(/\s*\+\s*/g, '__PLUS__');
                     res = res.replace(/\*(\d+)/g, '__MULT$1__');
 
-                    // Group Preceding Elements (Product Token or Brackets) with their associated short Note
-                    res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div style="position: relative; display: inline-block; margin: 0 2px;">$1$2</div>');
-                    // Wrap any stray short notes to give them a relative positioning anchor too
-                    res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div style="position: relative; display: inline-block; margin: 0 2px;">$2</div>');
+                    // 5. Group elements into unbreakable Flex Columns
+                    // We bind the Token (or right bracket), an optional multiplier, and an optional Note into ONE flex column
+                    res = res.replace(/(__TKN\d__|__RBRACE__)(?:(__MULT\d__))?(?:\s*)(__NOTE__[^_]+__)?/g, function(match, base, mult, noteStr) {
+                        let noteHTML = '';
+                        if (noteStr) {
+                            let cleanNote = noteStr.replace(/__NOTE__/g, '').replace(/__/g, '');
+                            noteHTML = `<div class="text-[10px] text-gray-300 font-medium italic tracking-wide whitespace-nowrap text-center bg-black/60 px-1.5 py-0.5 rounded border border-white/10 shadow-sm mt-1 w-max">${cleanNote}</div>`;
+                        }
+                        return `<div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; flex-shrink: 0; margin: 0 4px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; height: 32px;">${base}${mult || ''}</div>
+                                    ${noteHTML}
+                                </div>`;
+                    });
+                    
+                    // Catch any orphaned notes that weren't immediately following a token
+                    res = res.replace(/__NOTE__([^_]+)__/g, function(match, note) {
+                        return `<div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; flex-shrink: 0; margin: 0 4px;">
+                                    <div class="text-[10px] text-gray-300 font-medium italic tracking-wide whitespace-nowrap text-center bg-black/60 px-1.5 py-0.5 rounded border border-white/10 shadow-sm mt-1 w-max">${note}</div>
+                                </div>`;
+                    });
 
-                    // Apply HTML replacements to syntax placeholders (strictly inline items)
-                    res = res.replace(/__OR__/g, '<span style="margin: 0 6px; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #94a3b8; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; vertical-align: middle;">OR</span>');
-                    res = res.replace(/__SLASH__/g, '<span style="margin: 0 4px; font-weight: bold; color: #94a3b8; display: inline-block; vertical-align: middle;">/</span>');
-                    res = res.replace(/__PLUS__/g, '<span style="margin: 0 6px; color: #2AF598; font-weight: 900; font-size: 1rem; display: inline-block; vertical-align: middle;">+</span>');
-                    res = res.replace(/__LBRACE__/g, '<span style="margin: 0 2px; color: #009EFD; font-weight: 900; font-size: 1.25rem; display: inline-block; vertical-align: middle;">[</span>');
-                    res = res.replace(/__RBRACE__/g, '<span style="margin: 0 2px; color: #009EFD; font-weight: 900; font-size: 1.25rem; display: inline-block; vertical-align: middle;">]</span>');
-                    res = res.replace(/__MULT(\d+)__/g, '<span style="margin-left: 2px; font-size: 11px; font-weight: bold; padding: 2px 6px; background: rgba(255,255,255,0.2); color: white; border-radius: 4px; display: inline-block; vertical-align: middle;">x$1</span>');
+                    // 6. Apply fixed flex-shrink-0 styling to basic syntax
+                    const symH = "height: 32px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;";
+                    
+                    res = res.replace(/__OR__/g, `<div style="${symH}; margin: 0 6px;"><span class="text-[10px] uppercase font-bold text-gray-400 bg-white/10 px-1 rounded shadow">OR</span></div>`);
+                    res = res.replace(/__SLASH__/g, `<div style="${symH}; margin: 0 4px;"><span class="font-bold text-gray-400">/</span></div>`);
+                    res = res.replace(/__PLUS__/g, `<div style="${symH}; margin: 0 6px;"><span class="font-black text-sm text-[var(--primary-green)]">+</span></div>`);
+                    res = res.replace(/__LBRACE__/g, `<div style="${symH}; margin: 0 2px;"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">[</span></div>`);
+                    // RBRACE might have been grouped into a column, but if it was orphaned:
+                    res = res.replace(/__RBRACE__/g, `<div style="${symH}; margin: 0 2px;"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">]</span></div>`);
+                    
+                    // Multiplier tags attach directly next to the product
+                    res = res.replace(/__MULT(\d+)__/g, `<span class="ml-0.5 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded flex-shrink-0">x$1</span>`);
 
-                    // Restore Products as Buttons (strictly inline items)
+                    // 7. Restore Products
                     sortedProducts.forEach((p, idx) => {
                         if (p) {
-                            let btn = `<button type="button" class="bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-colors shadow-sm whitespace-nowrap" style="display: inline-flex; align-items: center; vertical-align: middle;" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
+                            let btn = `<button type="button" class="bg-[var(--secondary-blue)]/20 hover:bg-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white border border-[var(--secondary-blue)]/50 px-2 py-1 rounded-lg text-[13px] font-bold cursor-pointer transition-colors shadow-sm whitespace-nowrap flex items-center flex-shrink-0" onclick="toggleBasket('${p}')"><i class="fa-solid fa-plus text-[10px] mr-1 opacity-50"></i>${p}</button>`;
                             res = res.split(`__TKN${idx}__`).join(btn);
                         }
                     });
 
-                    // Restore SHORT Notes as absolute positioned tags beneath the item (they will NOT affect the row's inline flow)
-                    notes.forEach((n, idx) => {
-                        let noteHtml = `<span style="position: absolute; top: 100%; margin-top: 6px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #cbd5e1; font-weight: 500; font-style: italic; white-space: nowrap; background: rgba(0,0,0,0.85); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(42,245,152,0.4); z-index: 10; line-height: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;">${n}</span>`;
-                        res = res.split(`__NOTE${idx}__`).join(noteHtml);
-                    });
-
-                    // 5. Generate UI for LONG solution-level notes
+                    // 8. Generate UI for LONG solution-level notes
                     let longNotesHtml = '';
                     if (longNotes.length > 0) {
                         let combinedNotes = longNotes.join('<br><br>');
                         // Place a discrete, absolute "Solution Note" tab on the top right
                         longNotesHtml = `
                         <div class="absolute right-0 top-0 z-20 group">
-                            <div class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border-l border-b border-yellow-400/30 rounded-bl-lg rounded-tr-lg cursor-help transition-all group-hover:bg-yellow-400 group-hover:text-[#050810]">
+                            <div class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-yellow-400 bg-yellow-400/10 border-l border-b border-yellow-400/30 rounded-bl-lg rounded-tr-lg cursor-help transition-all group-hover:bg-yellow-400 group-hover:text-[#050810]">
                                 <i class="fa-solid fa-lightbulb"></i> Solution Note
                             </div>
-                            <div class="absolute top-full right-0 mt-1 w-max max-w-[300px] whitespace-normal bg-[#0B1221] text-gray-200 font-medium text-xs p-3 rounded-lg border border-yellow-400/40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] shadow-[0_15px_35px_rgba(0,0,0,0.8)] text-left leading-relaxed">
+                            <div class="absolute top-full right-0 mt-1 w-max max-w-[300px] whitespace-normal bg-[#0B1221] text-gray-200 font-medium text-xs p-4 rounded-lg border border-yellow-400/40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] shadow-[0_15px_35px_rgba(0,0,0,0.8)] text-left leading-relaxed">
                                 ${combinedNotes}
                             </div>
                         </div>`;
                     }
 
-                    // 6. Wrap everything in a unified container. 
-                    // Dynamic padding-right ensures the scroll bar doesn't hide text underneath the absolute Solution Note tab!
+                    // 9. Wrap everything in a horizontal scroll container
+                    // We use an empty flex-shrink-0 spacer div at the end to ensure the right edge is never crushed against the wall
                     return `
-                    <div class="relative w-full">
+                    <div class="relative w-full" style="min-width: 0;">
                         ${longNotesHtml}
-                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 24px; padding-top: 8px; padding-left: 4px; padding-right: ${longNotes.length > 0 ? '90px' : '4px'}; width: 100%; white-space: nowrap; scrollbar-width: thin;">
+                        <div class="custom-scroll" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; overflow-x: auto; padding-bottom: 12px; padding-top: 8px; width: 100%; max-width: 100%; white-space: nowrap;">
                             ${res}
+                            <div style="flex-shrink: 0; width: 40px; height: 1px;"></div>
                         </div>
                     </div>`;
                 }
@@ -847,7 +861,7 @@ js_code = """
                     if (!resEl) return;
                     
                     if (selectedBasket.size === 0) {
-                        resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex flex-col items-center justify-center";
+                        resEl.className = "rounded-xl border border-white/10 p-5 bg-black/20 transition-all min-h-[120px] flex flex-col items-center justify-center w-full";
                         resEl.innerHTML = `
                             <div class="text-center text-gray-500">
                                 <i class="fa-solid fa-microchip text-3xl mb-2 opacity-50"></i>
@@ -890,7 +904,7 @@ js_code = """
                         let pillsHtml = '';
                         suggestionsMap.forEach((missingArr, key) => {
                             let itemsStr = missingArr.join(',');
-                            pillsHtml += `<button onclick="addMultipleToBasket('${itemsStr}')" class="bg-black/40 border border-white/20 hover:border-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-plus text-[10px]"></i> ${key}</button>`;
+                            pillsHtml += `<button onclick="addMultipleToBasket('${itemsStr}')" class="bg-black/40 border border-white/20 hover:border-[var(--secondary-blue)] text-[var(--secondary-blue)] hover:text-white px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 flex-shrink-0"><i class="fa-solid fa-plus text-[10px]"></i> ${key}</button>`;
                         });
                         
                         suggestionsHtml = `
@@ -906,18 +920,21 @@ js_code = """
                     // Apply Final UI
                     if (matchedRow) {
                         const formulaStr = matchedRow.composition || matchedRow.sol || "Unknown Architecture";
-                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col";
+                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col items-start w-full";
+                        resEl.style.overflow = "visible";
                         resEl.innerHTML = `
-                            <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center">
+                            <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center w-full flex-shrink-0">
                                 <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
                             </div>
                             
-                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg pb-3 mb-4 flex flex-col overflow-visible relative">
-                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mb-1 mt-3 ml-4"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
-                                ${makeClickableFormula(formulaStr)}
+                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg pb-3 mb-4 flex flex-col items-start justify-start relative w-full" style="min-width: 0; overflow: visible;">
+                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mb-1 mt-3 ml-4 flex-shrink-0"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
+                                <div class="w-full px-2" style="min-width: 0;">
+                                    ${makeClickableFormula(formulaStr)}
+                                </div>
                             </div>
 
-                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 w-full">
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai || 'N/A'}</div></div>
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch || 'N/A'}</div></div>
                                 <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">HDD</div><div class="text-sm font-bold">${matchedRow.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check"></i> YES</span>' : '<span class="text-gray-400">NO</span>'}</div></div>
@@ -939,9 +956,9 @@ js_code = """
                         let bgColor = suggestionsMap.size > 0 ? "bg-yellow-500/5" : "bg-red-500/5";
                         let icon = suggestionsMap.size > 0 ? "fa-circle-exclamation" : "fa-circle-xmark";
 
-                        resEl.className = `rounded-xl border ${borderColor} p-5 ${bgColor} transition-all flex flex-col`;
+                        resEl.className = `rounded-xl border ${borderColor} p-5 ${bgColor} transition-all flex flex-col items-start w-full`;
                         resEl.innerHTML = `
-                            <div class="${statusColor} font-bold text-xl mb-2 flex items-center">
+                            <div class="${statusColor} font-bold text-xl mb-2 flex items-center w-full">
                                 <i class="fa-solid ${icon} mr-2 text-2xl"></i> ${suggestionsMap.size > 0 ? 'Incomplete Combination' : 'Invalid Combination'}
                             </div>
                             <p class="text-sm text-gray-400 m-0">${errorMsg}</p>
@@ -993,9 +1010,11 @@ js_code = """
                         if (match) {
                             const formulaStr = item.composition || item.sol || "";
                             html += `
-                                <div class="bg-black/30 border border-white/10 rounded-lg pb-3 hover:border-white/20 transition-all flex flex-col overflow-visible mb-3 relative">
-                                    ${makeClickableFormula(formulaStr)}
-                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mt-1 ml-4">
+                                <div class="bg-black/30 border border-white/10 rounded-lg hover:border-white/20 transition-all flex flex-col items-start justify-start mb-3 relative w-full" style="min-width: 0; overflow: visible;">
+                                    <div class="w-full px-2 pt-1" style="min-width: 0;">
+                                        ${makeClickableFormula(formulaStr)}
+                                    </div>
+                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mb-3 ml-4 flex-shrink-0">
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai || 'N/A'}</span>
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch || 'N/A'}</span>
                                     </div>
@@ -1153,10 +1172,29 @@ js_code = """
                     }).join('');
                 }
 
-                // --- MODAL & GRAPH LOGIC ---
+                // Attach event listeners safely
+                document.addEventListener('DOMContentLoaded', () => {
+                    const searchInput = document.getElementById('searchInput');
+                    const clearBtn = document.getElementById('clearBtn');
+                    
+                    if (searchInput) {
+                        searchInput.addEventListener('input', performSearch);
+                    }
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', () => {
+                            if (searchInput) {
+                                searchInput.value = ''; 
+                                searchInput.focus(); 
+                            }
+                            performSearch();
+                        });
+                    }
+                });
+
+                // Function to pop up the security warning modal
                 window.showSecurityWarning = function(btnElement) {
                     const overlay = document.getElementById('securityModal');
-                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    const modalBox = overlay.querySelector('.modal-box');
                     
                     if (!overlay || !modalBox) return;
 
@@ -1197,19 +1235,13 @@ js_code = """
                     return { x, y };
                 }
 
-                let isGraphDragging = false;
-                let hasGraphDragged = false;
-                let graphStartX = 0;
-                let graphStartY = 0;
-                let graphTranslateX = 0;
-                let graphTranslateY = 0;
-
+                // --- GRAPH LOGIC ---
                 window.openRelevanceGraph = function(termName, btnElement) {
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
 
                     const overlay = document.getElementById('relevanceModal');
-                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    const modalBox = overlay.querySelector('.modal-box');
                     
                     if (!overlay || !modalBox) return;
 
@@ -1289,7 +1321,7 @@ js_code = """
                         n.className = 'round-node node-related';
                         if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
                         n.innerText = rTerm; n.dataset.term = rTerm;
-                        n.onclick = (e) => { if (hasGraphDragged) return; window.showChildTerm(rTerm); };
+                        n.onclick = (e) => { if (hasGraphDragged) return; showChildTerm(rTerm); };
                         if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
                     });
 
@@ -1374,19 +1406,17 @@ js_code = """
                     
                     const safeTerm = d.term || '';
                     const safeDesc = d.desc || '';
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="window.masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
+                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
                     b.classList.add('active');
                 };
 
                 window.closeModal = function() { 
                     const modal = document.getElementById('relevanceModal');
                     if (modal) modal.classList.remove('active'); 
-                    const secModal = document.getElementById('securityModal');
-                    if (secModal) secModal.classList.remove('active');
                 };
                 
                 window.masterSearch = function(name) {
-                    window.closeModal();
+                    closeModal();
                     const searchInput = document.getElementById('searchInput');
                     if (searchInput) {
                         searchInput.value = name;
@@ -1398,26 +1428,16 @@ js_code = """
                     }
                 };
 
-                // --- APP INITIALIZATION ---
-                function initStreamaxpedia() {
-                    // 1. Search Engine Bindings
-                    const searchInput = document.getElementById('searchInput');
-                    const clearBtn = document.getElementById('clearBtn');
-                    
-                    if (searchInput) {
-                        searchInput.addEventListener('input', performSearch);
-                    }
-                    if (clearBtn) {
-                        clearBtn.addEventListener('click', () => {
-                            if (searchInput) {
-                                searchInput.value = ''; 
-                                searchInput.focus(); 
-                            }
-                            performSearch();
-                        });
-                    }
+                document.addEventListener('mousemove', (e) => {
+                    const mascotImg = document.getElementById('mascotImage');
+                    if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
+                    const x = (e.clientX / window.innerWidth - 0.5) * 40; 
+                    const y = (e.clientY / window.innerHeight - 0.5) * -40; 
+                    const translateX = (e.clientX / window.innerWidth - 0.5) * 15;
+                    mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
+                });
 
-                    // 2. Relevance Graph Bindings
+                document.addEventListener('DOMContentLoaded', () => {
                     const vp = document.getElementById('graphViewport');
                     const ct = document.getElementById('graphContainer');
                     if (vp && ct) {
@@ -1443,10 +1463,7 @@ js_code = """
                             }).observe(modalBox);
                         }
                     }
-                }
-                
-                // Execute immediately bypassing DOMContentLoaded timing issues in iframes
-                initStreamaxpedia();
+                });
                 
                 window.viewSecurityPolicy = function() {
                     try {
