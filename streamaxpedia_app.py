@@ -552,7 +552,7 @@ css_and_html = r"""
                         </div>
 
                         <!-- Results Container -->
-                        <div id="matrixResults" class="overflow-y-auto custom-scroll pr-2 pb-2 flex-grow space-y-3 relative">
+                        <div id="matrixResults" class="overflow-y-auto custom-scroll pr-2 pb-2 flex-grow space-y-3">
                             <!-- Populated by JS -->
                         </div>
                     </div>
@@ -754,7 +754,7 @@ js_code = """
                             longNotes.push(text);
                             return ``; // Remove from the horizontal inline flow entirely
                         } else {
-                            return `__NOTE__${text}__`; // Keep short hints inline
+                            return `__NOTE_START__${text}__NOTE_END__`; // Keep short hints inline
                         }
                     });
 
@@ -765,7 +765,7 @@ js_code = """
                             longNotes.push(text);
                             return ``;
                         } else {
-                            return `__NOTE__${text}__`;
+                            return `__NOTE_START__${text}__NOTE_END__`;
                         }
                     });
 
@@ -787,34 +787,34 @@ js_code = """
 
                     // 5. Group elements into unbreakable Flex Columns
                     // We bind the Token (or right bracket), an optional multiplier, and an optional Note into ONE flex column
-                    res = res.replace(/(__TKN\d__|__RBRACE__)(?:(__MULT\d__))?(?:\s*)(__NOTE__[^_]+__)?/g, function(match, base, mult, noteStr) {
+                    res = res.replace(/(__TKN\d__|__RBRACE__)(?:(__MULT\d__))?(?:\s*)(__NOTE_START__.*?__NOTE_END__)?/g, function(match, base, mult, noteStr) {
                         let noteHTML = '';
                         if (noteStr) {
-                            let cleanNote = noteStr.replace(/__NOTE__/g, '').replace(/__/g, '');
+                            let cleanNote = noteStr.replace(/__NOTE_START__/g, '').replace(/__NOTE_END__/g, '');
                             noteHTML = `<div class="text-[10px] text-gray-300 font-medium italic tracking-wide whitespace-nowrap text-center bg-black/60 px-1.5 py-0.5 rounded border border-white/10 shadow-sm mt-1 w-max">${cleanNote}</div>`;
                         }
-                        return `<div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; flex-shrink: 0; margin: 0 4px;">
-                                    <div style="display: flex; align-items: center; justify-content: center; height: 32px;">${base}${mult || ''}</div>
+                        return `<div class="inline-flex flex-col items-center justify-start flex-shrink-0 mx-1">
+                                    <div class="flex items-center justify-center h-8">${base}${mult || ''}</div>
                                     ${noteHTML}
                                 </div>`;
                     });
                     
                     // Catch any orphaned notes that weren't immediately following a token
-                    res = res.replace(/__NOTE__([^_]+)__/g, function(match, note) {
-                        return `<div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; flex-shrink: 0; margin: 0 4px;">
+                    res = res.replace(/__NOTE_START__(.*?)__NOTE_END__/g, function(match, note) {
+                        return `<div class="inline-flex flex-col items-center justify-start flex-shrink-0 mx-1">
+                                    <div class="flex items-center justify-center h-8"></div>
                                     <div class="text-[10px] text-gray-300 font-medium italic tracking-wide whitespace-nowrap text-center bg-black/60 px-1.5 py-0.5 rounded border border-white/10 shadow-sm mt-1 w-max">${note}</div>
                                 </div>`;
                     });
 
                     // 6. Apply fixed flex-shrink-0 styling to basic syntax
-                    const symH = "height: 32px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;";
+                    const symH = "h-8 inline-flex items-center justify-center flex-shrink-0";
                     
-                    res = res.replace(/__OR__/g, `<div style="${symH}; margin: 0 6px;"><span class="text-[10px] uppercase font-bold text-gray-400 bg-white/10 px-1 rounded shadow">OR</span></div>`);
-                    res = res.replace(/__SLASH__/g, `<div style="${symH}; margin: 0 4px;"><span class="font-bold text-gray-400">/</span></div>`);
-                    res = res.replace(/__PLUS__/g, `<div style="${symH}; margin: 0 6px;"><span class="font-black text-sm text-[var(--primary-green)]">+</span></div>`);
-                    res = res.replace(/__LBRACE__/g, `<div style="${symH}; margin: 0 2px;"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">[</span></div>`);
-                    // RBRACE might have been grouped into a column, but if it was orphaned:
-                    res = res.replace(/__RBRACE__/g, `<div style="${symH}; margin: 0 2px;"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">]</span></div>`);
+                    res = res.replace(/__OR__/g, `<div class="${symH} mx-1.5"><span class="text-[10px] uppercase font-bold text-gray-400 bg-white/10 px-1 rounded shadow">OR</span></div>`);
+                    res = res.replace(/__SLASH__/g, `<div class="${symH} mx-1"><span class="font-bold text-gray-400">/</span></div>`);
+                    res = res.replace(/__PLUS__/g, `<div class="${symH} mx-1.5"><span class="font-black text-sm text-[var(--primary-green)]">+</span></div>`);
+                    res = res.replace(/__LBRACE__/g, `<div class="${symH} mx-0.5"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">[</span></div>`);
+                    res = res.replace(/__RBRACE__/g, `<div class="${symH} mx-0.5"><span class="font-black text-xl text-[var(--secondary-blue)] opacity-80">]</span></div>`);
                     
                     // Multiplier tags attach directly next to the product
                     res = res.replace(/__MULT(\d+)__/g, `<span class="ml-0.5 text-[11px] font-bold px-1.5 py-0.5 bg-white/20 text-white rounded flex-shrink-0">x$1</span>`);
@@ -844,13 +844,15 @@ js_code = """
                     }
 
                     // 9. Wrap everything in a horizontal scroll container
-                    // We use an empty flex-shrink-0 spacer div at the end to ensure the right edge is never crushed against the wall
+                    // The `w-max` class inside an `overflow-x-auto` container forces correct flex calculation, eliminating any chance of left-side clipping.
                     return `
-                    <div class="relative w-full" style="min-width: 0;">
+                    <div class="relative w-full rounded-lg overflow-hidden">
                         ${longNotesHtml}
-                        <div class="custom-scroll" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; overflow-x: auto; padding-bottom: 12px; padding-top: 8px; width: 100%; max-width: 100%; white-space: nowrap;">
-                            ${res}
-                            <div style="flex-shrink: 0; width: 40px; height: 1px;"></div>
+                        <div class="custom-scroll w-full overflow-x-auto pb-4 pt-3">
+                            <div class="w-max flex flex-row items-start px-4">
+                                ${res}
+                                <div class="w-12 flex-shrink-0 h-1"></div>
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -920,31 +922,34 @@ js_code = """
                     // Apply Final UI
                     if (matchedRow) {
                         const formulaStr = matchedRow.composition || matchedRow.sol || "Unknown Architecture";
-                        resEl.className = "rounded-xl border border-[var(--primary-green)] p-5 bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col items-start w-full";
-                        resEl.style.overflow = "visible";
+                        resEl.className = "rounded-xl border border-[var(--primary-green)] bg-[var(--primary-green)]/5 transition-all shadow-[0_0_20px_rgba(42,245,152,0.15)] flex flex-col items-start w-full overflow-hidden";
                         resEl.innerHTML = `
-                            <div class="text-[var(--primary-green)] font-bold text-xl mb-4 flex items-center w-full flex-shrink-0">
-                                <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
+                            <div class="p-5 border-b border-[var(--primary-green)]/20 w-full">
+                                <div class="text-[var(--primary-green)] font-bold text-xl flex items-center w-full flex-shrink-0">
+                                    <i class="fa-solid fa-circle-check mr-2 text-2xl"></i> Valid Solution Confirmed
+                                </div>
                             </div>
                             
-                            <div class="bg-black/30 border border-[var(--primary-green)]/30 rounded-lg pb-3 mb-4 flex flex-col items-start justify-start relative w-full" style="min-width: 0; overflow: visible;">
-                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mb-1 mt-3 ml-4 flex-shrink-0"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
-                                <div class="w-full px-2" style="min-width: 0;">
+                            <div class="bg-black/30 pb-3 flex flex-col items-start justify-start relative w-full overflow-hidden border-b border-[var(--primary-green)]/20">
+                                <div class="text-[10px] text-[var(--primary-green)] uppercase tracking-wider font-bold mt-4 ml-5 flex-shrink-0"><i class="fa-solid fa-microchip mr-1"></i> Full System Architecture</div>
+                                <div class="w-full" style="min-width: 0;">
                                     ${makeClickableFormula(formulaStr)}
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 w-full">
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai || 'N/A'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch || 'N/A'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">HDD</div><div class="text-sm font-bold">${matchedRow.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check"></i> YES</span>' : '<span class="text-gray-400">NO</span>'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DMS</div><div class="text-sm font-bold ${matchedRow.dms==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dms || 'NO'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">ADAS</div><div class="text-sm font-bold ${matchedRow.adas==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.adas || 'NO'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DSC</div><div class="text-sm font-bold ${matchedRow.dsc==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dsc || 'NO'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis || 'NO'}</div></div>
-                                <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm || 'NO'}</div></div>
+                            <div class="p-5 w-full">
+                                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 w-full">
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI Reqs</div><div class="text-sm text-white font-bold">${matchedRow.ai || 'N/A'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">Channels</div><div class="text-sm text-white font-bold">${matchedRow.ch || 'N/A'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">HDD</div><div class="text-sm font-bold">${matchedRow.hdd === 'YES' ? '<span class="text-[var(--primary-green)]"><i class="fa-solid fa-check"></i> YES</span>' : '<span class="text-gray-400">NO</span>'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DMS</div><div class="text-sm font-bold ${matchedRow.dms==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dms || 'NO'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">ADAS</div><div class="text-sm font-bold ${matchedRow.adas==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.adas || 'NO'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">DSC</div><div class="text-sm font-bold ${matchedRow.dsc==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.dsc || 'NO'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">BSIS/MOIS</div><div class="text-sm font-bold ${matchedRow.bsis==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.bsis || 'NO'}</div></div>
+                                    <div class="p-3 bg-black/40 rounded-lg border border-[var(--primary-green)]/30 text-center"><div class="text-[10px] text-gray-400 uppercase mb-1">AI-AVM</div><div class="text-sm font-bold ${matchedRow.avm==='YES'?'text-[var(--secondary-blue)]':'text-gray-400'}">${matchedRow.avm || 'NO'}</div></div>
+                                </div>
+                                ${suggestionsHtml}
                             </div>
-                            ${suggestionsHtml}
                         `;
                     } else {
                         let errorMsg = suggestionsMap.size > 0 
@@ -1010,11 +1015,11 @@ js_code = """
                         if (match) {
                             const formulaStr = item.composition || item.sol || "";
                             html += `
-                                <div class="bg-black/30 border border-white/10 rounded-lg hover:border-white/20 transition-all flex flex-col items-start justify-start mb-3 relative w-full" style="min-width: 0; overflow: visible;">
-                                    <div class="w-full px-2 pt-1" style="min-width: 0;">
+                                <div class="bg-black/30 border border-white/10 rounded-lg hover:border-white/20 transition-all flex flex-col w-full overflow-hidden mb-3">
+                                    <div class="w-full relative" style="min-width: 0;">
                                         ${makeClickableFormula(formulaStr)}
                                     </div>
-                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider mb-3 ml-4 flex-shrink-0">
+                                    <div class="flex gap-2 text-[10px] uppercase font-bold tracking-wider pb-3 px-4 flex-shrink-0 border-t border-white/5 pt-3">
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ai || 'N/A'}</span>
                                         <span class="bg-white/5 text-gray-400 px-2 py-1 rounded">${item.ch || 'N/A'}</span>
                                     </div>
