@@ -789,9 +789,9 @@ js_code = """
                     res = res.replace(/\*(\d+)/g, '__MULT$1__');
 
                     // Group Preceding Elements (Product Token or Brackets) with their associated short Note
-                    res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div style="position: relative; display: inline-block; margin: 0 2px;">$1$2</div>');
+                    res = res.replace(/((?:__TKN\d__|__RBRACE__)(?:__MULT\d__)?)\s*(__NOTE\d__)/g, '<div style="position: relative; display: inline-block; margin: 0 16px;">$1$2</div>');
                     // Wrap any stray short notes to give them a relative positioning anchor too
-                    res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div style="position: relative; display: inline-block; margin: 0 2px;">$2</div>');
+                    res = res.replace(/(^|[^>])(__NOTE\d__)/g, '$1<div style="position: relative; display: inline-block; margin: 0 16px;">$2</div>');
 
                     // Apply HTML replacements to syntax placeholders (strictly inline items)
                     res = res.replace(/__OR__/g, '<span style="margin: 0 6px; font-size: 10px; text-transform: uppercase; font-weight: bold; color: #94a3b8; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; vertical-align: middle;">OR</span>');
@@ -811,7 +811,7 @@ js_code = """
 
                     // Restore SHORT Notes as absolute positioned tags beneath the item (they will NOT affect the row's inline flow)
                     notes.forEach((n, idx) => {
-                        let noteHtml = `<span style="position: absolute; top: 100%; margin-top: 6px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #cbd5e1; font-weight: 500; font-style: italic; white-space: nowrap; background: rgba(0,0,0,0.85); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(42,245,152,0.4); z-index: 10; line-height: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;">${n}</span>`;
+                        let noteHtml = `<span style="position: absolute; top: 100%; margin-top: 6px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #cbd5e1; font-weight: 500; font-style: italic; white-space: nowrap; background: rgba(0,0,0,0.85); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(42,245,152,0.4); z-index: 10; line-height: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none;">${n}</span>`;
                         res = res.split(`__NOTE${idx}__`).join(noteHtml);
                     });
 
@@ -822,22 +822,24 @@ js_code = """
                         // Place a discrete, absolute "Solution Note" tab on the top right
                         longNotesHtml = `
                         <div class="absolute right-0 top-0 z-20 group">
-                            <div class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border-l border-b border-yellow-400/30 rounded-bl-lg rounded-tr-lg cursor-help transition-all group-hover:bg-yellow-400 group-hover:text-[#050810]">
+                            <div class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-yellow-400 bg-yellow-400/10 border-l border-b border-yellow-400/30 rounded-bl-lg rounded-tr-lg cursor-help transition-all group-hover:bg-yellow-400 group-hover:text-[#050810]">
                                 <i class="fa-solid fa-lightbulb"></i> Solution Note
                             </div>
-                            <div class="absolute top-full right-0 mt-1 w-max max-w-[300px] whitespace-normal bg-[#0B1221] text-gray-200 font-medium text-xs p-3 rounded-lg border border-yellow-400/40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] shadow-[0_15px_35px_rgba(0,0,0,0.8)] text-left leading-relaxed">
+                            <div class="absolute top-full right-0 mt-1 w-max max-w-[300px] whitespace-normal bg-[#0B1221] text-gray-200 font-medium text-xs p-4 rounded-lg border border-yellow-400/40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] shadow-[0_15px_35px_rgba(0,0,0,0.8)] text-left leading-relaxed">
                                 ${combinedNotes}
                             </div>
                         </div>`;
                     }
 
                     // 6. Wrap everything in a unified container. 
-                    // Dynamic padding-right ensures the scroll bar doesn't hide text underneath the absolute Solution Note tab!
+                    // Use a physical spacer div at the end because webkit ignores right-padding in scrollable flex containers
                     return `
                     <div class="relative w-full">
                         ${longNotesHtml}
-                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 28px; padding-top: 12px; padding-left: 8px; padding-right: ${longNotes.length > 0 ? '150px' : '100px'}; width: 100%; white-space: nowrap; scrollbar-width: thin;">
+                        <div class="custom-scroll" style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 32px; padding-top: 16px; padding-left: 8px; width: 100%; white-space: nowrap;">
                             ${res}
+                            <!-- Spacer to prevent right-edge clipping of tooltips in scrollable flex containers -->
+                            <div style="flex-shrink: 0; width: ${longNotes.length > 0 ? '140px' : '60px'}; height: 1px; pointer-events: none;"></div>
                         </div>
                     </div>`;
                 }
