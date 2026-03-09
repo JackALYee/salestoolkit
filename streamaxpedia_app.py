@@ -36,6 +36,7 @@ for combo in PRODUCT_COMBINATIONS:
     notes.extend([lc.strip() for lc in loose_chinese if lc.strip()])
     
     # Strip loose Chinese and ANY preceding dash/hyphen/space so it doesn't leave "C53-"
+    # Make sure NOT to strip valid structural characters like '}' or '*'
     clean = re.sub(r'[-_\s]*[\u4e00-\u9fff]+[^\+/{}\*]*', '', clean)
     clean = re.sub(r'\bor\b', '/', clean)
     combo["notes"] = notes
@@ -459,9 +460,9 @@ css_and_html = r"""
                                 
                                 <h3 class="text-md font-bold text-white mb-3"><i class="fa-solid fa-rocket text-[var(--primary-green)] mr-2"></i> 如何使用</h3>
                                 <ul class="space-y-3 pl-2 text-sm text-gray-300">
-                                    <li><strong class="text-[var(--primary-green)]">1. 挑选与搜索 (左侧面板 - 组件库):</strong> 使用搜索栏查找独立的硬件组件（例如 <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>）。点击任何组件“卡片”即可将其立即添加到屏幕底部的方案验证器中。</li>
-                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置筛选):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤 Streamax 官方推荐配置。每一个显示的方案都是可交互的——点击公式字符串中的任何产品即可将其直接添加到方案验证器中。</li>
-                                    <li><strong class="text-yellow-500">3. 验证与扩展 (底部面板 - 方案验证器):</strong> 当您向方案验证器添加组件时，验证引擎会实时工作。
+                                    <li><strong class="text-[var(--primary-green)]">1. 挑选与搜索 (左侧面板 - 组件库):</strong> 使用搜索栏查找独立的硬件组件（例如 <em>AD Plus 2.0</em>, <em>C29N</em>, <em>AVM</em>）。点击任何组件“芯片”即可将其立即添加到屏幕底部的购物车中。</li>
+                                    <li><strong class="text-[var(--secondary-blue)]">2. 按功能过滤 (右侧面板 - 配置发现):</strong> 不确定需要哪些组件？勾选功能框（如 <em>DMS</em>, <em>ADAS</em>, 或 <em>盲区检测</em>）来过滤 Streamax 官方推荐配置。每一个显示的方案都是可交互的——点击公式字符串中的任何产品即可将其直接添加到购物车中。</li>
+                                    <li><strong class="text-yellow-500">3. 验证与扩展 (底部面板 - 方案验证器):</strong> 当您向购物车添加组件时，验证引擎会实时工作。
                                         <ul class="list-disc pl-6 mt-2 text-gray-400 space-y-1">
                                             <li>如果您的选择与官方架构完全匹配，它将显示<strong class="text-[var(--primary-green)]">有效方案已确认</strong>徽章以及完整的技术规格。</li>
                                             <li>如果您的选择不完整，它会闪烁<strong class="text-yellow-500">组合不完整</strong>警告，并智能提示您需要添加的确切缺失组件以完成系统配置！</li>
@@ -749,8 +750,8 @@ js_code = """
                     res = res.replace(/（/g, '(').replace(/）/g, ')');
                     res = res.replace(/\s*\((.*?)\)/g, (match, p1) => {
                         let text = p1.trim();
-                        // If it's a long explanation (>8 chars), treat as a solution-level note
-                        if (text.length > 8) {
+                        // If it's a long explanation (>12 chars), treat as a solution-level note
+                        if (text.length > 12) {
                             longNotes.push(text);
                             return ``; // Remove from the horizontal inline flow entirely
                         } else {
@@ -759,10 +760,10 @@ js_code = """
                         }
                     });
 
-                    // 2. Extract Loose Chinese Hints (including preceding hyphens, e.g., "-左")
+                    // 2. Extract loose Chinese (including preceding hyphens) e.g. "-左"
                     res = res.replace(/[-\s]*([\u4e00-\u9fa5]+[^+\/{}\*\(\)]*)/g, (match, p1) => {
                         let text = p1.replace(/^[-_\s]+/, '').trim();
-                        if (text.length > 8) {
+                        if (text.length > 12) {
                             longNotes.push(text);
                             return ``;
                         } else {
@@ -835,7 +836,7 @@ js_code = """
                     return `
                     <div class="relative w-full">
                         ${longNotesHtml}
-                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 24px; padding-top: 8px; padding-left: 4px; padding-right: ${longNotes.length > 0 ? '90px' : '4px'}; width: 100%; white-space: nowrap; scrollbar-width: thin;">
+                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: visible; padding-bottom: 28px; padding-top: 12px; padding-left: 8px; padding-right: ${longNotes.length > 0 ? '150px' : '100px'}; width: 100%; white-space: nowrap; scrollbar-width: thin;">
                             ${res}
                         </div>
                     </div>`;
@@ -1153,10 +1154,29 @@ js_code = """
                     }).join('');
                 }
 
-                // --- MODAL & GRAPH LOGIC ---
+                // Attach event listeners safely
+                document.addEventListener('DOMContentLoaded', () => {
+                    const searchInput = document.getElementById('searchInput');
+                    const clearBtn = document.getElementById('clearBtn');
+                    
+                    if (searchInput) {
+                        searchInput.addEventListener('input', performSearch);
+                    }
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', () => {
+                            if (searchInput) {
+                                searchInput.value = ''; 
+                                searchInput.focus(); 
+                            }
+                            performSearch();
+                        });
+                    }
+                });
+
+                // Function to pop up the security warning modal
                 window.showSecurityWarning = function(btnElement) {
                     const overlay = document.getElementById('securityModal');
-                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    const modalBox = overlay.querySelector('.modal-box');
                     
                     if (!overlay || !modalBox) return;
 
@@ -1197,19 +1217,13 @@ js_code = """
                     return { x, y };
                 }
 
-                let isGraphDragging = false;
-                let hasGraphDragged = false;
-                let graphStartX = 0;
-                let graphStartY = 0;
-                let graphTranslateX = 0;
-                let graphTranslateY = 0;
-
+                // --- GRAPH LOGIC ---
                 window.openRelevanceGraph = function(termName, btnElement) {
                     const termData = terminologyDB.find(t => t.term === termName);
                     if (!termData || !termData.related) return;
 
                     const overlay = document.getElementById('relevanceModal');
-                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
+                    const modalBox = overlay.querySelector('.modal-box');
                     
                     if (!overlay || !modalBox) return;
 
@@ -1289,7 +1303,7 @@ js_code = """
                         n.className = 'round-node node-related';
                         if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
                         n.innerText = rTerm; n.dataset.term = rTerm;
-                        n.onclick = (e) => { if (hasGraphDragged) return; window.showChildTerm(rTerm); };
+                        n.onclick = (e) => { if (hasGraphDragged) return; showChildTerm(rTerm); };
                         if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
                     });
 
@@ -1374,19 +1388,17 @@ js_code = """
                     
                     const safeTerm = d.term || '';
                     const safeDesc = d.desc || '';
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="window.masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
+                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
                     b.classList.add('active');
                 };
 
                 window.closeModal = function() { 
                     const modal = document.getElementById('relevanceModal');
                     if (modal) modal.classList.remove('active'); 
-                    const secModal = document.getElementById('securityModal');
-                    if (secModal) secModal.classList.remove('active');
                 };
                 
                 window.masterSearch = function(name) {
-                    window.closeModal();
+                    closeModal();
                     const searchInput = document.getElementById('searchInput');
                     if (searchInput) {
                         searchInput.value = name;
@@ -1398,26 +1410,16 @@ js_code = """
                     }
                 };
 
-                // --- APP INITIALIZATION ---
-                function initStreamaxpedia() {
-                    // 1. Search Engine Bindings
-                    const searchInput = document.getElementById('searchInput');
-                    const clearBtn = document.getElementById('clearBtn');
-                    
-                    if (searchInput) {
-                        searchInput.addEventListener('input', performSearch);
-                    }
-                    if (clearBtn) {
-                        clearBtn.addEventListener('click', () => {
-                            if (searchInput) {
-                                searchInput.value = ''; 
-                                searchInput.focus(); 
-                            }
-                            performSearch();
-                        });
-                    }
+                document.addEventListener('mousemove', (e) => {
+                    const mascotImg = document.getElementById('mascotImage');
+                    if (!mascotImg || mascotImg.classList.contains('jumping-heart')) return;
+                    const x = (e.clientX / window.innerWidth - 0.5) * 40; 
+                    const y = (e.clientY / window.innerHeight - 0.5) * -40; 
+                    const translateX = (e.clientX / window.innerWidth - 0.5) * 15;
+                    mascotImg.style.transform = `rotateY(${x}deg) rotateX(${y}deg) translateX(${translateX}px)`;
+                });
 
-                    // 2. Relevance Graph Bindings
+                document.addEventListener('DOMContentLoaded', () => {
                     const vp = document.getElementById('graphViewport');
                     const ct = document.getElementById('graphContainer');
                     if (vp && ct) {
@@ -1443,10 +1445,7 @@ js_code = """
                             }).observe(modalBox);
                         }
                     }
-                }
-                
-                // Execute immediately bypassing DOMContentLoaded timing issues in iframes
-                initStreamaxpedia();
+                });
                 
                 window.viewSecurityPolicy = function() {
                     try {
