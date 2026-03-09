@@ -457,8 +457,8 @@ PRODUCT_COMBINATIONS = [
     {"ai": "6-Channel AI", "ch": "11-channel monitoring", "hdd": "YES", "composition": "X3N（V2.1）+{ADKIT+CA20S}+{AVM+CA51*4}  (MDVR AHD or IPC口对接AVM)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"},
     {"ai": "6-Channel AI", "ch": "11-channel monitoring", "hdd": "YES", "composition": "M3N+{C29N+C40W}+{AVM+CA51*4}  (MDVR AHD or IPC对接AVM)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"},
     {"ai": "6-Channel AI", "ch": "11-channel monitoring", "hdd": "YES", "composition": "M3N+{ADKIT+CA20S}+{AVM+CA51*4}  (MDVR AHD or IPC口对接AVM)", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "NO", "bsd": "NO", "avm": "YES"},
-    {"ai": "8-Channel AI", "ch": "12-channel monitoring", "hdd": "YES（Pro可选大硬盘）", "composition": "X3NPro-H0404+{ADKIT+CA20S}+{C53-左+CA51-前}+{C53-右+CA51-后}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"},
-    {"ai": "8-Channel AI", "ch": "12-channel monitoring", "hdd": "YES（Pro可选大硬盘）", "composition": "X3NPro-H0404+{C29N+C40W}+{C53-左+CA51-前}+{C53-右+CA51-后}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"}
+    {"ai": "8-Channel AI", "ch": "12-channel monitoring", "hdd": "YES", "composition": "X3NPro-H0404+{ADKIT+CA20S}+{C53-左+CA51-前}+{C53-右+CA51-后}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"},
+    {"ai": "8-Channel AI", "ch": "12-channel monitoring", "hdd": "YES", "composition": "X3NPro-H0404+{C29N+C40W}+{C53-左+CA51-前}+{C53-右+CA51-后}", "dms": "YES", "adas": "YES", "dsc": "NO", "bsis": "YES", "bsd": "NO", "avm": "NO"}
 ]
 
 # --- 3. RECURSIVE ARCHITECTURE PARSER ---
