@@ -181,7 +181,7 @@ def render_login():
 
     # 4. JHSun Animation (Easter Egg)
     elif st.session_state.get('show_jhsun_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=1PNuXeOlPEtInZjDEicvVIcVE0BH5CcNd&sz=w800"
+        img_src = "https://drive.google.com/thumbnail?id=1MbhoRTe86qcO9Q0GNeJ9DPPYeuYLn4DG&sz=w800"
             
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
         st.markdown(f"""
