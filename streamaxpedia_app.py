@@ -624,7 +624,7 @@ js_code = """
                 const ALL_PRODUCTS = """ + products_json + """;
                 const pdfBase64 = \"""" + pdf_base64 + """\";
                 
-                const ENABLE_DOWNLOADS = true;
+                const ENABLE_DOWNLOADS = false;
 """ + r"""
                 let selectedBasket = new Set();
 
