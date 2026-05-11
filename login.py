@@ -3,6 +3,20 @@ import smtplib
 import ssl
 import time
 
+# Cookie-based session persistence — keeps the user signed in across page
+# refreshes and ?view=jerry_gpt navigations. Optional: if the module isn't
+# available, login still works for the lifetime of this tab.
+try:
+    import auth as _auth
+except Exception:  # noqa: BLE001
+    _auth = None
+
+
+def _persist(user_name: str) -> None:
+    """Write the auth cookie after a successful sign-in."""
+    if _auth is not None:
+        _auth.persist_login(user_name)
+
 def verify_streamax_credentials(email, password):
     # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
     clean_email = email.strip()
@@ -142,6 +156,8 @@ def render_login():
         time.sleep(8)
         st.session_state['show_jerry_anim'] = False
         st.session_state['authenticated'] = True
+        st.session_state['user_name'] = 'Jerry'
+        _persist('Jerry')
         st.rerun()
 
     # 2. Hekun Animation
@@ -158,6 +174,8 @@ def render_login():
         time.sleep(8)
         st.session_state['show_hekun_anim'] = False
         st.session_state['authenticated'] = True
+        st.session_state['user_name'] = 'Hekun'
+        _persist('Hekun')
         st.rerun()
 
     # 3. ZNTang Animation (Easter Egg)
@@ -177,6 +195,8 @@ def render_login():
         time.sleep(8)
         st.session_state['show_zntang_anim'] = False
         st.session_state['authenticated'] = True
+        st.session_state['user_name'] = 'ZNTang'
+        _persist('ZNTang')
         st.rerun()
 
     # 4. JHSun Animation (Easter Egg)
@@ -196,6 +216,8 @@ def render_login():
         time.sleep(8)
         st.session_state['show_jhsun_anim'] = False
         st.session_state['authenticated'] = True
+        st.session_state['user_name'] = 'JHSun'
+        _persist('JHSun')
         st.rerun()
 
     # Show Standard Form View
@@ -247,6 +269,8 @@ def render_login():
                             st.rerun()
                         else:
                             st.session_state['authenticated'] = True
+                            st.session_state['user_name'] = email_input
+                            _persist(email_input)
                             st.rerun()
                     else:
                         st.error(message)
