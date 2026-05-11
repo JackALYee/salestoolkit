@@ -9,6 +9,7 @@ falling back to the ANTHROPIC_API_KEY environment variable.
 """
 from __future__ import annotations
 
+import base64
 import os
 from pathlib import Path
 
@@ -326,6 +327,42 @@ THEME_CSS = """
         margin: 0 auto; line-height: 1.6;
     }
 
+    /* Copy-markdown button (per Jerry response) */
+    .jerry-copy-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .jerry-copy-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text-grey);
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        letter-spacing: 0.3px;
+    }
+    .jerry-copy-btn i { font-size: 0.7rem; }
+    .jerry-copy-btn:hover {
+        border-color: var(--primary-green);
+        color: var(--primary-green);
+        background: rgba(42, 245, 152, 0.05);
+    }
+    .jerry-copy-btn.copied {
+        border-color: var(--primary-green);
+        color: var(--primary-green);
+        background: rgba(42, 245, 152, 0.12);
+    }
+
     /* Error / config panels */
     .jerry-error {
         padding: 20px 24px;
@@ -354,6 +391,63 @@ QUICK_PROMPTS = [
 
 
 # ---------------------------------------------------------------------------
+# Copy-to-clipboard button (rendered under each Jerry response)
+# ---------------------------------------------------------------------------
+
+_COPY_BUTTON_TEMPLATE = """
+<div class="jerry-copy-row">
+  <button class="jerry-copy-btn" type="button" onclick="
+    (function(btn) {
+      var b64 = '__B64__';
+      var binary = atob(b64);
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      var text = new TextDecoder('utf-8').decode(bytes);
+      function done() {
+        btn.classList.add('copied');
+        var span = btn.querySelector('span');
+        var original = span.textContent;
+        span.textContent = 'Copied';
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          span.textContent = original;
+        }, 1500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function() {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
+      }
+    })(this);
+  ">
+    <i class="fa-solid fa-copy"></i><span>Copy markdown</span>
+  </button>
+</div>
+"""
+
+
+def _render_copy_button(text: str) -> None:
+    """Render a 'Copy markdown' button that copies `text` to the clipboard.
+
+    Text is base64-encoded so it embeds safely in the onclick attribute
+    regardless of quotes, newlines, em-dashes, or unicode content (Chinese,
+    emoji, etc.). A textarea fallback handles older browsers without
+    navigator.clipboard.
+    """
+    b64 = base64.b64encode(text.encode("utf-8")).decode("ascii")
+    st.markdown(
+        _COPY_BUTTON_TEMPLATE.replace("__B64__", b64),
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -377,7 +471,7 @@ def render() -> None:
             </a>
         </div>
         <div class="jerry-header">
-            <div class="jerry-subtitle">STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
+            <div class="jerry-subtitle">A STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
             <h1 class="jerry-title">Jerry GPT</h1>
             <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
             <div class="jerry-meta">
@@ -454,6 +548,8 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
     for msg in history:
         with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
             st.markdown(msg["content"])
+            if msg["role"] == "assistant":
+                _render_copy_button(msg["content"])
 
     # --- Composer + actions ---
     col_a, col_b = st.columns([6, 1])
@@ -509,6 +605,7 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
                     full_text += chunk
                     placeholder.markdown(full_text + "▊")
             placeholder.markdown(full_text)
+            _render_copy_button(full_text)
         except Exception as exc:
             history.pop()  # roll back user turn so retry works
             placeholder.markdown(
