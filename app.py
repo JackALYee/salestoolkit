@@ -4,6 +4,13 @@ import streamlit.components.v1 as components
 # --- GRACEFUL IMPORTS ---
 from login import render_login
 
+# Jerry GPT — optional sub-page rendered when ?view=jerry_gpt is in the URL.
+try:
+    from jerry_gpt import render as render_jerry_gpt
+except Exception as _jerry_import_err:  # noqa: BLE001
+    render_jerry_gpt = None
+    _JERRY_IMPORT_ERR = _jerry_import_err
+
 try:
     from streamaxpedia_app import content as streamaxpedia_content
 except ImportError:
@@ -104,6 +111,18 @@ if 'authenticated' not in st.session_state:
 if not st.session_state['authenticated']:
     render_login()
 else:
+    # --- QUERY-PARAM ROUTER: Jerry GPT sub-page ---
+    # When the user clicks the Jerry GPT tab inside Streamaxpedia, the link
+    # navigates to ?view=jerry_gpt. We detect that here and render the
+    # Streamlit-native chat module instead of the toolkit HTML.
+    _view = st.query_params.get("view", "")
+    if _view == "jerry_gpt":
+        if render_jerry_gpt is None:
+            st.error(f"Could not load Jerry GPT module: {_JERRY_IMPORT_ERR}")
+            st.stop()
+        render_jerry_gpt()
+        st.stop()
+
     # 1. HTML Head & CSS
     html_head = r"""<!DOCTYPE html>
 <html lang="en">
