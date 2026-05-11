@@ -420,7 +420,7 @@ css_and_html = r"""
                     <div class="subtitle-box">
                         <p class="temp-note">
                             <i class="fa-solid fa-circle-info" style="color: var(--secondary-blue); margin-right: 5px;"></i>
-                            This is a temporary Streamax info library. A more powerful Streamax AI agent is coming soon!
+                            This is a temporary Streamax info library. Check out Jerry GPT for more!
                         </p>
                         <p class="credit-line">
                             <i class="fa-solid fa-bolt" style="margin-right: 5px;"></i>By Trucking BU - a Sales Toolkit Extension
