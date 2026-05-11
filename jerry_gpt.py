@@ -16,7 +16,27 @@ import streamlit as st
 
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
+ASSETS_DIR = Path(__file__).parent / "assets"
 DEFAULT_MODEL = "claude-opus-4-7"
+
+
+def _find_jerry_avatar() -> str:
+    """Return absolute path to Jerry's portrait if found, else fallback emoji.
+
+    st.chat_message(avatar=...) accepts either an emoji or a file path.
+    Streamlit renders the avatar inside a ~36px circular frame and auto-
+    crops/scales the image, so no resizing is needed in code — we just
+    point to the file. Falls back to 🤖 if the portrait isn't present.
+    """
+    for name in ("jerry.png", "jerry.jpg", "jerry.jpeg", "jerry.webp"):
+        path = ASSETS_DIR / name
+        if path.is_file():
+            return str(path)
+    return "🤖"
+
+
+JERRY_AVATAR = _find_jerry_avatar()
+USER_AVATAR = "🧑"
 
 
 # ---------------------------------------------------------------------------
@@ -223,10 +243,20 @@ THEME_CSS = """
     }
     [data-testid="stChatMessage"] td { color: var(--text-grey) !important; }
 
-    /* Assistant avatar */
+    /* Assistant avatar — shows Jerry's portrait inside a gradient ring */
     [data-testid="stChatMessageAvatarAssistant"] {
         background: var(--gradient-text) !important;
         color: #050810 !important;
+        padding: 2px !important;
+        box-shadow: 0 0 12px rgba(42, 245, 152, 0.25) !important;
+    }
+    [data-testid="stChatMessageAvatarAssistant"] img {
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        width: 100% !important;
+        height: 100% !important;
+        border: 2px solid #050810 !important;
+        background: #050810 !important;
     }
 
     /* Chat input */
@@ -422,7 +452,7 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
 
     # --- Render history ---
     for msg in history:
-        with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "🧑"):
+        with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
             st.markdown(msg["content"])
 
     # --- Composer + actions ---
@@ -448,7 +478,7 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
     history.append({"role": "user", "content": text})
 
     # Render user turn immediately so it appears during streaming
-    with st.chat_message("user", avatar="🧑"):
+    with st.chat_message("user", avatar=USER_AVATAR):
         st.markdown(text)
 
     try:
@@ -464,7 +494,7 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
     client = Anthropic(api_key=api_key)
     api_messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar=JERRY_AVATAR):
         placeholder = st.empty()
         full_text = ""
 
