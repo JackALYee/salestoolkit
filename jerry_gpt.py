@@ -79,12 +79,103 @@ USER_AVATAR = "🧑"
 # Knowledge loading (cached across reruns)
 # ---------------------------------------------------------------------------
 
+def _generate_streamaxpedia_knowledge() -> str:
+    """Build a markdown section from terminology_db.py at module load.
+
+    Pulls in every product term, description, related products, file URLs,
+    and the validated product architectures. Jerry gets a full Streamaxpedia
+    snapshot inside his system prompt — so he knows every SKU, what it does,
+    what it pairs with, and where to find the spec sheet.
+    """
+    try:
+        from terminology_db import TERMINOLOGY_DB, PRODUCT_COMBINATIONS
+    except Exception:
+        return ""
+
+    lines: list[str] = []
+    lines.append("# Streamaxpedia — Product Database & Architectures")
+    lines.append("")
+    lines.append(
+        "This section is generated from the Streamaxpedia database "
+        "(`terminology_db.py`). It contains every Streamax product term, "
+        "category, short description, related products, and downloadable "
+        "spec-sheet / user-manual URLs. When a user asks where to download "
+        "documentation for a product, give them the exact URL from this list. "
+        "When asked which architecture supports a given capability (DMS, ADAS, "
+        "DSC, BSIS, BSD, AVM, channel count, on-device storage), use the "
+        "Validated Product Architectures table below — these are the official "
+        "Streamax-approved compositions."
+    )
+    lines.append("")
+
+    # --- Group terminology by category ---
+    by_category: dict[str, list[dict]] = {}
+    for entry in TERMINOLOGY_DB:
+        cat = (entry.get("category") or "OTHER").upper()
+        by_category.setdefault(cat, []).append(entry)
+
+    lines.append("## Product & Technology Catalog")
+    for cat in sorted(by_category.keys()):
+        lines.append(f"\n### {cat}")
+        for entry in by_category[cat]:
+            term = entry.get("term", "").strip()
+            desc = (entry.get("desc") or "").strip()
+            related = entry.get("related") or []
+            files = entry.get("files") or []
+            if not term:
+                continue
+            lines.append(f"\n**{term}**")
+            if desc:
+                lines.append(f"- {desc}")
+            if related:
+                lines.append(f"- Related: {', '.join(related)}")
+            for f in files:
+                label = (f.get("label") or "Download").strip()
+                url = (f.get("url") or "").strip()
+                if url:
+                    lines.append(f"- {label}: {url}")
+
+    # --- Validated product architectures ---
+    if PRODUCT_COMBINATIONS:
+        lines.append("\n## Validated Product Architectures")
+        lines.append("")
+        lines.append(
+            "Each row is an officially validated Streamax product combination — "
+            "the AI capability tier, monitoring channel count, on-device storage, "
+            "the product composition (architecture formula), and which safety "
+            "features that combination supports."
+        )
+        lines.append("")
+        lines.append("| AI tier | Channels | Storage | Composition | DMS | ADAS | DSC | BSIS | BSD | AVM |")
+        lines.append("|---|---|---|---|---|---|---|---|---|---|")
+        for combo in PRODUCT_COMBINATIONS:
+            row = "| {ai} | {ch} | {hdd} | {comp} | {dms} | {adas} | {dsc} | {bsis} | {bsd} | {avm} |".format(
+                ai=combo.get("ai", "").strip() or "—",
+                ch=combo.get("ch", "").strip() or "—",
+                hdd=combo.get("hdd", "").strip() or "—",
+                comp=(combo.get("composition") or "").strip().replace("|", "/") or "—",
+                dms=combo.get("dms", "").strip() or "—",
+                adas=combo.get("adas", "").strip() or "—",
+                dsc=combo.get("dsc", "").strip() or "—",
+                bsis=combo.get("bsis", "").strip() or "—",
+                bsd=combo.get("bsd", "").strip() or "—",
+                avm=combo.get("avm", "").strip() or "—",
+            )
+            lines.append(row)
+
+    return "\n".join(lines)
+
+
 @st.cache_resource(show_spinner=False)
 def _load_system_blocks() -> list[dict]:
-    """Concatenate all knowledge files into one cacheable system-prompt block.
+    """Concatenate all knowledge sources into one cacheable system-prompt block.
+
+    Sources, in order:
+      1. Hand-curated persona + 6 topical modules in jerry_gpt_knowledge/
+      2. Generated Streamaxpedia snapshot (terminology + architectures)
 
     Anthropic allows at most 4 cache_control breakpoints per request, so we
-    combine the persona + 6 modules into a single block and mark it cacheable.
+    combine everything into a single ephemeral-cached block.
     """
     files = sorted(KNOWLEDGE_DIR.glob("*.md"))
     if not files:
@@ -93,6 +184,11 @@ def _load_system_blocks() -> list[dict]:
     for path in files:
         text = path.read_text(encoding="utf-8")
         sections.append(f"<knowledge file=\"{path.name}\">\n{text}\n</knowledge>")
+
+    spedia = _generate_streamaxpedia_knowledge()
+    if spedia:
+        sections.append(f"<knowledge file=\"streamaxpedia_generated.md\">\n{spedia}\n</knowledge>")
+
     combined = "\n\n".join(sections)
     return [
         {
