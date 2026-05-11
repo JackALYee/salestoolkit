@@ -5,6 +5,37 @@ import re
 import itertools
 from terminology_db import TERMINOLOGY_DB, PRODUCT_COMBINATIONS
 
+
+# --- Jerry GPT portrait loader (used by the launch card below) -----------
+def _load_jerry_portrait_data_uri() -> str | None:
+    """Return Jerry's portrait as a base64 data URI, or None if not present.
+
+    Looks for any of: assets/jerry.jpg, jerry.jpeg, jerry.png, jerry.webp
+    in the same folder as this file. Encodes the bytes inline so the image
+    travels with the components.html iframe (no static-file server needed).
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        ("assets/jerry.jpg", "image/jpeg"),
+        ("assets/jerry.jpeg", "image/jpeg"),
+        ("assets/jerry.png", "image/png"),
+        ("assets/jerry.webp", "image/webp"),
+    ]
+    for rel, mime in candidates:
+        path = os.path.join(base_dir, rel)
+        if os.path.isfile(path):
+            try:
+                with open(path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                return f"data:{mime};base64,{b64}"
+            except Exception:
+                continue
+    return None
+
+
+JERRY_PORTRAIT_URI = _load_jerry_portrait_data_uri()
+
+
 # --- 1. RECURSIVE ARCHITECTURE PARSER & CLEANUP ---
 ALL_PRODUCTS_SET = set()
 
@@ -586,16 +617,52 @@ css_and_html = r"""
 
             <!-- MODE 3: JERRY GPT -->
             <div id="spedia-jerry-mode" class="spedia-mode hidden w-full">
+                <style>
+                    .jerry-portrait-wrap {
+                        width: 140px; height: 140px; margin: 0 auto 24px;
+                        border-radius: 50%;
+                        padding: 4px;
+                        background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%);
+                        box-shadow: 0 0 40px rgba(42, 245, 152, 0.25), 0 10px 30px rgba(0,0,0,0.4);
+                        animation: jerryFloat 5s ease-in-out infinite;
+                    }
+                    .jerry-portrait-wrap img {
+                        width: 100%; height: 100%;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        display: block;
+                        border: 3px solid #050810;
+                        background: #050810;
+                    }
+                    .jerry-portrait-fallback {
+                        width: 100%; height: 100%;
+                        border-radius: 50%;
+                        background: #050810;
+                        border: 3px solid #050810;
+                        display: flex; align-items: center; justify-content: center;
+                    }
+                    .jerry-portrait-fallback i {
+                        font-size: 4rem;
+                        background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%);
+                        -webkit-background-clip: text; background-clip: text; color: transparent;
+                    }
+                    @keyframes jerryFloat {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-8px); }
+                    }
+                </style>
                 <div class="w-full max-w-5xl mx-auto px-4 mt-8 fade-up">
                     <div class="card" style="text-align: center; padding: 50px 30px;">
                         <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; background:rgba(42,245,152,0.08); border:1px solid rgba(42,245,152,0.25); border-radius:30px; color:var(--primary-green); font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:24px;">
                             <i class="fa-solid fa-sparkles"></i> NEW
                         </div>
-                        <i class="fa-solid fa-robot" style="font-size: 4rem; background: var(--gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 20px; display: block;"></i>
+                        <div class="jerry-portrait-wrap">
+                            __JERRY_PORTRAIT_HTML__
+                        </div>
                         <h2 style="font-size: 2.4rem; margin-bottom: 12px; letter-spacing: -1px;"><span class="gradient-text">Jerry GPT</span></h2>
-                        <p style="color: var(--text-grey); max-width: 640px; margin: 0 auto 28px; font-size: 1.05rem; line-height: 1.6;">
+                        <p style="color: var(--text-grey); max-width: 680px; margin: 0 auto 28px; font-size: 1.05rem; line-height: 1.65;">
                             A digital version of Jerry — Streamax's Product Marketing Director.
-                            Distilled from internal playbooks, white papers, and global strategy.
+                            Ten years inside Streamax, distilled into one conversation — so you walk into every customer meeting with a sharper, more convincing pitch.
                             Ask anything about positioning, the competitive landscape, regional plays,
                             product portfolio, or how to handle a specific customer conversation.
                         </p>
@@ -1530,6 +1597,19 @@ js_code = """
             </script>
         </div>
 """
+
+# Inject Jerry's portrait (if assets/jerry.{jpg,png,webp} exists) or fall back
+# to a robot icon. Done after css_and_html is built so the data URI doesn't
+# tangle with the raw string escaping above.
+if JERRY_PORTRAIT_URI:
+    _jerry_portrait_html = (
+        f'<img src="{JERRY_PORTRAIT_URI}" alt="Jerry — Product Marketing Director">'
+    )
+else:
+    _jerry_portrait_html = (
+        '<div class="jerry-portrait-fallback"><i class="fa-solid fa-robot"></i></div>'
+    )
+css_and_html = css_and_html.replace("__JERRY_PORTRAIT_HTML__", _jerry_portrait_html)
 
 # Stitch everything together into a variable that app.py imports
 content = css_and_html + js_code
