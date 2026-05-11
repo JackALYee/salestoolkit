@@ -133,9 +133,19 @@ THEME_CSS = """
         margin-bottom: 12px; line-height: 1.1;
     }
     .jerry-tagline {
-        color: var(--text-grey); max-width: 680px; margin: 0 auto 16px;
-        font-size: 1rem; line-height: 1.6;
+        color: var(--text-grey) !important;
+        max-width: 680px !important;
+        width: auto !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        margin-top: 0 !important;
+        margin-bottom: 16px !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
         text-align: center !important;
+        display: block !important;
     }
     .jerry-meta {
         display: inline-flex; align-items: center; gap: 10px;
