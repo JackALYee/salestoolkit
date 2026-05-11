@@ -4,6 +4,12 @@ import streamlit.components.v1 as components
 # --- GRACEFUL IMPORTS ---
 from login import render_login
 
+# Cookie-based session persistence (so refresh + ?view=jerry_gpt don't sign out).
+try:
+    import auth as _auth
+except Exception:  # noqa: BLE001
+    _auth = None
+
 # Jerry GPT — optional sub-page rendered when ?view=jerry_gpt is in the URL.
 try:
     from jerry_gpt import render as render_jerry_gpt
@@ -106,6 +112,23 @@ st.markdown(
 
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
+
+# --- COOKIE-BASED SESSION RESTORE ---
+# Re-hydrate session_state['authenticated'] from the signed auth cookie if the
+# tab was reloaded, the user landed on ?view=jerry_gpt directly, or a new tab
+# was opened. No-op when already authenticated, or when auth module / cookie
+# library isn't available.
+if _auth is not None and not st.session_state['authenticated']:
+    _auth.restore_session()
+
+# --- ?logout=1 — clear auth and bounce to /
+if st.query_params.get("logout") == "1":
+    if _auth is not None:
+        _auth.logout()
+    else:
+        st.session_state['authenticated'] = False
+    st.query_params.clear()
+    st.rerun()
 
 # --- RENDER LOGIN OR TOOLKIT ---
 if not st.session_state['authenticated']:
