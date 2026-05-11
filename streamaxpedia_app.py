@@ -666,7 +666,23 @@ css_and_html = r"""
                             Ask anything about positioning, the competitive landscape, regional plays,
                             product portfolio, or how to handle a specific customer conversation.
                         </p>
-                        <a href="?view=jerry_gpt" target="_top" style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); color: #050810; font-weight: 700; font-size: 1.05rem; padding: 14px 32px; border-radius: 30px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(42, 245, 152, 0.2);">
+                        <a href="?view=jerry_gpt" target="_blank" rel="noopener" onclick="
+                            (function(evt, anchor) {
+                                evt.preventDefault();
+                                // Detect the parent Streamlit app's URL.
+                                // Inside components.html iframe, document.referrer points at the parent.
+                                var base = '';
+                                try { if (document.referrer) base = document.referrer; } catch (e) {}
+                                if (!base) {
+                                    try { base = window.parent.location.href; } catch (e) { base = ''; }
+                                }
+                                if (!base) base = anchor.href;
+                                // Strip any existing query/hash from the base URL
+                                var url = base.split('?')[0].split('#')[0] + '?view=jerry_gpt';
+                                window.open(url, '_blank', 'noopener');
+                            })(event, this);
+                            return false;
+                        " style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); color: #050810; font-weight: 700; font-size: 1.05rem; padding: 14px 32px; border-radius: 30px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(42, 245, 152, 0.2); cursor: pointer;">
                             Open Jerry GPT <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         </a>
                     </div>
