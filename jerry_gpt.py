@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
@@ -394,56 +395,129 @@ QUICK_PROMPTS = [
 # Copy-to-clipboard button (rendered under each Jerry response)
 # ---------------------------------------------------------------------------
 
-_COPY_BUTTON_TEMPLATE = """
-<div class="jerry-copy-row">
-  <button class="jerry-copy-btn" type="button" onclick="
-    (function(btn) {
-      var b64 = '__B64__';
+_COPY_BUTTON_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #A0AEC0;
+  }
+  .row { display: flex; justify-content: flex-end; padding: 4px 0; }
+  .btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #A0AEC0;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn i { font-size: 0.7rem; }
+  .btn:hover {
+    border-color: #2AF598;
+    color: #2AF598;
+    background: rgba(42, 245, 152, 0.06);
+  }
+  .btn.copied {
+    border-color: #2AF598;
+    color: #2AF598;
+    background: rgba(42, 245, 152, 0.14);
+  }
+</style>
+</head>
+<body>
+<div class="row">
+  <button class="btn" type="button" id="b">
+    <i class="fa-solid fa-copy"></i><span id="lbl">Copy markdown</span>
+  </button>
+</div>
+<script>
+  (function() {
+    var b64 = "__B64__";
+    var btn = document.getElementById("b");
+    var lbl = document.getElementById("lbl");
+
+    function decode() {
       var binary = atob(b64);
       var bytes = new Uint8Array(binary.length);
       for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      var text = new TextDecoder('utf-8').decode(bytes);
-      function done() {
-        btn.classList.add('copied');
-        var span = btn.querySelector('span');
-        var original = span.textContent;
-        span.textContent = 'Copied';
-        setTimeout(function() {
-          btn.classList.remove('copied');
-          span.textContent = original;
-        }, 1500);
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done).catch(function() {
-          var ta = document.createElement('textarea');
-          ta.value = text; document.body.appendChild(ta); ta.select();
-          try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
+      return new TextDecoder("utf-8").decode(bytes);
+    }
+
+    function flash() {
+      btn.classList.add("copied");
+      var original = lbl.textContent;
+      lbl.textContent = "Copied";
+      setTimeout(function() {
+        btn.classList.remove("copied");
+        lbl.textContent = original;
+      }, 1500);
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "0";
+      ta.style.left = "0";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    btn.addEventListener("click", function() {
+      var text = decode();
+      if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(flash).catch(function() {
+          if (fallbackCopy(text)) flash();
         });
       } else {
-        var ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
+        if (fallbackCopy(text)) flash();
       }
-    })(this);
-  ">
-    <i class="fa-solid fa-copy"></i><span>Copy markdown</span>
-  </button>
-</div>
+    });
+  })();
+</script>
+</body>
+</html>
 """
 
 
 def _render_copy_button(text: str) -> None:
-    """Render a 'Copy markdown' button that copies `text` to the clipboard.
+    """Render a 'Copy markdown' button beneath an assistant message.
 
-    Text is base64-encoded so it embeds safely in the onclick attribute
-    regardless of quotes, newlines, em-dashes, or unicode content (Chinese,
-    emoji, etc.). A textarea fallback handles older browsers without
-    navigator.clipboard.
+    Uses st.components.v1.html() so the click handler actually runs —
+    st.markdown() strips inline event handlers in newer Streamlit versions.
+    The iframe is height=42, just tall enough for the button row.
+
+    Text is base64-encoded so it embeds safely in the inline JS regardless
+    of quotes, newlines, em-dashes, or unicode content (Chinese, emoji).
+    Tries the modern Clipboard API first, falls back to a hidden-textarea
+    + document.execCommand('copy') for older browsers and iframe contexts
+    where the Clipboard API is blocked.
     """
     b64 = base64.b64encode(text.encode("utf-8")).decode("ascii")
-    st.markdown(
-        _COPY_BUTTON_TEMPLATE.replace("__B64__", b64),
-        unsafe_allow_html=True,
+    components.html(
+        _COPY_BUTTON_HTML.replace("__B64__", b64),
+        height=42,
+        scrolling=False,
     )
 
 
