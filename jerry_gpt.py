@@ -47,21 +47,12 @@ LENGTH_OPTIONS = {
     },
 }
 
-# --- Approximate per-million-token pricing (USD), for in-UI cost estimates ---
-# Source: Anthropic public pricing as of 2026; treat as approximate.
-PRICING = {
-    "claude-opus-4-7":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
-    "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
-    "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
-}
-
 EMPTY_USAGE = {
     "input_tokens": 0,
     "output_tokens": 0,
     "cache_read_tokens": 0,
     "cache_creation_tokens": 0,
     "message_count": 0,
-    "cost_usd": 0.0,
 }
 
 
@@ -409,7 +400,6 @@ THEME_CSS = """
         font-variant-numeric: tabular-nums;
         font-family: 'Roboto Mono', 'SF Mono', Menlo, monospace;
     }
-    .jerry-stat-row.cost .val { color: var(--primary-green); }
     .jerry-stat-hint {
         font-size: 0.65rem;
         color: var(--text-grey);
@@ -692,8 +682,7 @@ def _render_side_panel() -> None:
           <div class="jerry-stat-row"><span>Cache reads</span><span class="val">{usage['cache_read_tokens']:,}</span></div>
           <div class="jerry-stat-row"><span>Cache writes</span><span class="val">{usage['cache_creation_tokens']:,}</span></div>
           <div class="jerry-stat-row"><span>Total tokens</span><span class="val">{total_tokens:,}</span></div>
-          <div class="jerry-stat-row cost"><span>Est. cost</span><span class="val">${usage['cost_usd']:.4f}</span></div>
-          <div class="jerry-stat-hint">Cost is an estimate based on public per-token pricing and may not match actual billing. Cache reads cost ~10% of fresh input tokens — that's where the savings come from on follow-up turns.</div>
+          <div class="jerry-stat-hint">Cache reads represent prompt-cache hits — the knowledge base loads once per model, then most input tokens come from cache on follow-up turns.</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -705,27 +694,13 @@ def _render_side_panel() -> None:
 
 
 def _update_usage(model_id: str, usage_obj) -> None:
-    """Add this turn's tokens to the session-cumulative stats + estimate cost."""
+    """Add this turn's token counts to the session-cumulative stats."""
     stats = st.session_state["jerry_gpt_usage"]
-    in_t = getattr(usage_obj, "input_tokens", 0) or 0
-    out_t = getattr(usage_obj, "output_tokens", 0) or 0
-    cr_t = getattr(usage_obj, "cache_read_input_tokens", 0) or 0
-    cc_t = getattr(usage_obj, "cache_creation_input_tokens", 0) or 0
-
-    stats["input_tokens"] += in_t
-    stats["output_tokens"] += out_t
-    stats["cache_read_tokens"] += cr_t
-    stats["cache_creation_tokens"] += cc_t
+    stats["input_tokens"] += getattr(usage_obj, "input_tokens", 0) or 0
+    stats["output_tokens"] += getattr(usage_obj, "output_tokens", 0) or 0
+    stats["cache_read_tokens"] += getattr(usage_obj, "cache_read_input_tokens", 0) or 0
+    stats["cache_creation_tokens"] += getattr(usage_obj, "cache_creation_input_tokens", 0) or 0
     stats["message_count"] += 1
-
-    p = PRICING.get(model_id, PRICING["claude-sonnet-4-6"])
-    turn_cost = (
-        in_t * p["input"]
-        + out_t * p["output"]
-        + cr_t * p["cache_read"]
-        + cc_t * p["cache_creation"]
-    ) / 1_000_000
-    stats["cost_usd"] += turn_cost
 
 
 def render() -> None:
@@ -915,7 +890,7 @@ def _submit_message(
                 final_message = stream.get_final_message()
             placeholder.markdown(full_text)
             _render_copy_button(full_text)
-            # Track cumulative token + cost stats
+            # Track cumulative token stats for the side panel
             _update_usage(model, final_message.usage)
         except Exception as exc:
             history.pop()  # roll back user turn so retry works
