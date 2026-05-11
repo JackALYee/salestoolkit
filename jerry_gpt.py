@@ -133,8 +133,9 @@ THEME_CSS = """
         margin-bottom: 12px; line-height: 1.1;
     }
     .jerry-tagline {
-        color: var(--text-grey); max-width: 640px; margin: 0 auto 16px;
-        font-size: 1rem; line-height: 1.55;
+        color: var(--text-grey); max-width: 680px; margin: 0 auto 16px;
+        font-size: 1rem; line-height: 1.6;
+        text-align: center !important;
     }
     .jerry-meta {
         display: inline-flex; align-items: center; gap: 10px;
@@ -338,7 +339,7 @@ def render() -> None:
         <div class="jerry-header">
             <div class="jerry-subtitle">STREAMAX SALES TOOLKIT</div>
             <h1 class="jerry-title">Jerry GPT</h1>
-            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director. Distilled from internal playbooks, white papers, and global strategy.</p>
+            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
             <div class="jerry-meta">
                 <span class="dot"></span>
                 <span>{model}</span>
