@@ -971,7 +971,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 3.3 • 货运产品线 Trucking BU • Mar 2026</div>
+            <div class="header-meta fade-up">Version 4.1 • 货运产品线 Trucking BU • May 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
@@ -1018,10 +1018,11 @@ else:
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <div class="glass-panel p-5">
                                 <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamaxpedia</h4>
-                                <p class="mb-3 text-xs text-gray-400">The "knowledge base" and "product architecture guide" for sales. Features two main modes:</p>
+                                <p class="mb-3 text-xs text-gray-400">The "knowledge base" and "product architecture guide" for sales. Features three modes:</p>
                                 <ul class="text-sm">
                                     <li><strong>Search Engine Mode:</strong> Type any relevant term (e.g., "ADAS", "MDVR") for quick retrieval. Click the <strong>Relevance</strong> button to open a dynamic topology graph showing product ecosystem connections.</li>
                                     <li><strong>Product Matrix Mode:</strong> A smart hardware configurator. Select components on the left, filter solutions by function on the right. The bottom <strong>Solution Validator</strong> automatically checks if the selection is a valid official architecture and intelligently suggests missing components.</li>
+                                    <li><strong>Jerry GPT <span style="color: var(--primary-green); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; margin-left: 4px;">NEW</span>:</strong> A digital version of Jerry, Streamax's Product Marketing Director. Distilled by Jerry himself from 10 years inside Streamax — sales playbooks, white papers, global strategy, and value propositions all live in his working memory. Ask anything about positioning, the competitive landscape, regional plays, product portfolio, or how to handle a specific customer conversation. Responses come back in Jerry's voice: structured, source-backed, numbers-first — so every customer meeting lands with a sharper, more convincing pitch.</li>
                                 </ul>
                             </div>
 
@@ -1083,10 +1084,11 @@ else:
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <div class="glass-panel p-5">
                                 <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamax 百科全书 (Streamaxpedia)</h4>
-                                <p class="mb-3 text-xs text-gray-400">销售人员的“知识库”和“产品搭配指南”。分为两个主要模式：</p>
+                                <p class="mb-3 text-xs text-gray-400">销售人员的"知识库"和"产品搭配指南"。包含三个模式：</p>
                                 <ul class="text-sm">
                                     <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
                                     <li><strong>产品组合矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
+                                    <li><strong>Jerry GPT <span style="color: var(--primary-green); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; margin-left: 4px;">新功能</span>：</strong>Jerry 本人的 AI 数字分身——Streamax 产品市场总监。融合了他在 Streamax 十年沉淀：销售手册、白皮书、全球战略和价值主张全部纳入工作记忆。可咨询任何关于产品定位、竞争格局、区域打法、产品组合，或具体客户对话处理的问题。回复以 Jerry 本人的风格呈现——结构化、有出处、以数字开场——让每一次客户会议都打出更锐利、更有说服力的论点。</li>
                                 </ul>
                             </div>
 
