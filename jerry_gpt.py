@@ -21,6 +21,49 @@ KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
 DEFAULT_MODEL = "claude-opus-4-7"
 
+# --- Model catalog (display label -> Anthropic model id) ---
+MODEL_OPTIONS = {
+    "Opus 4.7 — highest quality": "claude-opus-4-7",
+    "Sonnet 4.6 — balanced": "claude-sonnet-4-6",
+    "Haiku 4.5 — fastest, cheapest": "claude-haiku-4-5-20251001",
+}
+MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
+
+# --- Response length presets ---
+# max_tokens caps the response; hint is appended to the user message so Jerry
+# adjusts his structure (concise reply vs. full structured breakdown).
+LENGTH_OPTIONS = {
+    "Short": {
+        "max_tokens": 512,
+        "hint": "Keep this response tight — 1-2 short paragraphs, no headers, no tables. Just the punch line and the why.",
+    },
+    "Medium": {
+        "max_tokens": 1536,
+        "hint": "",  # default, no extra instruction
+    },
+    "Long": {
+        "max_tokens": 4096,
+        "hint": "Take the space to be thorough. Use headers, comparative tables, and structured frameworks where they help.",
+    },
+}
+
+# --- Approximate per-million-token pricing (USD), for in-UI cost estimates ---
+# Source: Anthropic public pricing as of 2026; treat as approximate.
+PRICING = {
+    "claude-opus-4-7":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
+    "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
+    "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
+}
+
+EMPTY_USAGE = {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_creation_tokens": 0,
+    "message_count": 0,
+    "cost_usd": 0.0,
+}
+
 
 def _find_jerry_avatar() -> str:
     """Return absolute path to Jerry's portrait if found, else fallback emoji.
@@ -328,6 +371,63 @@ THEME_CSS = """
         margin: 0 auto; line-height: 1.6;
     }
 
+    /* Side panel (settings + stats) */
+    .jerry-side-card {
+        background: var(--glass-bg);
+        border: var(--glass-border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(8px);
+    }
+    .jerry-side-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--primary-green);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .jerry-side-title i { font-size: 0.8rem; }
+
+    .jerry-stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.78rem;
+        color: var(--text-grey);
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .jerry-stat-row:last-of-type { border-bottom: none; }
+    .jerry-stat-row .val {
+        color: var(--text-white);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        font-family: 'Roboto Mono', 'SF Mono', Menlo, monospace;
+    }
+    .jerry-stat-row.cost .val { color: var(--primary-green); }
+    .jerry-stat-hint {
+        font-size: 0.65rem;
+        color: var(--text-grey);
+        opacity: 0.6;
+        margin-top: 8px;
+        line-height: 1.4;
+    }
+
+    /* Streamlit widget overrides inside the side card */
+    .jerry-side-card .stSelectbox label,
+    .jerry-side-card .stRadio label {
+        font-size: 0.72rem !important;
+        color: var(--text-grey) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
     /* Copy-markdown button (per Jerry response) */
     .jerry-copy-row {
         display: flex;
@@ -525,6 +625,109 @@ def _render_copy_button(text: str) -> None:
 # Public entry point
 # ---------------------------------------------------------------------------
 
+def _init_session_state() -> None:
+    """Create all the Jerry-GPT keys in session_state if missing."""
+    if "jerry_gpt_history" not in st.session_state:
+        st.session_state["jerry_gpt_history"] = []
+    if "jerry_gpt_model" not in st.session_state:
+        st.session_state["jerry_gpt_model"] = _get_model()
+    if "jerry_gpt_length" not in st.session_state:
+        st.session_state["jerry_gpt_length"] = "Medium"
+    if "jerry_gpt_usage" not in st.session_state:
+        st.session_state["jerry_gpt_usage"] = dict(EMPTY_USAGE)
+
+
+def _render_side_panel() -> None:
+    """Right column: model selector, response length, cumulative stats."""
+    # --- Settings card ---
+    st.markdown(
+        '<div class="jerry-side-card"><div class="jerry-side-title">'
+        '<i class="fa-solid fa-sliders"></i><span>Settings</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Model selector — preserves choice across reruns via session_state key
+    current_model = st.session_state.get("jerry_gpt_model", DEFAULT_MODEL)
+    current_label = MODEL_ID_TO_LABEL.get(current_model, list(MODEL_OPTIONS.keys())[0])
+    model_labels = list(MODEL_OPTIONS.keys())
+    selected_label = st.selectbox(
+        "Model",
+        model_labels,
+        index=model_labels.index(current_label),
+        key="jerry_model_selectbox",
+    )
+    st.session_state["jerry_gpt_model"] = MODEL_OPTIONS[selected_label]
+
+    # Length selector
+    length_keys = list(LENGTH_OPTIONS.keys())
+    current_length = st.session_state.get("jerry_gpt_length", "Medium")
+    selected_length = st.radio(
+        "Response length",
+        length_keys,
+        index=length_keys.index(current_length),
+        key="jerry_length_radio",
+        horizontal=True,
+    )
+    st.session_state["jerry_gpt_length"] = selected_length
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Stats card ---
+    usage = st.session_state["jerry_gpt_usage"]
+    total_tokens = (
+        usage["input_tokens"]
+        + usage["output_tokens"]
+        + usage["cache_read_tokens"]
+        + usage["cache_creation_tokens"]
+    )
+    st.markdown(
+        f"""
+        <div class="jerry-side-card">
+          <div class="jerry-side-title">
+            <i class="fa-solid fa-chart-line"></i><span>Session usage</span>
+          </div>
+          <div class="jerry-stat-row"><span>Messages</span><span class="val">{usage['message_count']}</span></div>
+          <div class="jerry-stat-row"><span>Input tokens</span><span class="val">{usage['input_tokens']:,}</span></div>
+          <div class="jerry-stat-row"><span>Output tokens</span><span class="val">{usage['output_tokens']:,}</span></div>
+          <div class="jerry-stat-row"><span>Cache reads</span><span class="val">{usage['cache_read_tokens']:,}</span></div>
+          <div class="jerry-stat-row"><span>Cache writes</span><span class="val">{usage['cache_creation_tokens']:,}</span></div>
+          <div class="jerry-stat-row"><span>Total tokens</span><span class="val">{total_tokens:,}</span></div>
+          <div class="jerry-stat-row cost"><span>Est. cost</span><span class="val">${usage['cost_usd']:.4f}</span></div>
+          <div class="jerry-stat-hint">Cost is an estimate based on public per-token pricing and may not match actual billing. Cache reads cost ~10% of fresh input tokens — that's where the savings come from on follow-up turns.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Reset stats", use_container_width=True, key="reset_stats_btn"):
+        st.session_state["jerry_gpt_usage"] = dict(EMPTY_USAGE)
+        st.rerun()
+
+
+def _update_usage(model_id: str, usage_obj) -> None:
+    """Add this turn's tokens to the session-cumulative stats + estimate cost."""
+    stats = st.session_state["jerry_gpt_usage"]
+    in_t = getattr(usage_obj, "input_tokens", 0) or 0
+    out_t = getattr(usage_obj, "output_tokens", 0) or 0
+    cr_t = getattr(usage_obj, "cache_read_input_tokens", 0) or 0
+    cc_t = getattr(usage_obj, "cache_creation_input_tokens", 0) or 0
+
+    stats["input_tokens"] += in_t
+    stats["output_tokens"] += out_t
+    stats["cache_read_tokens"] += cr_t
+    stats["cache_creation_tokens"] += cc_t
+    stats["message_count"] += 1
+
+    p = PRICING.get(model_id, PRICING["claude-sonnet-4-6"])
+    turn_cost = (
+        in_t * p["input"]
+        + out_t * p["output"]
+        + cr_t * p["cache_read"]
+        + cc_t * p["cache_creation"]
+    ) / 1_000_000
+    stats["cost_usd"] += turn_cost
+
+
 def render() -> None:
     """Render the Jerry GPT chat page. Called from app.py when view=jerry_gpt.
 
@@ -534,30 +737,8 @@ def render() -> None:
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
     api_key = _get_api_key()
-    model = _get_model()
 
-    # --- Header ---
-    st.markdown(
-        f"""
-        <div class="jerry-back-bar">
-            <a href="/" target="_self" class="jerry-back-link">
-                <i class="fa-solid fa-arrow-left"></i> Back to Toolkit
-            </a>
-        </div>
-        <div class="jerry-header">
-            <div class="jerry-subtitle">A STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
-            <h1 class="jerry-title">Jerry GPT</h1>
-            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
-            <div class="jerry-meta">
-                <span class="dot"></span>
-                <span>{model}</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # --- API key check ---
+    # --- API key check (fail early, before initing state we don't need) ---
     if not api_key:
         st.markdown(
             """
@@ -592,58 +773,98 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         st.stop()
 
     # --- Session state ---
-    if "jerry_gpt_history" not in st.session_state:
-        st.session_state["jerry_gpt_history"] = []
-
+    _init_session_state()
     history: list[dict] = st.session_state["jerry_gpt_history"]
+    model = st.session_state["jerry_gpt_model"]
+    length = st.session_state["jerry_gpt_length"]
 
-    # --- Welcome / quick prompts when empty ---
-    if not history:
-        st.markdown(
-            """
-            <div class="jerry-welcome">
-                <div class="jerry-welcome-badge">
-                    <i class="fa-solid fa-comments"></i> READY TO TALK
-                </div>
-                <h2>What would Jerry say?</h2>
-                <p>Ask about positioning, the competitive landscape, regional strategy, product portfolio, objection handling, or any conversation you're prepping for. Jerry leads with outcomes, sources, and structured frameworks.</p>
+    # --- Header (full width) ---
+    st.markdown(
+        f"""
+        <div class="jerry-back-bar">
+            <a href="/" target="_self" class="jerry-back-link">
+                <i class="fa-solid fa-arrow-left"></i> Back to Toolkit
+            </a>
+        </div>
+        <div class="jerry-header">
+            <div class="jerry-subtitle">A STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
+            <h1 class="jerry-title">Jerry GPT</h1>
+            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
+            <div class="jerry-meta">
+                <span class="dot"></span>
+                <span>{MODEL_ID_TO_LABEL.get(model, model)}</span>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        cols = st.columns(3)
-        for i, (label, prompt) in enumerate(QUICK_PROMPTS):
-            if cols[i % 3].button(label, key=f"qp_{i}", use_container_width=True):
-                _submit_message(prompt, system_blocks, api_key, model)
+    # --- Two-column body: main chat + side panel ---
+    col_main, col_side = st.columns([3, 1], gap="large")
+
+    with col_side:
+        _render_side_panel()
+
+    with col_main:
+        # Welcome + quick prompts when empty
+        if not history:
+            st.markdown(
+                """
+                <div class="jerry-welcome">
+                    <div class="jerry-welcome-badge">
+                        <i class="fa-solid fa-comments"></i> READY TO TALK
+                    </div>
+                    <h2>What would Jerry say?</h2>
+                    <p>Ask about positioning, the competitive landscape, regional strategy, product portfolio, objection handling, or any conversation you're prepping for. Jerry leads with outcomes, sources, and structured frameworks.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            cols = st.columns(3)
+            for i, (label, prompt) in enumerate(QUICK_PROMPTS):
+                if cols[i % 3].button(label, key=f"qp_{i}", use_container_width=True):
+                    _submit_message(prompt, system_blocks, api_key, model, length)
+                    st.rerun()
+
+        # Chat history
+        for msg in history:
+            with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
+                st.markdown(msg["content"])
+                if msg["role"] == "assistant":
+                    _render_copy_button(msg["content"])
+
+        # New-chat button row
+        _col_a, _col_b = st.columns([6, 1])
+        with _col_b:
+            if st.button("🔄 New chat", use_container_width=True, disabled=not history, key="new_chat_btn"):
+                st.session_state["jerry_gpt_history"] = []
                 st.rerun()
 
-    # --- Render history ---
-    for msg in history:
-        with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
-            st.markdown(msg["content"])
-            if msg["role"] == "assistant":
-                _render_copy_button(msg["content"])
-
-    # --- Composer + actions ---
-    col_a, col_b = st.columns([6, 1])
-    with col_b:
-        if st.button("🔄 New chat", use_container_width=True, disabled=not history):
-            st.session_state["jerry_gpt_history"] = []
+        # Chat input (renders inline at bottom of col_main)
+        user_input = st.chat_input("Ask Jerry anything…")
+        if user_input:
+            _submit_message(user_input, system_blocks, api_key, model, length)
             st.rerun()
-
-    user_input = st.chat_input("Ask Jerry anything…")
-    if user_input:
-        _submit_message(user_input, system_blocks, api_key, model)
-        st.rerun()
 
 
 # ---------------------------------------------------------------------------
 # Internals
 # ---------------------------------------------------------------------------
 
-def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: str) -> None:
-    """Append user turn, call Anthropic, append assistant turn. Streams to UI."""
+def _submit_message(
+    text: str,
+    system_blocks: list[dict],
+    api_key: str,
+    model: str,
+    length: str = "Medium",
+) -> None:
+    """Append user turn, call Anthropic, append assistant turn. Streams to UI.
+
+    `length` is one of LENGTH_OPTIONS keys (Short / Medium / Long) — controls
+    both max_tokens and an instruction appended to the user message that
+    nudges Jerry's response structure.
+    """
     history: list[dict] = st.session_state["jerry_gpt_history"]
     history.append({"role": "user", "content": text})
 
@@ -661,8 +882,21 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
         )
         return
 
+    length_cfg = LENGTH_OPTIONS.get(length, LENGTH_OPTIONS["Medium"])
+    max_tokens = length_cfg["max_tokens"]
+    hint = length_cfg["hint"]
+
     client = Anthropic(api_key=api_key)
+    # Build API messages from history. If the user has selected a short or long
+    # response, append the length hint to the LATEST user message so Jerry
+    # adjusts structure — but don't mutate the stored history (so the hint
+    # doesn't accumulate across turns or appear in the UI).
     api_messages = [{"role": m["role"], "content": m["content"]} for m in history]
+    if hint and api_messages and api_messages[-1]["role"] == "user":
+        api_messages[-1] = {
+            "role": "user",
+            "content": api_messages[-1]["content"] + f"\n\n[Length preference: {hint}]",
+        }
 
     with st.chat_message("assistant", avatar=JERRY_AVATAR):
         placeholder = st.empty()
@@ -671,15 +905,18 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
         try:
             with client.messages.stream(
                 model=model,
-                max_tokens=2048,
+                max_tokens=max_tokens,
                 system=system_blocks,
                 messages=api_messages,
             ) as stream:
                 for chunk in stream.text_stream:
                     full_text += chunk
                     placeholder.markdown(full_text + "▊")
+                final_message = stream.get_final_message()
             placeholder.markdown(full_text)
             _render_copy_button(full_text)
+            # Track cumulative token + cost stats
+            _update_usage(model, final_message.usage)
         except Exception as exc:
             history.pop()  # roll back user turn so retry works
             placeholder.markdown(
