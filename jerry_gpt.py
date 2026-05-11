@@ -337,9 +337,9 @@ def render() -> None:
             </a>
         </div>
         <div class="jerry-header">
-            <div class="jerry-subtitle">STREAMAX SALES TOOLKIT</div>
+            <div class="jerry-subtitle">STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
             <h1 class="jerry-title">Jerry GPT</h1>
-            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
+            <h2 class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
             <div class="jerry-meta">
                 <span class="dot"></span>
                 <span>{model}</span>
