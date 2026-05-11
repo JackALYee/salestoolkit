@@ -87,14 +87,48 @@ def _verify_token(token: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Cookie manager (lazy + cached across reruns)
+# Cookie manager
 # ---------------------------------------------------------------------------
+#
+# `stx.CookieManager(key=...)` is a Streamlit widget. Streamlit's rules:
+#   - Cannot be wrapped in @st.cache_resource (raises CachedWidgetWarning).
+#   - Cannot be instantiated twice in the same run with the same key.
+#   - MUST be instantiated each run for the widget to be rendered/refreshed.
+#
+# Strategy: instantiate exactly once per run (inside `init()`), store the
+# instance in st.session_state so any later helper (persist_login, logout)
+# in the same run reuses it without re-creating the widget. The next run
+# overwrites the stored instance with a fresh one.
 
-@st.cache_resource(show_spinner=False)
-def _get_cookie_manager():
+_SESSION_CM_KEY = "_stmx_cookie_mgr"
+
+
+def init() -> None:
+    """Instantiate the cookie manager once for this Streamlit run.
+
+    Call this near the top of app.py before any other auth helpers.
+    Safe to call multiple times in one run (idempotent — only the first
+    call actually creates the widget; subsequent calls are no-ops).
+    """
     if not _STX_AVAILABLE:
-        return None
-    return stx.CookieManager(key="stmx_cookie_mgr")
+        return
+    # If something already instantiated the manager this run, leave it alone.
+    # (This relies on the convention that `init()` is called once per run.
+    # session_state persists across reruns, but the value we stash is itself
+    # overwritten each call below, so stale references are fine.)
+    if _SESSION_CM_KEY in st.session_state and st.session_state.get(
+        "_stmx_cm_run_marker"
+    ):
+        return
+    st.session_state[_SESSION_CM_KEY] = stx.CookieManager(key="stmx_cookie_mgr")
+    st.session_state["_stmx_cm_run_marker"] = True
+
+
+def _cm():
+    """Return the run's cookie manager. Auto-inits if needed."""
+    if _SESSION_CM_KEY not in st.session_state:
+        init()
+    return st.session_state.get(_SESSION_CM_KEY)
 
 
 # ---------------------------------------------------------------------------
@@ -106,11 +140,18 @@ def restore_session() -> None:
 
     Call this once near the top of app.py, BEFORE checking
     st.session_state['authenticated']. Safe to call when already
-    authenticated (no-op).
+    authenticated (no-op for the auth check; the cookie manager still
+    initializes so persist_login/logout can use it later in the same run).
     """
+    # Reset the per-run marker so init() will create a fresh CookieManager
+    # widget for this run (Streamlit requires re-registration each run).
+    st.session_state.pop("_stmx_cm_run_marker", None)
+    st.session_state.pop(_SESSION_CM_KEY, None)
+    init()
+
     if st.session_state.get("authenticated"):
         return
-    cm = _get_cookie_manager()
+    cm = _cm()
     if cm is None:
         return
     token = cm.get(COOKIE_NAME)
@@ -128,7 +169,7 @@ def persist_login(user_name: str) -> None:
     Writes the signed token to a browser cookie so the next refresh
     or tab navigation stays authenticated.
     """
-    cm = _get_cookie_manager()
+    cm = _cm()
     if cm is None:
         return
     expires_at = datetime.now() + timedelta(days=COOKIE_EXPIRY_DAYS)
@@ -141,7 +182,7 @@ def persist_login(user_name: str) -> None:
 
 def logout() -> None:
     """Clear session state and the auth cookie."""
-    cm = _get_cookie_manager()
+    cm = _cm()
     if cm is not None:
         try:
             cm.delete(COOKIE_NAME)
