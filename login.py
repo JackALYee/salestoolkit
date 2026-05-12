@@ -77,44 +77,60 @@ def render_login():
             background-image: radial-gradient(circle at 50% -20%, #0B1221, #050810);
         }
         /* --- Bulletproof input dark mode --------------------------------------
-           Survives: Chrome/Safari autofill (which repaints fields white/yellow),
-           OS-level dark-mode color-scheme inheritance, Streamlit DOM changes,
-           and any browser default that would otherwise flip backgrounds light. */
-        .stApp input,
-        .stApp textarea {
+           Paints EVERY wrapper layer dark (Streamlit + BaseWeb add several),
+           defeats Windows Forced Colors / High Contrast mode via
+           `forced-color-adjust: none`, and uses `color-scheme: dark` so
+           browsers don't apply light-mode UA defaults. Autofill is overridden
+           via `-webkit-text-fill-color` + a massive inset box-shadow. */
+        [data-testid="stTextInput"],
+        [data-testid="stTextInput"] > div,
+        [data-testid="stTextInput"] > div > div,
+        [data-testid="stTextInput"] [data-baseweb="input"],
+        [data-testid="stTextInput"] [data-baseweb="base-input"] {
+            background: rgba(20, 25, 40, 0.85) !important;
+            background-color: rgba(20, 25, 40, 0.85) !important;
+            background-image: none !important;
             color-scheme: dark !important;
-            background-color: rgba(20, 25, 40, 0.6) !important;
+            forced-color-adjust: none !important;
+            border-radius: 8px !important;
+        }
+        [data-testid="stTextInput"] [data-baseweb="input"],
+        [data-testid="stTextInput"] [data-baseweb="base-input"] {
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        [data-testid="stTextInput"] input {
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
             color: #2AF598 !important;
             -webkit-text-fill-color: #2AF598 !important;
             caret-color: #2AF598 !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 8px !important;
+            color-scheme: dark !important;
+            forced-color-adjust: none !important;
         }
-        .stApp input:focus,
-        .stApp textarea:focus {
+        [data-testid="stTextInput"] input:focus,
+        [data-testid="stTextInput"] [data-baseweb="input"]:focus-within {
             border-color: #2AF598 !important;
             box-shadow: 0 0 0 1px #2AF598 !important;
             outline: none !important;
         }
-        .stApp input::placeholder,
-        .stApp textarea::placeholder {
+        [data-testid="stTextInput"] input::placeholder {
             color: rgba(160, 174, 192, 0.55) !important;
             -webkit-text-fill-color: rgba(160, 174, 192, 0.55) !important;
             opacity: 1 !important;
         }
-        /* Defeat Chrome/Safari autofill yellow/white repaint */
-        .stApp input:-webkit-autofill,
-        .stApp input:-webkit-autofill:hover,
-        .stApp input:-webkit-autofill:focus,
-        .stApp input:-webkit-autofill:active,
-        .stApp textarea:-webkit-autofill,
-        .stApp textarea:-webkit-autofill:focus {
+        /* Defeat Chrome/Safari/Edge autofill repaint */
+        [data-testid="stTextInput"] input:-webkit-autofill,
+        [data-testid="stTextInput"] input:-webkit-autofill:hover,
+        [data-testid="stTextInput"] input:-webkit-autofill:focus,
+        [data-testid="stTextInput"] input:-webkit-autofill:active {
             -webkit-text-fill-color: #2AF598 !important;
             -webkit-box-shadow: 0 0 0 1000px rgba(20, 25, 40, 0.95) inset !important;
             caret-color: #2AF598 !important;
             transition: background-color 5000s ease-in-out 0s;
         }
-        .stTextInput label {
+        .stTextInput label,
+        [data-testid="stTextInput"] label {
             color: #A0AEC0 !important;
         }
         [data-testid="stForm"] {
