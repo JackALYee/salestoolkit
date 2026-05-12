@@ -422,9 +422,23 @@ THEME_CSS = """
         background: #050810 !important;
     }
 
-    /* Chat input */
+    /* Chat input — paint EVERY wrapper layer dark so no white wrapper shows
+       through (Windows Edge + High Contrast + BaseWeb wrappers all defeat the
+       single-selector approach). */
+    [data-testid="stChatInput"],
+    [data-testid="stChatInput"] > div,
+    [data-testid="stChatInput"] > div > div,
+    [data-testid="stChatInput"] [data-baseweb="textarea"],
+    [data-testid="stChatInput"] [data-baseweb="base-input"],
+    [data-testid="stChatInputContainer"],
+    [data-testid="stChatInputTextArea"] {
+        background: rgba(5, 8, 16, 0.85) !important;
+        background-color: rgba(5, 8, 16, 0.85) !important;
+        background-image: none !important;
+        color-scheme: dark !important;
+        forced-color-adjust: none !important;
+    }
     [data-testid="stChatInput"] {
-        background: rgba(5, 8, 16, 0.6) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 14px !important;
         backdrop-filter: blur(10px);
@@ -433,12 +447,26 @@ THEME_CSS = """
         border-color: rgba(42, 245, 152, 0.4) !important;
         box-shadow: 0 0 20px rgba(42, 245, 152, 0.15) !important;
     }
+    /* Textarea itself: transparent, so the dark wrapper shows through */
     [data-testid="stChatInput"] textarea {
-        color: var(--text-white) !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #2AF598 !important;
         font-family: 'Inter', sans-serif !important;
+        color-scheme: dark !important;
+        forced-color-adjust: none !important;
+    }
+    [data-testid="stChatInput"] textarea::placeholder {
+        color: rgba(160, 174, 192, 0.55) !important;
+        -webkit-text-fill-color: rgba(160, 174, 192, 0.55) !important;
+        opacity: 1 !important;
     }
     [data-testid="stChatInput"] button {
         color: var(--primary-green) !important;
+        forced-color-adjust: none !important;
     }
 
     /* Quick prompt buttons */
