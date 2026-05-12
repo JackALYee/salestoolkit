@@ -76,15 +76,43 @@ def render_login():
             background-color: #050810;
             background-image: radial-gradient(circle at 50% -20%, #0B1221, #050810);
         }
-        .stTextInput>div>div>input {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: #2AF598;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+        /* --- Bulletproof input dark mode --------------------------------------
+           Survives: Chrome/Safari autofill (which repaints fields white/yellow),
+           OS-level dark-mode color-scheme inheritance, Streamlit DOM changes,
+           and any browser default that would otherwise flip backgrounds light. */
+        .stApp input,
+        .stApp textarea {
+            color-scheme: dark !important;
+            background-color: rgba(20, 25, 40, 0.6) !important;
+            color: #2AF598 !important;
+            -webkit-text-fill-color: #2AF598 !important;
+            caret-color: #2AF598 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px !important;
         }
-        .stTextInput>div>div>input:focus {
-            border-color: #2AF598;
-            box-shadow: 0 0 0 1px #2AF598;
+        .stApp input:focus,
+        .stApp textarea:focus {
+            border-color: #2AF598 !important;
+            box-shadow: 0 0 0 1px #2AF598 !important;
+            outline: none !important;
+        }
+        .stApp input::placeholder,
+        .stApp textarea::placeholder {
+            color: rgba(160, 174, 192, 0.55) !important;
+            -webkit-text-fill-color: rgba(160, 174, 192, 0.55) !important;
+            opacity: 1 !important;
+        }
+        /* Defeat Chrome/Safari autofill yellow/white repaint */
+        .stApp input:-webkit-autofill,
+        .stApp input:-webkit-autofill:hover,
+        .stApp input:-webkit-autofill:focus,
+        .stApp input:-webkit-autofill:active,
+        .stApp textarea:-webkit-autofill,
+        .stApp textarea:-webkit-autofill:focus {
+            -webkit-text-fill-color: #2AF598 !important;
+            -webkit-box-shadow: 0 0 0 1000px rgba(20, 25, 40, 0.95) inset !important;
+            caret-color: #2AF598 !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
         .stTextInput label {
             color: #A0AEC0 !important;
