@@ -264,6 +264,37 @@ THEME_CSS = """
     #MainMenu, footer, header[data-testid="stHeader"] { visibility: hidden; }
     .stDeployButton { display: none; }
 
+    /* --- Bulletproof input dark mode --------------------------------------
+       Survives: Chrome/Safari autofill (which repaints fields white/yellow),
+       OS-level dark-mode color-scheme inheritance, Streamlit DOM changes,
+       and any browser default that would otherwise flip backgrounds light. */
+    .stApp input,
+    .stApp textarea {
+        color-scheme: dark !important;
+        background-color: rgba(20, 25, 40, 0.6) !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #2AF598 !important;
+    }
+    .stApp input::placeholder,
+    .stApp textarea::placeholder {
+        color: rgba(160, 174, 192, 0.55) !important;
+        -webkit-text-fill-color: rgba(160, 174, 192, 0.55) !important;
+        opacity: 1 !important;
+    }
+    /* Defeat Chrome/Safari autofill yellow/white repaint */
+    .stApp input:-webkit-autofill,
+    .stApp input:-webkit-autofill:hover,
+    .stApp input:-webkit-autofill:focus,
+    .stApp input:-webkit-autofill:active,
+    .stApp textarea:-webkit-autofill,
+    .stApp textarea:-webkit-autofill:focus {
+        -webkit-text-fill-color: #ffffff !important;
+        -webkit-box-shadow: 0 0 0 1000px rgba(20, 25, 40, 0.95) inset !important;
+        caret-color: #2AF598 !important;
+        transition: background-color 5000s ease-in-out 0s;
+    }
+
     .block-container {
         max-width: 1080px !important;
         padding-top: 2rem !important;
