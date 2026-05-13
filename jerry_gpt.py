@@ -41,18 +41,29 @@ MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
 # adjusts his structure (concise reply vs. full structured breakdown).
 LENGTH_OPTIONS = {
     "Short": {
-        "max_tokens": 512,
+        "max_tokens": 1024,
         "hint": "Keep this response tight — 1-2 short paragraphs, no headers, no tables. Just the punch line and the why.",
     },
     "Medium": {
-        "max_tokens": 1536,
+        "max_tokens": 4096,
         "hint": "",  # default, no extra instruction
     },
     "Long": {
-        "max_tokens": 4096,
-        "hint": "Take the space to be thorough. Use headers, comparative tables, and structured frameworks where they help.",
+        "max_tokens": 8192,
+        "hint": (
+            "Take the space to be thorough. Use headers, comparative tables, "
+            "and structured frameworks where they help. "
+            "Plan your structure before writing — if you start a table, list, or "
+            "section, finish it. Never leave a table half-built or a numbered "
+            "list missing trailing items."
+        ),
     },
 }
+
+# Safety cap on auto-continuation. If a response keeps hitting max_tokens
+# this many times in a row, stop trying — something is wrong with the prompt
+# rather than just a long answer.
+_MAX_CONTINUATIONS = 3
 
 EMPTY_USAGE = {
     "input_tokens": 0,
@@ -1136,34 +1147,75 @@ def _submit_message(
         placeholder = st.empty()
         full_text = ""
 
+        # Accumulate token usage across the initial response and any
+        # auto-continuation rounds, so the side-panel stats and the audit log
+        # reflect the TOTAL cost of producing the complete answer.
+        total_input = 0
+        total_output = 0
+        total_cache_read = 0
+        total_cache_creation = 0
+        continuations = 0
+
         try:
-            with client.messages.stream(
-                model=model,
-                max_tokens=max_tokens,
-                system=system_for_request,
-                messages=api_messages,
-            ) as stream:
-                for chunk in stream.text_stream:
-                    full_text += chunk
-                    placeholder.markdown(full_text + "▊")
-                final_message = stream.get_final_message()
+            current_messages = api_messages
+            while True:
+                with client.messages.stream(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system=system_for_request,
+                    messages=current_messages,
+                ) as stream:
+                    for chunk in stream.text_stream:
+                        full_text += chunk
+                        placeholder.markdown(full_text + "▊")
+                    final_message = stream.get_final_message()
+
+                u = final_message.usage
+                total_input += getattr(u, "input_tokens", 0) or 0
+                total_output += getattr(u, "output_tokens", 0) or 0
+                total_cache_read += getattr(u, "cache_read_input_tokens", 0) or 0
+                total_cache_creation += getattr(u, "cache_creation_input_tokens", 0) or 0
+
+                # If the stop reason was anything OTHER than max_tokens, we're
+                # done. (Normal completion is `end_turn`. Other reasons —
+                # `stop_sequence`, `tool_use`, etc. — also exit cleanly.)
+                stop_reason = getattr(final_message, "stop_reason", None)
+                if stop_reason != "max_tokens" or continuations >= _MAX_CONTINUATIONS:
+                    break
+
+                # Auto-continue: use Anthropic's assistant-prefill pattern.
+                # Appending the partial response as the final assistant
+                # message tells Claude to continue from exactly that point —
+                # no "continue from where you left off" instruction needed,
+                # no preamble like "Sure, continuing:" gets generated.
+                continuations += 1
+                current_messages = current_messages + [
+                    {"role": "assistant", "content": full_text}
+                ]
+
             placeholder.markdown(full_text)
             _render_copy_button(full_text)
-            # Track cumulative token stats for the side panel
-            _update_usage(model, final_message.usage)
-            # Append this turn to the usage log (stdout + optional Google Sheets)
+
+            # Build a single accumulated usage object for downstream consumers.
+            class _AccumulatedUsage:
+                input_tokens = total_input
+                output_tokens = total_output
+                cache_read_input_tokens = total_cache_read
+                cache_creation_input_tokens = total_cache_creation
+
+            _update_usage(model, _AccumulatedUsage)
+
             if _usage_logger is not None:
-                usage_obj = final_message.usage
                 _usage_logger.log_query(
                     question=text,
                     answer=full_text,
                     model=model,
                     length=length,
                     is_leadership=is_leadership,
-                    input_tokens=getattr(usage_obj, "input_tokens", 0) or 0,
-                    output_tokens=getattr(usage_obj, "output_tokens", 0) or 0,
-                    cache_read_tokens=getattr(usage_obj, "cache_read_input_tokens", 0) or 0,
-                    cache_creation_tokens=getattr(usage_obj, "cache_creation_input_tokens", 0) or 0,
+                    input_tokens=total_input,
+                    output_tokens=total_output,
+                    cache_read_tokens=total_cache_read,
+                    cache_creation_tokens=total_cache_creation,
                 )
         except Exception as exc:
             history.pop()  # roll back user turn so retry works
