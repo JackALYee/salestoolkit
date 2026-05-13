@@ -35,6 +35,8 @@ HEADERS = [
     "timestamp_utc",
     "user_email",
     "user_name",
+    "is_leadership",       # was the user in the Streamax LEADERSHIP list?
+    "sensitive_flagged",   # did the question match the pricing-keyword heuristic?
     "question",
     "answer",
     "model",
@@ -46,6 +48,37 @@ HEADERS = [
 ]
 
 
+# --- Pricing-sensitive question heuristic --------------------------------
+# Tags a row as `sensitive_flagged = TRUE` when the user's question matches
+# any of these phrases. Tagging happens regardless of clearance — combined
+# with `is_leadership` it tells you:
+#   * sensitive_flagged=TRUE & is_leadership=FALSE → audit-worthy attempt
+#   * sensitive_flagged=TRUE & is_leadership=TRUE  → legitimate leadership inquiry
+#   * sensitive_flagged=FALSE                       → normal query
+_PRICING_KEYWORDS = (
+    # English — generic pricing language
+    "price", "pricing", "cost", "margin", "markup", "discount",
+    "how much", "how cheap", "expensive", "wholesale", "retail",
+    "msrp", "list price", "quote",
+    # Pricing terms-of-art
+    "exw", "ddp", "fob", "landed",
+    "amortiz", "monthly cost", "per vehicle", "per veh", "/mo",
+    "cost basis", "cost floor", "cost to tsp", "cost to reseller",
+    # Currency
+    "usd", "rmb", "cny", "$",
+    # Chinese
+    "价格", "成本", "毛利", "利润", "便宜", "贵", "报价", "折扣", "批发",
+)
+
+
+def _is_pricing_sensitive(text: str) -> bool:
+    """Heuristic: True if the question looks pricing-adjacent."""
+    if not text:
+        return False
+    lower = text.lower()
+    return any(kw in lower for kw in _PRICING_KEYWORDS)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -55,6 +88,7 @@ def log_query(
     model: str,
     length: str,
     answer: str = "",
+    is_leadership: bool = False,
     input_tokens: int = 0,
     output_tokens: int = 0,
     cache_read_tokens: int = 0,
@@ -63,17 +97,23 @@ def log_query(
     """Log one Jerry GPT turn to stdout (always) and Google Sheets (if configured).
 
     `answer` is Jerry's full response in markdown — captured for sales-team
-    review and persona tuning. Truncated to 20K chars per cell (Google Sheets
-    cap is 50K; typical Long responses are 8-12K chars).
+    review and persona tuning. Truncated to 20K chars per cell.
+
+    `is_leadership` records whether this user has clearance for sensitive
+    Streamax pricing. `sensitive_flagged` is computed from the question text
+    via a keyword heuristic — together they enable audit filtering.
 
     Never raises. All failures are swallowed and printed so the user's chat
     experience is never disrupted by logging issues.
     """
     try:
+        sensitive = _is_pricing_sensitive(question)
         record = {
             "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "user_email": st.session_state.get("user_email", ""),
             "user_name": st.session_state.get("user_name", ""),
+            "is_leadership": bool(is_leadership),
+            "sensitive_flagged": sensitive,
             "question": (question or "")[:MAX_QUESTION_LEN],
             "answer": (answer or "")[:MAX_ANSWER_LEN],
             "model": model,

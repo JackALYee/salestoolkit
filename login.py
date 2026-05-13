@@ -17,6 +17,52 @@ def _persist(user_name: str) -> None:
     if _auth is not None:
         _auth.persist_login(user_name)
 
+
+# --- LEADERSHIP — Streamax executives cleared for sensitive pricing data ----
+# Edit this set to grant/revoke clearance for Streamax product pricing,
+# margin, and cost-basis information inside Jerry GPT.
+# All comparisons are case-insensitive; values stored lowercase.
+LEADERSHIP_EMAILS = frozenset({
+    "jerry@streamax.com",
+    "hekun@streamax.com",
+    "jcyi@streamax.com",
+    "liheng@streamax.com",
+    "melanie@streamax.com",
+    "alan@streamax.com",
+    "xdwang@streamax.com",
+    "zjzhao@streamax.com",
+    "liulei@streamax.com",
+})
+
+# Easter-egg auth shortcuts (jerry_test, hekun_test, etc.) authenticate as a
+# display name. Map the display name back to the canonical streamax.com email
+# so the leadership check works for the bypass accounts too.
+_EASTER_EGG_TO_EMAIL = {
+    "jerry": "jerry@streamax.com",
+    "hekun": "hekun@streamax.com",
+    "zntang": "zntang@streamax.com",
+    "jhsun": "jhsun@streamax.com",
+}
+
+
+def resolve_leadership(name_or_email: str) -> bool:
+    """Return True if the given user is in the Streamax LEADERSHIP list.
+
+    Accepts either a streamax.com email (regular accounts) or a display name
+    (Jerry/Hekun/etc. — used by the easter-egg bypass logins). Case-insensitive.
+    """
+    if not name_or_email:
+        return False
+    val = name_or_email.strip().lower()
+    # If it's a known display name, swap to canonical email
+    val = _EASTER_EGG_TO_EMAIL.get(val, val)
+    return val in LEADERSHIP_EMAILS
+
+
+def _grant_leadership(name_or_email: str) -> None:
+    """Set session_state['is_leadership'] for the just-authenticated user."""
+    st.session_state["is_leadership"] = resolve_leadership(name_or_email)
+
 def verify_streamax_credentials(email, password):
     # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
     clean_email = email.strip()
@@ -201,6 +247,7 @@ def render_login():
         st.session_state['show_jerry_anim'] = False
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'Jerry'
+        _grant_leadership('Jerry')
         _persist('Jerry')
         st.rerun()
 
@@ -219,6 +266,7 @@ def render_login():
         st.session_state['show_hekun_anim'] = False
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'Hekun'
+        _grant_leadership('Hekun')
         _persist('Hekun')
         st.rerun()
 
@@ -240,6 +288,7 @@ def render_login():
         st.session_state['show_zntang_anim'] = False
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'ZNTang'
+        _grant_leadership('ZNTang')
         _persist('ZNTang')
         st.rerun()
 
@@ -261,6 +310,7 @@ def render_login():
         st.session_state['show_jhsun_anim'] = False
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'JHSun'
+        _grant_leadership('JHSun')
         _persist('JHSun')
         st.rerun()
 
@@ -314,6 +364,7 @@ def render_login():
                         else:
                             st.session_state['authenticated'] = True
                             st.session_state['user_name'] = email_input
+                            _grant_leadership(email_input)
                             _persist(email_input)
                             st.rerun()
                     else:

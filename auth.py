@@ -161,6 +161,13 @@ def restore_session() -> None:
     if user:
         st.session_state["authenticated"] = True
         st.session_state["user_name"] = user
+        # Re-derive leadership clearance from the restored user identity
+        # so Jerry GPT enforces access control immediately after page reload.
+        try:
+            from login import resolve_leadership
+            st.session_state["is_leadership"] = resolve_leadership(user)
+        except Exception:
+            st.session_state["is_leadership"] = False
 
 
 def persist_login(user_name: str) -> None:
@@ -188,7 +195,7 @@ def logout() -> None:
             cm.delete(COOKIE_NAME)
         except Exception:
             pass
-    for key in ("authenticated", "user_name"):
+    for key in ("authenticated", "user_name", "is_leadership"):
         st.session_state.pop(key, None)
 
 
