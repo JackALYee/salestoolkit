@@ -1059,6 +1059,7 @@ def _submit_message(
                 usage_obj = final_message.usage
                 _usage_logger.log_query(
                     question=text,
+                    answer=full_text,
                     model=model,
                     length=length,
                     input_tokens=getattr(usage_obj, "input_tokens", 0) or 0,
