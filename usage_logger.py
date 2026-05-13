@@ -29,12 +29,14 @@ except ImportError:
     gspread = None  # type: ignore
 
 
-MAX_QUESTION_LEN = 2000  # truncate per cell to keep Sheets responsive
+MAX_QUESTION_LEN = 2000   # truncate per cell to keep Sheets responsive
+MAX_ANSWER_LEN = 20000    # Jerry's response in markdown; 50K is the cell hard cap
 HEADERS = [
     "timestamp_utc",
     "user_email",
     "user_name",
     "question",
+    "answer",
     "model",
     "length",
     "input_tokens",
@@ -52,12 +54,17 @@ def log_query(
     question: str,
     model: str,
     length: str,
+    answer: str = "",
     input_tokens: int = 0,
     output_tokens: int = 0,
     cache_read_tokens: int = 0,
     cache_creation_tokens: int = 0,
 ) -> None:
     """Log one Jerry GPT turn to stdout (always) and Google Sheets (if configured).
+
+    `answer` is Jerry's full response in markdown — captured for sales-team
+    review and persona tuning. Truncated to 20K chars per cell (Google Sheets
+    cap is 50K; typical Long responses are 8-12K chars).
 
     Never raises. All failures are swallowed and printed so the user's chat
     experience is never disrupted by logging issues.
@@ -68,6 +75,7 @@ def log_query(
             "user_email": st.session_state.get("user_email", ""),
             "user_name": st.session_state.get("user_name", ""),
             "question": (question or "")[:MAX_QUESTION_LEN],
+            "answer": (answer or "")[:MAX_ANSWER_LEN],
             "model": model,
             "length": length,
             "input_tokens": int(input_tokens or 0),
