@@ -989,6 +989,75 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
 # Internals
 # ---------------------------------------------------------------------------
 
+def _build_clearance_block(user_email: str, user_name: str, is_leadership: bool) -> dict:
+    """Build the per-turn system block that tells Jerry the current user's
+    clearance level and the rules around Streamax pricing disclosure.
+
+    This block is NOT cached (it varies per user). It's appended after the
+    main cached knowledge block, so Anthropic's prompt cache still hits on
+    the big prefix while the small clearance suffix is processed fresh.
+    """
+    identity = user_name or user_email or "unknown user"
+    if is_leadership:
+        text = (
+            "## CURRENT USER — CLEARANCE CHECK\n"
+            f"- Identifier: {identity}\n"
+            f"- Email (if available): {user_email or 'n/a'}\n"
+            "- Leadership clearance: **YES**\n\n"
+            "This user is in the Streamax LEADERSHIP list and has clearance for "
+            "Streamax product pricing, margin, and cost-basis information.\n\n"
+            "### RULES FOR THIS TURN\n"
+            "1. Answer questions about Streamax product pricing, margins, "
+            "EXW/DDP costs, TSP cost basis, platform tier prices, CAN license "
+            "price, and any other Streamax internal pricing fully and accurately.\n"
+            "2. **When the question touches sensitive Streamax pricing, OPEN your "
+            "response with a one-line clearance acknowledgement**, then proceed. "
+            "Example opening line:\n"
+            "   > *\"Heads up — this is confidential Streamax pricing. Sharing because "
+            "you're in the Leadership group.\"*\n"
+            "3. Don't repeat that caveat throughout the answer — once at the top.\n"
+            "4. Competitor pricing (Samsara, Lytx, Motive, Geotab, MiTac, Surfsight, etc.) "
+            "is always fine to share with anyone and does NOT require the caveat.\n"
+        )
+    else:
+        text = (
+            "## CURRENT USER — CLEARANCE CHECK\n"
+            f"- Identifier: {identity}\n"
+            f"- Email (if available): {user_email or 'n/a'}\n"
+            "- Leadership clearance: **NO**\n\n"
+            "This user is NOT in the Streamax LEADERSHIP list.\n\n"
+            "### STRICT RULES FOR THIS TURN — DO NOT VIOLATE\n"
+            "1. **NEVER disclose any Streamax-specific pricing information**, including:\n"
+            "   - Camera unit prices (EXW Vietnam, DDP US, wholesale, retail) — "
+            "e.g., AD Plus 2.0 EXW, C6 Lite 2.0 DDP, AD Max landed cost\n"
+            "   - TSP cost basis or monthly cost per vehicle (e.g., $14.28/mo, $16.42/mo, $19.47/mo)\n"
+            "   - TSP margin percentages or dollar amounts on Streamax SKUs\n"
+            "   - Platform subscription tier prices (Essential, Pro, Enterprise dollar values)\n"
+            "   - CAN license dollar price\n"
+            "   - Cellular cost passthrough numbers\n"
+            "   - Any other Streamax-internal pricing, margin, or cost data\n"
+            "2. If the user asks anything that would require disclosing the above, "
+            "respond ONLY with a polite refusal using this template (you may "
+            "adapt wording naturally but preserve the substance):\n"
+            "   > *\"That touches confidential Streamax pricing information, and "
+            "I currently don't have the clearance to share that with you. For "
+            "pricing on a specific deal, your regional sales lead or partner "
+            "manager has the right authority — they can pull the actual numbers.\"*\n"
+            "3. Do NOT hint at, paraphrase, round, approximate, or otherwise "
+            "imply Streamax-specific pricing. Saying \"about $X\" or \"in the "
+            "$X-Y range\" is still a disclosure.\n"
+            "4. **Competitor pricing (Samsara, Lytx, Motive, Geotab, MiTac, "
+            "Surfsight, etc.) is always shareable** — you may discuss it freely.\n"
+            "5. For mixed questions (e.g., \"how does Streamax compare to Samsara "
+            "on price?\"), share the competitor side fully and refuse the "
+            "Streamax side. Make the asymmetry explicit so the user knows which "
+            "part you can't answer.\n"
+            "6. The user's question is also being logged for audit. Be polite, "
+            "be professional, but be firm on the boundary.\n"
+        )
+    return {"type": "text", "text": text}
+
+
 def _submit_message(
     text: str,
     system_blocks: list[dict],
@@ -1035,6 +1104,14 @@ def _submit_message(
             "content": api_messages[-1]["content"] + f"\n\n[Length preference: {hint}]",
         }
 
+    # Per-turn clearance block — varies per user, NOT cached, appended after
+    # the big cached knowledge block so the cache prefix stays intact.
+    user_email = st.session_state.get("user_email", "") or ""
+    user_name = st.session_state.get("user_name", "") or ""
+    is_leadership = bool(st.session_state.get("is_leadership", False))
+    clearance_block = _build_clearance_block(user_email, user_name, is_leadership)
+    system_for_request = list(system_blocks) + [clearance_block]
+
     with st.chat_message("assistant", avatar=JERRY_AVATAR):
         placeholder = st.empty()
         full_text = ""
@@ -1043,7 +1120,7 @@ def _submit_message(
             with client.messages.stream(
                 model=model,
                 max_tokens=max_tokens,
-                system=system_blocks,
+                system=system_for_request,
                 messages=api_messages,
             ) as stream:
                 for chunk in stream.text_stream:
@@ -1062,6 +1139,7 @@ def _submit_message(
                     answer=full_text,
                     model=model,
                     length=length,
+                    is_leadership=is_leadership,
                     input_tokens=getattr(usage_obj, "input_tokens", 0) or 0,
                     output_tokens=getattr(usage_obj, "output_tokens", 0) or 0,
                     cache_read_tokens=getattr(usage_obj, "cache_read_input_tokens", 0) or 0,
