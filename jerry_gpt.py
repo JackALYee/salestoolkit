@@ -16,6 +16,13 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Usage logger — optional sibling module. Stdout always works; Google Sheets
+# activates when secrets are configured. Never raises.
+try:
+    import usage_logger as _usage_logger
+except Exception:
+    _usage_logger = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -1047,6 +1054,18 @@ def _submit_message(
             _render_copy_button(full_text)
             # Track cumulative token stats for the side panel
             _update_usage(model, final_message.usage)
+            # Append this turn to the usage log (stdout + optional Google Sheets)
+            if _usage_logger is not None:
+                usage_obj = final_message.usage
+                _usage_logger.log_query(
+                    question=text,
+                    model=model,
+                    length=length,
+                    input_tokens=getattr(usage_obj, "input_tokens", 0) or 0,
+                    output_tokens=getattr(usage_obj, "output_tokens", 0) or 0,
+                    cache_read_tokens=getattr(usage_obj, "cache_read_input_tokens", 0) or 0,
+                    cache_creation_tokens=getattr(usage_obj, "cache_creation_input_tokens", 0) or 0,
+                )
         except Exception as exc:
             history.pop()  # roll back user turn so retry works
             placeholder.markdown(
