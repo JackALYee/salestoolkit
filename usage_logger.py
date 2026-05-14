@@ -16,7 +16,12 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+# China Standard Time (UTC+8). China doesn't observe DST, so a fixed
+# offset is correct year-round and avoids the IANA-tzdata dependency
+# (zoneinfo would need the tzdata package on some Windows runtimes).
+CHINA_TZ = timezone(timedelta(hours=8), name="CST")
 
 import streamlit as st
 
@@ -32,7 +37,7 @@ except ImportError:
 MAX_QUESTION_LEN = 2000   # truncate per cell to keep Sheets responsive
 MAX_ANSWER_LEN = 20000    # Jerry's response in markdown; 50K is the cell hard cap
 HEADERS = [
-    "timestamp_utc",
+    "timestamp_cn",
     "user_email",
     "user_name",
     "is_leadership",       # was the user in the Streamax LEADERSHIP list?
@@ -109,7 +114,7 @@ def log_query(
     try:
         sensitive = _is_pricing_sensitive(question)
         record = {
-            "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "timestamp_cn": datetime.now(CHINA_TZ).isoformat(timespec="seconds"),
             "user_email": st.session_state.get("user_email", ""),
             "user_name": st.session_state.get("user_name", ""),
             "is_leadership": bool(is_leadership),
