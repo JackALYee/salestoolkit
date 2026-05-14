@@ -83,7 +83,7 @@ Historically: separate GPS tracker + camera = two devices, two SIMs, two install
 
 ### 3.6 DSC vs DMS — the fatigue kill shot
 - **DSC** (Driver Status Camera): wide-angle cabin lens built into the windshield-mounted dashcam, above the driver's eyeline. Samsara, Motive, and Lytx use this architecture exclusively. Problem: when a drowsy driver's head dips forward, the eyebrow ridge occludes the eyes from a downward camera angle. The AI loses its #1 fatigue indicator. Sunglasses block it further.
-- **DMS** (the Streamax C29N): mounted on the A-pillar at eye level, 940nm IR penetrates sunglasses, 0-Lux capability, no eyebrow occlusion. *"Ask Samsara or Motive to demonstrate their fatigue detection with sunglasses on, at night, with the driver looking slightly down. Then ask us."*
+- **DMS** (the Streamax C29N): mounted on the A-pillar at eye level, 940nm IR penetrates sunglasses, 0-Lux capability, no eyebrow occlusion. *"Ask Samsara or Motive to demonstrate their fatigue detection in three scenarios: (1) daytime with the driver wearing sunglasses, (2) at night in low light, (3) with the driver's head dipped slightly forward. Each one independently defeats a windshield-mounted dashcam. Then ask us — the C29N handles all three."*
 - Plus deep-learning fatigue: a second AI layer trained on millions of real fatigue events captured in the field — rule-based + neural together, fewer false positives (drivers with small eyes, long eyelashes) and fewer misses.
 
 ### 3.7 The data flywheel

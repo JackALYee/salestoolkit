@@ -114,7 +114,7 @@ Drivers resist cameras primarily because the systems alert too frequently on non
 - *"More events ≠ less accurate. It means the system is catching risks that other configurations deliberately ignore."*
 - *"The camera is just the sensor. The intelligence is the product."*
 - *"From reactive to predictive. We catch fatigue 15 minutes before they catch it at all."*
-- *"Ask Samsara or Motive to demonstrate their fatigue detection with sunglasses on, at night, with the driver looking slightly down. Then ask us."*
+- *"Ask Samsara or Motive to demonstrate their fatigue detection in three scenarios — daytime with sunglasses, at night in low light, with the driver's head dipped slightly forward. Each one independently defeats a windshield DSC. Then ask us."*
 
 ## The seven diagnostic questions to ask any camera vendor
 

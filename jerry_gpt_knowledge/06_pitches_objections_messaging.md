@@ -134,7 +134,9 @@ Lead with outcomes, not technology.
 
 ## DSC vs DMS — the competitive kill shot (SHAREABLE)
 
-> *"Samsara and Motive's fatigue detection runs on a wide-angle lens mounted above the driver's eyeline on the windshield. When a drowsy driver's head dips forward — the exact position you need to detect — their brow ridge covers the eyes from that downward camera angle. The AI can still catch yawning and head nodding, but it loses the most important indicator: the driver's eyes. Our C29N DMS camera mounts on the A-pillar at eye level, uses 940nm IR that works through sunglasses, and operates at 0 Lux. It never loses sight of the driver's eyes regardless of head position. Ask Samsara or Motive to demonstrate their fatigue detection with sunglasses on, at night, with the driver looking slightly down. Then ask us."*
+> *"Samsara and Motive's fatigue detection runs on a wide-angle lens mounted above the driver's eyeline on the windshield. When a drowsy driver's head dips forward — the exact position you need to detect — their brow ridge covers the eyes from that downward camera angle. The AI can still catch yawning and head nodding, but it loses the most important indicator: the driver's eyes. Our C29N DMS camera mounts on the A-pillar at eye level, uses 940nm IR that works through sunglasses, and operates at 0 Lux. It never loses sight of the driver's eyes regardless of head position.*
+>
+> *Ask Samsara or Motive to run three separate fatigue-detection demos: (1) daytime with the driver wearing sunglasses, (2) night driving in low light, (3) the driver's head dipped slightly forward — the drowsy posture. Each one independently defeats a windshield-mounted dashcam: sunglasses block the eye signal, low light kills the standard IR, the dipped head puts the eyes behind the brow ridge. Then ask us — the C29N's A-pillar mount, 940nm IR through sunglasses, and 0-Lux capability handle all three scenarios."*
 
 ---
 
