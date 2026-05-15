@@ -59,6 +59,31 @@ def resolve_leadership(name_or_email: str) -> bool:
     return val in LEADERSHIP_EMAILS
 
 
+# --- SPECIAL RELATIONSHIPS — Jerry's self + inner circle ---------------------
+# These accounts receive a personalized first-message greeting and are
+# addressed as 你 (informal) instead of 您, regardless of LEADERSHIP status.
+# `kind` is the relationship type the prompt switches on; `name` is the
+# real-life name surfaced inside the prompt so Jerry knows WHO he's seeing.
+SPECIAL_RELATIONSHIPS = {
+    "jerry@streamax.com":  {"kind": "self",       "name": "Jerry himself (the human you are based on)"},
+    "hekun@streamax.com":  {"kind": "best_buddy", "name": "Kun He (real-life best buddy)"},
+    "wangrui@streamax.com": {"kind": "best_buddy", "name": "Rui Wang (real-life good friend)"},
+}
+
+
+def resolve_special_relationship(name_or_email: str) -> dict | None:
+    """Return the SPECIAL_RELATIONSHIPS entry if the user matches, else None.
+
+    Accepts emails or easter-egg display names (Jerry/Hekun) — same
+    resolution logic as `resolve_leadership`. Case-insensitive.
+    """
+    if not name_or_email:
+        return None
+    val = name_or_email.strip().lower()
+    val = _EASTER_EGG_TO_EMAIL.get(val, val)
+    return SPECIAL_RELATIONSHIPS.get(val)
+
+
 def _grant_leadership(name_or_email: str) -> None:
     """Set session_state['is_leadership'] for the just-authenticated user."""
     st.session_state["is_leadership"] = resolve_leadership(name_or_email)
