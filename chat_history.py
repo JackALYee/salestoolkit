@@ -307,6 +307,88 @@ def load_session_by_id(user_email: str, session_id: str) -> list[dict]:
         return []
 
 
+def delete_session(user_email: str, session_id: str) -> bool:
+    """Delete one specific session belonging to one user.
+
+    Scoped by both user_email AND session_id so a malicious actor with a
+    leaked session_id can't delete someone else's history. Returns True
+    on success, False on any error or no-op.
+    """
+    if not (user_email and session_id and is_configured()):
+        return False
+    conn = _get_connection()
+    if conn is None:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM jerry_gpt_chats
+                WHERE user_email = %s AND session_id = %s
+                """,
+                (user_email, session_id),
+            )
+        return True
+    except psycopg2.OperationalError:
+        conn = _retry_get_connection()
+        if conn is None:
+            return False
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    DELETE FROM jerry_gpt_chats
+                    WHERE user_email = %s AND session_id = %s
+                    """,
+                    (user_email, session_id),
+                )
+            return True
+        except Exception as e:
+            print(f"[JERRY_GPT_DB_ERROR] delete_session (retry) failed: "
+                  f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            return False
+    except Exception as e:
+        print(f"[JERRY_GPT_DB_ERROR] delete_session failed: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        return False
+
+
+def delete_all_sessions(user_email: str) -> bool:
+    """Delete ALL sessions belonging to one user. Destructive — use with
+    explicit user confirmation in the UI."""
+    if not (user_email and is_configured()):
+        return False
+    conn = _get_connection()
+    if conn is None:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM jerry_gpt_chats WHERE user_email = %s",
+                (user_email,),
+            )
+        return True
+    except psycopg2.OperationalError:
+        conn = _retry_get_connection()
+        if conn is None:
+            return False
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM jerry_gpt_chats WHERE user_email = %s",
+                    (user_email,),
+                )
+            return True
+        except Exception as e:
+            print(f"[JERRY_GPT_DB_ERROR] delete_all (retry) failed: "
+                  f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            return False
+    except Exception as e:
+        print(f"[JERRY_GPT_DB_ERROR] delete_all failed: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        return False
+
+
 def list_past_sessions(user_email: str, limit: int = 20) -> list[dict]:
     """Summaries of the user's past sessions, most recent first.
 
