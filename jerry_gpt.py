@@ -611,19 +611,69 @@ THEME_CSS = """
         color: #fca5a5;
     }
 
-    /* Past chats button styling — Streamlit native st.button overrides */
-    .jerry-side-card .stButton button {
-        text-align: left !important;
-        white-space: pre-wrap !important;
-        font-size: 0.74rem !important;
-        line-height: 1.35 !important;
-        padding: 8px 10px !important;
-        margin-bottom: 6px !important;
-        min-height: 0 !important;
-        height: auto !important;
+    /* ------------------------------------------------------------------
+       Streamlit st.container(border=True) → glass-card look-and-feel.
+       We target the data-testid Streamlit emits for bordered containers
+       so each card adopts the dark glass theme automatically. The card
+       wrapper sits one level above .stVerticalBlock; padding goes there
+       too so widgets don't hug the edge.
+       ------------------------------------------------------------------ */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--glass-bg);
+        border: var(--glass-border) !important;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        backdrop-filter: blur(8px);
     }
 
-    /* Side panel (settings + stats) */
+    /* Past-chat row: each session button + its delete affordance */
+    .jerry-past-row {
+        display: block;
+        margin-bottom: 4px;
+    }
+    .jerry-past-row .stButton button {
+        text-align: left !important;
+        white-space: pre-wrap !important;
+        font-size: 0.72rem !important;
+        line-height: 1.35 !important;
+        padding: 6px 10px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        background: rgba(255,255,255,0.02) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        color: var(--text-grey) !important;
+    }
+    .jerry-past-row .stButton button:hover {
+        border-color: var(--primary-green) !important;
+        color: var(--text-white) !important;
+        background: rgba(42, 245, 152, 0.04) !important;
+    }
+    .jerry-past-row .stButton button:disabled {
+        opacity: 0.55 !important;
+        cursor: default !important;
+        border-color: rgba(42, 245, 152, 0.35) !important;
+        color: var(--text-white) !important;
+    }
+
+    /* Delete (✕) icon: subtle by default, red on hover */
+    .jerry-past-del .stButton button {
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        color: var(--text-grey) !important;
+        font-size: 0.85rem !important;
+        padding: 6px 0 !important;
+        opacity: 0.5;
+        transition: all 0.15s;
+    }
+    .jerry-past-del .stButton button:hover {
+        color: #fca5a5 !important;
+        border-color: rgba(252, 165, 165, 0.4) !important;
+        background: rgba(252, 165, 165, 0.06) !important;
+        opacity: 1;
+    }
+
+    /* Legacy side-card class (kept for any remaining references) */
     .jerry-side-card {
         background: var(--glass-bg);
         border: var(--glass-border);
@@ -669,7 +719,9 @@ THEME_CSS = """
         line-height: 1.4;
     }
 
-    /* Streamlit widget overrides inside the side card */
+    /* Streamlit widget overrides inside any side card (incl. bordered containers) */
+    [data-testid="stVerticalBlockBorderWrapper"] .stSelectbox label,
+    [data-testid="stVerticalBlockBorderWrapper"] .stRadio label,
     .jerry-side-card .stSelectbox label,
     .jerry-side-card .stRadio label {
         font-size: 0.72rem !important;
@@ -933,263 +985,270 @@ def _render_past_chats() -> None:
     can tell at a glance whether persistent history is enabled and whether
     they have any saved conversations yet.
     """
-    # Card header — always visible
-    st.markdown(
-        '<div class="jerry-side-card"><div class="jerry-side-title">'
-        '<i class="fa-solid fa-clock-rotate-left"></i><span>Past chats</span></div>',
-        unsafe_allow_html=True,
-    )
-
-    # State 1: chat_history module didn't even import (no psycopg2)
-    if _chat_history is None:
+    with st.container(border=True):
+        # Card header — always visible
         st.markdown(
-            '<div class="jerry-side-hint">'
-            'Chat-history module unavailable — `psycopg2-binary` may not be '
-            'installed in this deployment. Check requirements.txt and reboot '
-            'the Streamlit Cloud app.'
-            '</div></div>',
+            '<div class="jerry-side-title">'
+            '<i class="fa-solid fa-clock-rotate-left"></i><span>Past chats</span></div>',
             unsafe_allow_html=True,
         )
-        return
 
-    # State 2: configured-side checks
-    if not _chat_history.is_configured():
-        st.markdown(
-            '<div class="jerry-side-hint">'
-            'Cross-session history requires <code>JERRY_GPT_DB_URL</code> in '
-            'Streamlit Cloud secrets. Without it, your chat resets every '
-            'page reload. Ask the admin to enable.'
-            '</div></div>',
-            unsafe_allow_html=True,
-        )
-        return
+        # State 1: chat_history module didn't even import (no psycopg2)
+        if _chat_history is None:
+            st.markdown(
+                '<div class="jerry-side-hint">'
+                'Chat-history module unavailable — `psycopg2-binary` may not be '
+                'installed in this deployment. Check requirements.txt and reboot '
+                'the Streamlit Cloud app.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            return
 
-    user_email = st.session_state.get("user_email", "") or ""
-    user_name = st.session_state.get("user_name", "") or ""
-    db_key = user_email or user_name
-    if not db_key:
-        st.markdown(
-            '<div class="jerry-side-hint">'
-            'No user identifier — log in first to see saved chats.'
-            '</div></div>',
-            unsafe_allow_html=True,
-        )
-        return
+        # State 2: configured-side checks
+        if not _chat_history.is_configured():
+            st.markdown(
+                '<div class="jerry-side-hint">'
+                'Cross-session history requires <code>JERRY_GPT_DB_URL</code> in '
+                'Streamlit Cloud secrets. Without it, your chat resets every '
+                'page reload. Ask the admin to enable.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            return
 
-    # Try to load
-    try:
-        sessions = _chat_history.list_past_sessions(db_key, limit=20)
-        load_error = None
-    except Exception as e:
-        sessions = []
-        load_error = f"{type(e).__name__}: {e}"
+        user_email = st.session_state.get("user_email", "") or ""
+        user_name = st.session_state.get("user_name", "") or ""
+        db_key = user_email or user_name
+        if not db_key:
+            st.markdown(
+                '<div class="jerry-side-hint">'
+                'No user identifier — log in first to see saved chats.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            return
 
-    # State 3: load itself failed (DB unreachable, auth wrong, etc.)
-    if load_error:
-        st.markdown(
-            f'<div class="jerry-side-hint jerry-side-hint-err">'
-            f'Could not load past chats — {load_error[:140]}. Check Streamlit '
-            f'Cloud logs for <code>[JERRY_GPT_DB_ERROR]</code>.'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    # State 4: configured + reachable + zero rows yet
-    if not sessions:
-        st.markdown(
-            '<div class="jerry-side-hint jerry-side-hint-ok">'
-            '✓ History is enabled. Your past conversations will appear here '
-            'once you send your first message.'
-            '</div></div>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    # State 5: render the list
-    current_session = st.session_state.get("jerry_gpt_session_id", "")
-
-    for sess in sessions:
-        sess_id = sess.get("session_id", "")
-        first_q = (sess.get("first_question") or "").strip() or "(empty session)"
-        if len(first_q) > 38:
-            first_q = first_q[:38] + "…"
-        msg_count = sess.get("message_count", 0)
-        started_at = sess.get("started_at")
-        # Postgres TIMESTAMPTZ → Python datetime (timezone-aware). Display
-        # in China time to match the audit log convention.
+        # Try to load
         try:
-            from datetime import timedelta, timezone as _tz
-            cn = _tz(timedelta(hours=8))
-            local = started_at.astimezone(cn) if started_at else None
-            date_str = local.strftime("%b %d %H:%M") if local else "—"
-        except Exception:
-            date_str = "—"
+            sessions = _chat_history.list_past_sessions(db_key, limit=20)
+            load_error = None
+        except Exception as e:
+            sessions = []
+            load_error = f"{type(e).__name__}: {e}"
 
-        is_current = sess_id == current_session
-        prefix = "▸ " if is_current else ""
-        label = f"{prefix}{date_str} · {msg_count}\n{first_q}"
+        # State 3: load itself failed (DB unreachable, auth wrong, etc.)
+        if load_error:
+            st.markdown(
+                f'<div class="jerry-side-hint jerry-side-hint-err">'
+                f'Could not load past chats — {load_error[:140]}. Check Streamlit '
+                f'Cloud logs for <code>[JERRY_GPT_DB_ERROR]</code>.'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            return
 
-        col_load, col_del = st.columns([5, 1], gap="small")
-        with col_load:
-            if st.button(
-                label,
-                key=f"past_chat_{sess_id}",
-                use_container_width=True,
-                disabled=is_current,
-            ):
-                try:
-                    loaded = _chat_history.load_session_by_id(db_key, sess_id)
-                    if loaded:
-                        st.session_state["jerry_gpt_history"] = loaded
-                        st.session_state["jerry_gpt_session_id"] = sess_id
+        # State 4: configured + reachable + zero rows yet
+        if not sessions:
+            st.markdown(
+                '<div class="jerry-side-hint jerry-side-hint-ok">'
+                '✓ History is enabled. Your past conversations will appear here '
+                'once you send your first message.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+        # State 5: render the list
+        current_session = st.session_state.get("jerry_gpt_session_id", "")
+
+        for sess in sessions:
+            sess_id = sess.get("session_id", "")
+            first_q = (sess.get("first_question") or "").strip() or "(empty session)"
+            if len(first_q) > 36:
+                first_q = first_q[:36] + "…"
+            msg_count = sess.get("message_count", 0)
+            started_at = sess.get("started_at")
+            try:
+                from datetime import timedelta, timezone as _tz
+                cn = _tz(timedelta(hours=8))
+                local = started_at.astimezone(cn) if started_at else None
+                date_str = local.strftime("%b %d %H:%M") if local else "—"
+            except Exception:
+                date_str = "—"
+
+            is_current = sess_id == current_session
+            prefix = "▸ " if is_current else ""
+            label = f"{prefix}{date_str} · {msg_count} msgs\n{first_q}"
+
+            # Wrap the row in a styled div so CSS can target the trash button
+            # as a subtle icon-only control rather than a full pill button.
+            row_class = (
+                "jerry-past-row jerry-past-row-current"
+                if is_current else "jerry-past-row"
+            )
+            st.markdown(
+                f'<div class="{row_class}">', unsafe_allow_html=True
+            )
+            col_load, col_del = st.columns([6, 1], gap="small")
+            with col_load:
+                if st.button(
+                    label,
+                    key=f"past_chat_{sess_id}",
+                    use_container_width=True,
+                    disabled=is_current,
+                ):
+                    try:
+                        loaded = _chat_history.load_session_by_id(db_key, sess_id)
+                        if loaded:
+                            st.session_state["jerry_gpt_history"] = loaded
+                            st.session_state["jerry_gpt_session_id"] = sess_id
+                            st.rerun()
+                    except Exception as e:
+                        import sys as _sys
+                        print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
+                              f"{type(e).__name__}: {e}",
+                              file=_sys.stderr, flush=True)
+            with col_del:
+                st.markdown('<div class="jerry-past-del">', unsafe_allow_html=True)
+                if st.button(
+                    "✕",
+                    key=f"del_chat_{sess_id}",
+                    use_container_width=True,
+                    help="Delete this conversation",
+                ):
+                    try:
+                        _chat_history.delete_session(db_key, sess_id)
+                        if sess_id == current_session:
+                            st.session_state["jerry_gpt_history"] = []
+                            st.session_state["jerry_gpt_session_id"] = (
+                                _chat_history.new_session_id()
+                            )
                         st.rerun()
-                except Exception as e:
-                    import sys as _sys
-                    print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
-                          f"{type(e).__name__}: {e}",
-                          file=_sys.stderr, flush=True)
-        with col_del:
-            if st.button(
-                "🗑",
-                key=f"del_chat_{sess_id}",
-                use_container_width=True,
-                help="Delete this conversation permanently",
-            ):
-                try:
-                    _chat_history.delete_session(db_key, sess_id)
-                    # If we just deleted the currently-displayed session,
-                    # clear the in-memory chat too and start a fresh session
-                    # so the UI doesn't render rows that no longer exist
-                    if sess_id == current_session:
+                    except Exception as e:
+                        import sys as _sys
+                        print(f"[JERRY_GPT_DB_ERROR] delete session failed: "
+                              f"{type(e).__name__}: {e}",
+                              file=_sys.stderr, flush=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # --- Clear-all footer with confirm step -----------------------------
+        st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+        if st.session_state.get("_jerry_clear_all_pending"):
+            st.markdown(
+                '<div class="jerry-side-hint jerry-side-hint-err">'
+                '⚠️ Delete ALL your past conversations? This cannot be undone.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            c_yes, c_no = st.columns(2, gap="small")
+            with c_yes:
+                if st.button(
+                    "Yes, delete all",
+                    key="confirm_clear_all_chats",
+                    use_container_width=True,
+                ):
+                    try:
+                        _chat_history.delete_all_sessions(db_key)
                         st.session_state["jerry_gpt_history"] = []
                         st.session_state["jerry_gpt_session_id"] = (
                             _chat_history.new_session_id()
                         )
+                    except Exception as e:
+                        import sys as _sys
+                        print(f"[JERRY_GPT_DB_ERROR] clear-all failed: "
+                              f"{type(e).__name__}: {e}",
+                              file=_sys.stderr, flush=True)
+                    st.session_state.pop("_jerry_clear_all_pending", None)
                     st.rerun()
-                except Exception as e:
-                    import sys as _sys
-                    print(f"[JERRY_GPT_DB_ERROR] delete session failed: "
-                          f"{type(e).__name__}: {e}",
-                          file=_sys.stderr, flush=True)
-
-    # --- Clear-all footer with confirm step ---------------------------------
-    st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
-    if st.session_state.get("_jerry_clear_all_pending"):
-        st.markdown(
-            '<div class="jerry-side-hint jerry-side-hint-err">'
-            '⚠️ Delete ALL your past conversations? This cannot be undone.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        c_yes, c_no = st.columns(2, gap="small")
-        with c_yes:
+            with c_no:
+                if st.button(
+                    "Cancel",
+                    key="cancel_clear_all_chats",
+                    use_container_width=True,
+                ):
+                    st.session_state.pop("_jerry_clear_all_pending", None)
+                    st.rerun()
+        else:
             if st.button(
-                "Yes, delete all",
-                key="confirm_clear_all_chats",
+                "Clear all history",
+                key="clear_all_chats",
                 use_container_width=True,
+                help="Permanently delete ALL your saved conversations",
             ):
-                try:
-                    _chat_history.delete_all_sessions(db_key)
-                    st.session_state["jerry_gpt_history"] = []
-                    st.session_state["jerry_gpt_session_id"] = (
-                        _chat_history.new_session_id()
-                    )
-                except Exception as e:
-                    import sys as _sys
-                    print(f"[JERRY_GPT_DB_ERROR] clear-all failed: "
-                          f"{type(e).__name__}: {e}",
-                          file=_sys.stderr, flush=True)
-                st.session_state.pop("_jerry_clear_all_pending", None)
+                st.session_state["_jerry_clear_all_pending"] = True
                 st.rerun()
-        with c_no:
-            if st.button(
-                "Cancel",
-                key="cancel_clear_all_chats",
-                use_container_width=True,
-            ):
-                st.session_state.pop("_jerry_clear_all_pending", None)
-                st.rerun()
-    else:
-        if st.button(
-            "🗑 Clear all history",
-            key="clear_all_chats",
-            use_container_width=True,
-            help="Permanently delete ALL your saved conversations",
-        ):
-            st.session_state["_jerry_clear_all_pending"] = True
-            st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_side_panel() -> None:
-    """Right column: model selector, response length, cumulative stats."""
-    # --- Settings card ---
-    st.markdown(
-        '<div class="jerry-side-card"><div class="jerry-side-title">'
-        '<i class="fa-solid fa-sliders"></i><span>Settings</span></div>',
-        unsafe_allow_html=True,
-    )
+    """Right column: settings (model + length) and cumulative session usage.
 
-    # Model selector — preserves choice across reruns via session_state key
-    current_model = st.session_state.get("jerry_gpt_model", DEFAULT_MODEL)
-    current_label = MODEL_ID_TO_LABEL.get(current_model, list(MODEL_OPTIONS.keys())[0])
-    model_labels = list(MODEL_OPTIONS.keys())
-    selected_label = st.selectbox(
-        "Model",
-        model_labels,
-        index=model_labels.index(current_label),
-        key="jerry_model_selectbox",
-    )
-    st.session_state["jerry_gpt_model"] = MODEL_OPTIONS[selected_label]
+    Each card uses st.container(border=True) so widgets render INSIDE the
+    bordered area — the older approach of opening a markdown <div> didn't
+    work because Streamlit renders each widget in its own DOM container,
+    sibling to the markdown HTML rather than nested in it.
+    """
+    # --- Settings card (model + length INSIDE the bordered container) ---
+    with st.container(border=True):
+        st.markdown(
+            '<div class="jerry-side-title">'
+            '<i class="fa-solid fa-sliders"></i><span>Settings</span></div>',
+            unsafe_allow_html=True,
+        )
 
-    # Length selector
-    length_keys = list(LENGTH_OPTIONS.keys())
-    current_length = st.session_state.get("jerry_gpt_length", "Medium")
-    selected_length = st.radio(
-        "Response length",
-        length_keys,
-        index=length_keys.index(current_length),
-        key="jerry_length_radio",
-        horizontal=True,
-    )
-    st.session_state["jerry_gpt_length"] = selected_length
+        # Model selector — preserves choice across reruns via session_state key
+        current_model = st.session_state.get("jerry_gpt_model", DEFAULT_MODEL)
+        current_label = MODEL_ID_TO_LABEL.get(current_model, list(MODEL_OPTIONS.keys())[0])
+        model_labels = list(MODEL_OPTIONS.keys())
+        selected_label = st.selectbox(
+            "Model",
+            model_labels,
+            index=model_labels.index(current_label),
+            key="jerry_model_selectbox",
+        )
+        st.session_state["jerry_gpt_model"] = MODEL_OPTIONS[selected_label]
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # --- Past chats card ---
-    _render_past_chats()
+        # Length selector
+        length_keys = list(LENGTH_OPTIONS.keys())
+        current_length = st.session_state.get("jerry_gpt_length", "Medium")
+        selected_length = st.radio(
+            "Response length",
+            length_keys,
+            index=length_keys.index(current_length),
+            key="jerry_length_radio",
+            horizontal=True,
+        )
+        st.session_state["jerry_gpt_length"] = selected_length
 
     # --- Stats card ---
-    usage = st.session_state["jerry_gpt_usage"]
-    total_tokens = (
-        usage["input_tokens"]
-        + usage["output_tokens"]
-        + usage["cache_read_tokens"]
-        + usage["cache_creation_tokens"]
-    )
-    st.markdown(
-        f"""
-        <div class="jerry-side-card">
-          <div class="jerry-side-title">
-            <i class="fa-solid fa-chart-line"></i><span>Session usage</span>
-          </div>
-          <div class="jerry-stat-row"><span>Messages</span><span class="val">{usage['message_count']}</span></div>
-          <div class="jerry-stat-row"><span>Input tokens</span><span class="val">{usage['input_tokens']:,}</span></div>
-          <div class="jerry-stat-row"><span>Output tokens</span><span class="val">{usage['output_tokens']:,}</span></div>
-          <div class="jerry-stat-row"><span>Cache reads</span><span class="val">{usage['cache_read_tokens']:,}</span></div>
-          <div class="jerry-stat-row"><span>Cache writes</span><span class="val">{usage['cache_creation_tokens']:,}</span></div>
-          <div class="jerry-stat-row"><span>Total tokens</span><span class="val">{total_tokens:,}</span></div>
-          <div class="jerry-stat-hint">Cache reads represent prompt-cache hits — the knowledge base loads once per model, then most input tokens come from cache on follow-up turns.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        usage = st.session_state["jerry_gpt_usage"]
+        total_tokens = (
+            usage["input_tokens"]
+            + usage["output_tokens"]
+            + usage["cache_read_tokens"]
+            + usage["cache_creation_tokens"]
+        )
+        st.markdown(
+            f"""
+            <div class="jerry-side-title">
+                <i class="fa-solid fa-chart-line"></i><span>Session usage</span>
+            </div>
+            <div class="jerry-stat-row"><span>Messages</span><span class="val">{usage['message_count']}</span></div>
+            <div class="jerry-stat-row"><span>Input tokens</span><span class="val">{usage['input_tokens']:,}</span></div>
+            <div class="jerry-stat-row"><span>Output tokens</span><span class="val">{usage['output_tokens']:,}</span></div>
+            <div class="jerry-stat-row"><span>Cache reads</span><span class="val">{usage['cache_read_tokens']:,}</span></div>
+            <div class="jerry-stat-row"><span>Cache writes</span><span class="val">{usage['cache_creation_tokens']:,}</span></div>
+            <div class="jerry-stat-row"><span>Total tokens</span><span class="val">{total_tokens:,}</span></div>
+            <div class="jerry-stat-hint">Cache reads represent prompt-cache hits — the knowledge base loads once per model, then most input tokens come from cache on follow-up turns.</div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    if st.button("Reset stats", use_container_width=True, key="reset_stats_btn"):
-        st.session_state["jerry_gpt_usage"] = dict(EMPTY_USAGE)
-        st.rerun()
+        if st.button("Reset stats", use_container_width=True, key="reset_stats_btn"):
+            st.session_state["jerry_gpt_usage"] = dict(EMPTY_USAGE)
+            st.rerun()
 
 
 def _update_usage(model_id: str, usage_obj) -> None:
@@ -1273,10 +1332,13 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         unsafe_allow_html=True,
     )
 
-    # --- Two-column body: main chat + side panel ---
-    col_main, col_side = st.columns([3, 1], gap="large")
+    # --- Three-column body: past chats (left) | main chat | settings + usage (right)
+    col_left, col_main, col_right = st.columns([1.1, 3, 1.1], gap="large")
 
-    with col_side:
+    with col_left:
+        _render_past_chats()
+
+    with col_right:
         _render_side_panel()
 
     with col_main:
