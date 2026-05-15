@@ -568,6 +568,31 @@ THEME_CSS = """
         font-weight: 600;
     }
 
+    /* Past chats — empty/error states */
+    .jerry-side-hint {
+        font-size: 0.75rem;
+        color: var(--text-grey);
+        line-height: 1.55;
+        padding: 4px 2px;
+    }
+    .jerry-side-hint code {
+        background: rgba(0,0,0,0.35);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        color: var(--primary-green);
+    }
+    .jerry-side-hint-ok {
+        color: var(--text-grey);
+    }
+    .jerry-side-hint-ok::first-letter {
+        color: var(--primary-green);
+        font-weight: 700;
+    }
+    .jerry-side-hint-err {
+        color: #fca5a5;
+    }
+
     /* Past chats button styling — Streamlit native st.button overrides */
     .jerry-side-card .stButton button {
         text-align: left !important;
@@ -886,30 +911,85 @@ def _render_past_chats() -> None:
     swaps the current chat into that session. The currently-active session
     is shown disabled with a chevron marker.
 
-    No-ops silently if chat_history isn't configured or the user has no
-    past sessions yet.
+    The card is ALWAYS rendered (with state-appropriate content) so users
+    can tell at a glance whether persistent history is enabled and whether
+    they have any saved conversations yet.
     """
-    if _chat_history is None or not _chat_history.is_configured():
-        return
-    user_email = st.session_state.get("user_email", "") or ""
-    user_name = st.session_state.get("user_name", "") or ""
-    db_key = user_email or user_name
-    if not db_key:
-        return
-    try:
-        sessions = _chat_history.list_past_sessions(db_key, limit=20)
-    except Exception:
-        sessions = []
-    if not sessions:
-        return
-
-    current_session = st.session_state.get("jerry_gpt_session_id", "")
-
+    # Card header — always visible
     st.markdown(
         '<div class="jerry-side-card"><div class="jerry-side-title">'
         '<i class="fa-solid fa-clock-rotate-left"></i><span>Past chats</span></div>',
         unsafe_allow_html=True,
     )
+
+    # State 1: chat_history module didn't even import (no psycopg2)
+    if _chat_history is None:
+        st.markdown(
+            '<div class="jerry-side-hint">'
+            'Chat-history module unavailable — `psycopg2-binary` may not be '
+            'installed in this deployment. Check requirements.txt and reboot '
+            'the Streamlit Cloud app.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # State 2: configured-side checks
+    if not _chat_history.is_configured():
+        st.markdown(
+            '<div class="jerry-side-hint">'
+            'Cross-session history requires <code>JERRY_GPT_DB_URL</code> in '
+            'Streamlit Cloud secrets. Without it, your chat resets every '
+            'page reload. Ask the admin to enable.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    user_email = st.session_state.get("user_email", "") or ""
+    user_name = st.session_state.get("user_name", "") or ""
+    db_key = user_email or user_name
+    if not db_key:
+        st.markdown(
+            '<div class="jerry-side-hint">'
+            'No user identifier — log in first to see saved chats.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # Try to load
+    try:
+        sessions = _chat_history.list_past_sessions(db_key, limit=20)
+        load_error = None
+    except Exception as e:
+        sessions = []
+        load_error = f"{type(e).__name__}: {e}"
+
+    # State 3: load itself failed (DB unreachable, auth wrong, etc.)
+    if load_error:
+        st.markdown(
+            f'<div class="jerry-side-hint jerry-side-hint-err">'
+            f'Could not load past chats — {load_error[:140]}. Check Streamlit '
+            f'Cloud logs for <code>[JERRY_GPT_DB_ERROR]</code>.'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # State 4: configured + reachable + zero rows yet
+    if not sessions:
+        st.markdown(
+            '<div class="jerry-side-hint jerry-side-hint-ok">'
+            '✓ History is enabled. Your past conversations will appear here '
+            'once you send your first message.'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # State 5: render the list
+    current_session = st.session_state.get("jerry_gpt_session_id", "")
 
     for sess in sessions:
         sess_id = sess.get("session_id", "")
