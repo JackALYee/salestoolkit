@@ -1434,17 +1434,52 @@ def _submit_message(
                 ]
 
             placeholder.markdown(full_text)
-            _render_copy_button(full_text)
+        except Exception as exc:
+            # Streaming itself failed — roll back the user turn so the
+            # retry works, surface the error in the chat bubble.
+            history.pop()
+            placeholder.markdown(
+                f"<div class='jerry-error'><strong>API error.</strong><br>{type(exc).__name__}: {exc}</div>",
+                unsafe_allow_html=True,
+            )
+            return
 
-            # Build a single accumulated usage object for downstream consumers.
+        # ── STREAMING SUCCEEDED ─────────────────────────────────────────────
+        # PERSIST FIRST. Everything below this point is non-critical
+        # post-work (copy button, side-panel stats, audit log). A failure
+        # in any of them must NOT cause us to lose the assistant message
+        # — that's the bug that caused responses to "disappear" after
+        # ~6 turns and silently skip the audit log. We add to history
+        # BEFORE the post-work, and wrap each post-work step in its own
+        # try/except with a stderr diagnostic.
+        history.append({"role": "assistant", "content": full_text})
+
+        try:
+            _render_copy_button(full_text)
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] copy_button failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
+
+        try:
             class _AccumulatedUsage:
                 input_tokens = total_input
                 output_tokens = total_output
                 cache_read_input_tokens = total_cache_read
                 cache_creation_input_tokens = total_cache_creation
-
             _update_usage(model, _AccumulatedUsage)
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] update_usage failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
 
+        try:
             if _usage_logger is not None:
                 _usage_logger.log_query(
                     question=text,
@@ -1457,12 +1492,10 @@ def _submit_message(
                     cache_read_tokens=total_cache_read,
                     cache_creation_tokens=total_cache_creation,
                 )
-        except Exception as exc:
-            history.pop()  # roll back user turn so retry works
-            placeholder.markdown(
-                f"<div class='jerry-error'><strong>API error.</strong><br>{type(exc).__name__}: {exc}</div>",
-                unsafe_allow_html=True,
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] log_query failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
             )
-            return
-
-    history.append({"role": "assistant", "content": full_text})
