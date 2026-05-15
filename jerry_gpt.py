@@ -23,6 +23,14 @@ try:
 except Exception:
     _usage_logger = None
 
+# Chat-history persistence — optional sibling module. Activates when
+# JERRY_GPT_DB_URL is configured. Never raises; failures degrade gracefully
+# to per-tab session_state behavior.
+try:
+    import chat_history as _chat_history
+except Exception:
+    _chat_history = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -789,7 +797,12 @@ def _render_copy_button(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _init_session_state() -> None:
-    """Create all the Jerry-GPT keys in session_state if missing."""
+    """Create all the Jerry-GPT keys in session_state if missing.
+
+    On first call of a Streamlit session, ALSO loads the user's most-recent
+    chat history from Postgres (if configured) — so the user picks up where
+    they left off across reloads, tabs, and devices.
+    """
     if "jerry_gpt_history" not in st.session_state:
         st.session_state["jerry_gpt_history"] = []
     if "jerry_gpt_model" not in st.session_state:
@@ -798,6 +811,37 @@ def _init_session_state() -> None:
         st.session_state["jerry_gpt_length"] = "Medium"
     if "jerry_gpt_usage" not in st.session_state:
         st.session_state["jerry_gpt_usage"] = dict(EMPTY_USAGE)
+    if "jerry_gpt_session_id" not in st.session_state:
+        st.session_state["jerry_gpt_session_id"] = None
+
+    # One-time history hydration from DB. Gated by _history_hydrated so we
+    # don't re-fetch on every rerun within the same Streamlit session.
+    if not st.session_state.get("_jerry_history_hydrated"):
+        st.session_state["_jerry_history_hydrated"] = True
+        if _chat_history is not None and _chat_history.is_configured():
+            user_email = st.session_state.get("user_email", "") or ""
+            user_name = st.session_state.get("user_name", "") or ""
+            # Prefer email, fall back to display name (easter-egg accounts)
+            db_key = user_email or user_name
+            if db_key:
+                try:
+                    loaded_history, loaded_session_id = _chat_history.load_recent_session(db_key)
+                    if loaded_history:
+                        st.session_state["jerry_gpt_history"] = loaded_history
+                        st.session_state["jerry_gpt_session_id"] = loaded_session_id
+                except Exception as e:
+                    import sys as _sys
+                    print(f"[JERRY_GPT_DB_ERROR] hydrate failed: "
+                          f"{type(e).__name__}: {e}",
+                          file=_sys.stderr, flush=True)
+
+    # Always make sure we have a session_id (new one if hydrate found nothing)
+    if not st.session_state.get("jerry_gpt_session_id"):
+        if _chat_history is not None:
+            st.session_state["jerry_gpt_session_id"] = _chat_history.new_session_id()
+        else:
+            import uuid as _uuid
+            st.session_state["jerry_gpt_session_id"] = f"local_{_uuid.uuid4().hex[:16]}"
 
 
 def _render_side_panel() -> None:
@@ -986,7 +1030,13 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         _col_a, _col_b = st.columns([6, 1])
         with _col_b:
             if st.button("🔄 New chat", use_container_width=True, disabled=not history, key="new_chat_btn"):
+                # Clear in-memory history AND assign a fresh session_id, so
+                # the next saved turn lands in a new conversation and
+                # subsequent loads pick up THIS empty session as the
+                # "most recent" instead of the old one.
                 st.session_state["jerry_gpt_history"] = []
+                if _chat_history is not None:
+                    st.session_state["jerry_gpt_session_id"] = _chat_history.new_session_id()
                 st.rerun()
 
         # Chat input (renders inline at bottom of col_main)
@@ -1453,6 +1503,45 @@ def _submit_message(
         # BEFORE the post-work, and wrap each post-work step in its own
         # try/except with a stderr diagnostic.
         history.append({"role": "assistant", "content": full_text})
+
+        # Persist this turn to Postgres so the user picks up where they
+        # left off on next reload / tab / device. Non-fatal — chat-history
+        # failures only mean the user loses cross-tab continuity, not the
+        # current turn.
+        try:
+            if _chat_history is not None and _chat_history.is_configured():
+                # Compute cost the same way usage_logger does, so the DB
+                # row stays in sync with the Sheets log
+                cost_usd = 0.0
+                if _usage_logger is not None:
+                    try:
+                        cost_usd = _usage_logger._estimate_cost_usd(
+                            model, total_input, total_output,
+                            total_cache_read, total_cache_creation,
+                        )
+                    except Exception:
+                        pass
+                _chat_history.save_turn(
+                    user_email=user_email or user_name,
+                    user_name=user_name,
+                    session_id=st.session_state.get("jerry_gpt_session_id", ""),
+                    user_message=text,
+                    assistant_message=full_text,
+                    model=model,
+                    length=length,
+                    input_tokens=total_input,
+                    output_tokens=total_output,
+                    cache_read_tokens=total_cache_read,
+                    cache_creation_tokens=total_cache_creation,
+                    cost_usd=cost_usd,
+                )
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] chat_history.save_turn failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
 
         try:
             _render_copy_button(full_text)
