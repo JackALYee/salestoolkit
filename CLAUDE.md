@@ -1,0 +1,98 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this app is
+
+A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Streamax Sales Toolkit** — internal tooling for the Trucking BU sales org. Entry point is `app.py`. The app combines a heavyweight HTML/JS UI (rendered inside `streamlit.components.v1.html`) with native Streamlit pages for the interactive features. SMTP-credential login gates access; a signed cookie keeps sessions alive across reloads.
+
+## Common commands
+
+```bash
+# Local development
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # then fill in real keys
+streamlit run app.py
+
+# Deploy
+git push origin main           # Streamlit Cloud auto-deploys from main
+
+# Roadmap scraper (separate venv — playwright is heavy, not a runtime dep)
+python3 -m venv .scrape_venv
+source .scrape_venv/bin/activate
+pip install playwright pdfplumber python-docx openpyxl python-pptx
+playwright install chromium
+python scrape_roadmap.py                # capture pages + downloads from the portal
+python scripts/distill_downloads.py     # re-distill _scrape_dump/downloads/ → 09_roadmap_documents.md
+```
+
+There are no tests or linters in this repo. `requirements.txt` is the only runtime dependency manifest; Streamlit Cloud installs from it automatically.
+
+## High-level architecture
+
+### Render pipeline — two paths in one app
+
+`app.py` checks `st.query_params["view"]` early and chooses between two completely different rendering strategies:
+
+1. **Default toolkit (no `?view=`)** — assembles a giant HTML string by concatenating `html_head` + the `content` HTML strings exported by each module (`streamaxpedia_app.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `dripmailer.py`, plus `email_tool_content` inline) + `html_tail`, then renders the whole thing through `components.html(..., height=1800, scrolling=True)`. Each module's `content` is a static HTML+JS string with no Python interactivity — navigation between tabs is pure client-side JavaScript inside the iframe.
+
+2. **`?view=jerry_gpt`** — bypasses the components.html assembly entirely and calls `jerry_gpt.render()` for a native Streamlit chat UI. This is the only way to embed live API-call interactivity, because Streamlit widgets can't live inside a `components.html` iframe.
+
+The launch button inside Streamaxpedia uses `<a target="_top" href="?view=jerry_gpt">` so the click escapes the iframe and navigates the parent frame, triggering a Streamlit rerun that picks up the query param. The same pattern is used for `?logout=1`.
+
+### Authentication and clearance — three layers
+
+1. **SMTP credential check** (`login.py`): user types `@streamax.com` email + password; `verify_streamax_credentials()` attempts SMTP-SSL login against `mail.streamax.com:465` as the auth check. Easter-egg shortcut accounts (`jerry_test`, `hekun_test`, etc.) bypass SMTP.
+
+2. **Cookie-based persistence** (`auth.py`): on successful login, `persist_login()` writes a signed cookie (`HMAC(user, expiry, AUTH_SECRET)`) via `extra-streamlit-components.CookieManager`. On every script run, `restore_session()` validates the cookie and rehydrates `st.session_state["authenticated"]`, `["user_name"]`, `["is_leadership"]`. Without this layer, every page reload or `?view=jerry_gpt` navigation forces re-login because Streamlit's session_state is per-WebSocket.
+
+3. **LEADERSHIP clearance** (`login.py`): `LEADERSHIP_EMAILS` is a frozenset of streamax.com addresses that may access Streamax-internal pricing inside Jerry GPT. `resolve_leadership()` and `resolve_special_relationship()` are case-insensitive lookups that also map easter-egg display names → canonical emails. `SPECIAL_RELATIONSHIPS` is a separate map (Jerry himself, Kun He, Rui Wang) that controls address form and one-time greetings — orthogonal to leadership.
+
+Important: the cookie manager has an async-cookie quirk. `extra_streamlit_components.CookieManager(key=...)` is a Streamlit widget and **cannot be wrapped in `@st.cache_resource`** (raises `CachedWidgetWarning`). It also **cannot be instantiated twice in the same run** with the same key. `auth.py` works around both by storing the manager in `st.session_state` and re-creating it once per run via `restore_session()` popping the stored marker. Anything that needs the manager later in the same run (e.g., `persist_login`) reuses the cached instance.
+
+### Jerry GPT — the chat subsystem
+
+`jerry_gpt.py` is its own self-contained subsystem (~1500 lines) that runs whenever `?view=jerry_gpt` is in the URL. Key concepts:
+
+**Knowledge base** lives in `jerry_gpt_knowledge/` as numbered markdown files. `_load_system_blocks()` reads every `*.md` file in lexicographic order, concatenates them, and returns a single Anthropic system-prompt block marked with `cache_control: ephemeral`. **Adding a new `.md` file to that directory automatically includes it** — no code change needed. The Streamaxpedia product database (`terminology_db.py`) is also pulled in via `_generate_streamaxpedia_knowledge()` at module load and appended to the same cached block.
+
+**Per-turn clearance block** is built fresh on every API call by `_build_clearance_block()` and appended **after** the cached knowledge block. This is critical: the big knowledge prefix stays cached across users (cheap), while the small clearance suffix varies per-request (user identity, leadership flag, first-turn greeting, special-relationship treatment). Cache hits stay high; per-user behavior stays correct.
+
+**Auto-continuation** in `_submit_message()`: each response is streamed inside a `while True:` loop. After streaming, if `final_message.stop_reason == "max_tokens"` (and we're under `_MAX_CONTINUATIONS = 3`), the partial response is appended as an assistant message and the loop re-streams. This uses Anthropic's assistant-prefill pattern — the model picks up exactly where it stopped, no "continue from where you left off" instruction needed. Token usage is accumulated across rounds for the audit log.
+
+**Anthropic prompt cache quirk** worth knowing: max 4 `cache_control` breakpoints per request. The knowledge base is a single block with one breakpoint. The clearance block deliberately has no cache_control so it doesn't consume a breakpoint and can vary freely.
+
+### Usage logging — two sinks, never raises
+
+`usage_logger.py` `log_query()` is called once per successful Jerry response. It writes to two sinks:
+
+1. **stdout/stderr** (always): JSON-prefixed line `[JERRY_GPT_LOG] {...}` — visible in Streamlit Cloud's Manage app → Logs.
+2. **Google Sheets** (optional): activates only when `st.secrets["gcp_service_account"]` AND `JERRY_GPT_SHEET_ID` are configured. Auto-creates the worksheet tab and header row on first write. The header schema is the `HEADERS` constant — when changing it, existing rows in the sheet will be misaligned and need manual cleanup.
+
+The `_is_pricing_sensitive()` heuristic flags questions matching pricing-related keywords (English + Chinese). Combined with the `is_leadership` column, this gives an audit view: `is_leadership=FALSE AND sensitive_flagged=TRUE` rows are attempted-pricing-access events worth reviewing.
+
+Timestamps are in China Standard Time (UTC+8, fixed offset — China doesn't observe DST). The column is named `timestamp_cn` not `timestamp_utc`.
+
+### Roadmap scraper
+
+`scrape_roadmap.py` runs separately from the deployed app — it's a local Mac-only tool that uses Playwright to log into the internal version portal at `http://10.20.51.20:5173` (Streamax intranet only) and pulls roadmap pages + downloadable documents. Key design notes:
+
+- The 8 sidebar sections are walked by **clicking** the visible Chinese labels (e.g., `路线规划`), not by guessing URLs — the SPA's actual routes are followed implicitly.
+- Document downloads aren't `<a href>` links — they're JavaScript cloud-download icons. `_harvest_docs_center()` clicks each category tab, expands all model rows, then clicks every element with `[title*="下载"]` etc. Each click is wrapped in `with page.expect_download() as dl_info:` which **consumes the download event** — so `_save_download()` must be called explicitly inside the with-block, not via the context-level listener (which never fires inside an `expect_download` scope).
+- Raw outputs go to `_scrape_dump/` (gitignored). Distilled markdown goes to `jerry_gpt_knowledge/08_roadmap_portal.md` (pages) and `09_roadmap_documents.md` (extracted DOCX/XLSX/PDF/PPTX text). Jerry's loader auto-picks these up on next deploy.
+
+### Module conventions
+
+Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.py` file and exports a single module-level string named `content` containing the HTML/JS for that tab. `streamaxpedia_app.py` is exceptional in two ways: it builds `content` programmatically from `terminology_db.py` data, and it has its own sub-navigation (Search Engine / Product Matrix / Jerry GPT launch card) inside the iframe.
+
+`terminology_db.py` is the single source of truth for product terms (114+ entries) and validated product architectures (70+ entries). It's imported by both `streamaxpedia_app.py` (for the toolkit UI) and `jerry_gpt.py` (so Jerry knows every SKU + the download URLs for spec sheets/manuals). Updating an entry there propagates to both places on next deploy.
+
+## Required secrets
+
+`st.secrets` (or `.streamlit/secrets.toml` locally):
+
+- `ANTHROPIC_API_KEY` — required for Jerry GPT
+- `JERRY_MODEL` — optional, defaults to `claude-opus-4-7`
+- `AUTH_SECRET` — required for session cookie signing (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`)
+- `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging
+
+If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
