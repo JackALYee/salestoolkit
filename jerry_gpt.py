@@ -98,6 +98,24 @@ def _find_jerry_avatar() -> str:
 
 
 JERRY_AVATAR = _find_jerry_avatar()
+
+
+def _md_safe(text: str) -> str:
+    """Escape characters that Streamlit's markdown renderer treats specially
+    but Jerry's content doesn't intend that way.
+
+    Currently only `$` — Streamlit has built-in MathJax support and treats
+    paired `$...$` as inline LaTeX. Jerry writes legitimate dollar amounts
+    ("$50–70 from Jimilab... $200 on AD Plus"), which get falsely paired
+    and rendered as italic-serif math expressions. Escaping `$` to `\\$`
+    forces literal-dollar rendering.
+
+    Other markdown syntax (**, *, _, #, |, ```) IS intentional in Jerry's
+    output — bold, headers, tables — so we don't touch those.
+    """
+    if not text:
+        return text
+    return text.replace("$", r"\$")
 USER_AVATAR = "🧑"
 
 
@@ -1232,7 +1250,7 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         # Chat history
         for msg in history:
             with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
-                st.markdown(msg["content"])
+                st.markdown(_md_safe(msg["content"]))
                 if msg["role"] == "assistant":
                     _render_copy_button(msg["content"])
 
@@ -1581,7 +1599,7 @@ def _submit_message(
 
     # Render user turn immediately so it appears during streaming
     with st.chat_message("user", avatar=USER_AVATAR):
-        st.markdown(text)
+        st.markdown(_md_safe(text))
 
     try:
         from anthropic import Anthropic
@@ -1667,7 +1685,7 @@ def _submit_message(
                 ) as stream:
                     for chunk in stream.text_stream:
                         full_text += chunk
-                        placeholder.markdown(full_text + "▊")
+                        placeholder.markdown(_md_safe(full_text) + "▊")
                     final_message = stream.get_final_message()
 
                 u = final_message.usage
@@ -1693,7 +1711,7 @@ def _submit_message(
                     {"role": "assistant", "content": full_text}
                 ]
 
-            placeholder.markdown(full_text)
+            placeholder.markdown(_md_safe(full_text))
         except Exception as exc:
             # Streaming itself failed — roll back the user turn so the
             # retry works, surface the error in the chat bubble.
