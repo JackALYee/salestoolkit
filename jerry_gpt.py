@@ -1030,23 +1030,95 @@ def _render_past_chats() -> None:
         prefix = "▸ " if is_current else ""
         label = f"{prefix}{date_str} · {msg_count}\n{first_q}"
 
-        if st.button(
-            label,
-            key=f"past_chat_{sess_id}",
-            use_container_width=True,
-            disabled=is_current,
-        ):
-            try:
-                loaded = _chat_history.load_session_by_id(db_key, sess_id)
-                if loaded:
-                    st.session_state["jerry_gpt_history"] = loaded
-                    st.session_state["jerry_gpt_session_id"] = sess_id
+        col_load, col_del = st.columns([5, 1], gap="small")
+        with col_load:
+            if st.button(
+                label,
+                key=f"past_chat_{sess_id}",
+                use_container_width=True,
+                disabled=is_current,
+            ):
+                try:
+                    loaded = _chat_history.load_session_by_id(db_key, sess_id)
+                    if loaded:
+                        st.session_state["jerry_gpt_history"] = loaded
+                        st.session_state["jerry_gpt_session_id"] = sess_id
+                        st.rerun()
+                except Exception as e:
+                    import sys as _sys
+                    print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
+                          f"{type(e).__name__}: {e}",
+                          file=_sys.stderr, flush=True)
+        with col_del:
+            if st.button(
+                "🗑",
+                key=f"del_chat_{sess_id}",
+                use_container_width=True,
+                help="Delete this conversation permanently",
+            ):
+                try:
+                    _chat_history.delete_session(db_key, sess_id)
+                    # If we just deleted the currently-displayed session,
+                    # clear the in-memory chat too and start a fresh session
+                    # so the UI doesn't render rows that no longer exist
+                    if sess_id == current_session:
+                        st.session_state["jerry_gpt_history"] = []
+                        st.session_state["jerry_gpt_session_id"] = (
+                            _chat_history.new_session_id()
+                        )
                     st.rerun()
-            except Exception as e:
-                import sys as _sys
-                print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
-                      f"{type(e).__name__}: {e}",
-                      file=_sys.stderr, flush=True)
+                except Exception as e:
+                    import sys as _sys
+                    print(f"[JERRY_GPT_DB_ERROR] delete session failed: "
+                          f"{type(e).__name__}: {e}",
+                          file=_sys.stderr, flush=True)
+
+    # --- Clear-all footer with confirm step ---------------------------------
+    st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
+    if st.session_state.get("_jerry_clear_all_pending"):
+        st.markdown(
+            '<div class="jerry-side-hint jerry-side-hint-err">'
+            '⚠️ Delete ALL your past conversations? This cannot be undone.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        c_yes, c_no = st.columns(2, gap="small")
+        with c_yes:
+            if st.button(
+                "Yes, delete all",
+                key="confirm_clear_all_chats",
+                use_container_width=True,
+            ):
+                try:
+                    _chat_history.delete_all_sessions(db_key)
+                    st.session_state["jerry_gpt_history"] = []
+                    st.session_state["jerry_gpt_session_id"] = (
+                        _chat_history.new_session_id()
+                    )
+                except Exception as e:
+                    import sys as _sys
+                    print(f"[JERRY_GPT_DB_ERROR] clear-all failed: "
+                          f"{type(e).__name__}: {e}",
+                          file=_sys.stderr, flush=True)
+                st.session_state.pop("_jerry_clear_all_pending", None)
+                st.rerun()
+        with c_no:
+            if st.button(
+                "Cancel",
+                key="cancel_clear_all_chats",
+                use_container_width=True,
+            ):
+                st.session_state.pop("_jerry_clear_all_pending", None)
+                st.rerun()
+    else:
+        if st.button(
+            "🗑 Clear all history",
+            key="clear_all_chats",
+            use_container_width=True,
+            help="Permanently delete ALL your saved conversations",
+        ):
+            st.session_state["_jerry_clear_all_pending"] = True
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
