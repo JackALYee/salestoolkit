@@ -15,3 +15,9 @@ venv/
 # Environment files
 .env
 .env.local
+
+# Roadmap scraper — local debug dumps + scraper venv. The distilled
+# markdown in jerry_gpt_knowledge/ IS committed; raw dumps are not.
+_scrape_dump/
+.scrape_venv/
+scrape_log.txt
