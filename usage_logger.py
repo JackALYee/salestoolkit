@@ -50,7 +50,43 @@ HEADERS = [
     "output_tokens",
     "cache_read_tokens",
     "cache_creation_tokens",
+    "cost_usd",            # estimated API cost (USD) — see PRICING below
 ]
+
+
+# --- Per-million-token pricing for cost estimation (USD) ---------------------
+# Reflects Anthropic public pricing as of 2026. Treat as approximate — actual
+# billing comes from Anthropic itself, this is for in-Sheet analytics so you
+# can sum and pivot. Cache-read pricing is roughly 10% of fresh input pricing
+# (the cache-hit discount). Cache-creation is roughly 1.25x fresh input.
+PRICING = {
+    "claude-opus-4-7":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
+    "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
+    "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
+}
+# Fallback for any model not listed above — uses Sonnet rates as a middle-of-
+# the-road estimate so the column is never blank.
+_PRICING_FALLBACK = PRICING["claude-sonnet-4-6"]
+
+
+def _estimate_cost_usd(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    cache_read_tokens: int,
+    cache_creation_tokens: int,
+) -> float:
+    """Estimate per-request cost in USD. Returns a float rounded to 6 decimals
+    so Sheets stores enough precision to capture sub-cent values and still
+    SUMs cleanly. Apply currency formatting in Sheets if you want a $ prefix."""
+    rates = PRICING.get(model, _PRICING_FALLBACK)
+    total = (
+        (input_tokens or 0) * rates["input"]
+        + (output_tokens or 0) * rates["output"]
+        + (cache_read_tokens or 0) * rates["cache_read"]
+        + (cache_creation_tokens or 0) * rates["cache_creation"]
+    ) / 1_000_000.0
+    return round(total, 6)
 
 
 # --- Pricing-sensitive question heuristic --------------------------------
@@ -127,6 +163,13 @@ def log_query(
             "output_tokens": int(output_tokens or 0),
             "cache_read_tokens": int(cache_read_tokens or 0),
             "cache_creation_tokens": int(cache_creation_tokens or 0),
+            "cost_usd": _estimate_cost_usd(
+                model,
+                int(input_tokens or 0),
+                int(output_tokens or 0),
+                int(cache_read_tokens or 0),
+                int(cache_creation_tokens or 0),
+            ),
         }
     except Exception as exc:
         print(f"[JERRY_GPT_LOG_ERROR] record build failed: {exc}", file=sys.stderr, flush=True)
