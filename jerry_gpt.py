@@ -1308,6 +1308,19 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
     # --- Session state ---
     _init_session_state()
     history: list[dict] = st.session_state["jerry_gpt_history"]
+
+    # Sync canonical model/length from the side-panel widget keys BEFORE we
+    # read them for the header. Streamlit runs top-to-bottom: without this
+    # sync, changing the selectbox would only update jerry_gpt_model after
+    # _render_side_panel() runs (below the header), so the header would
+    # display the previous model until the next rerun.
+    sel_label = st.session_state.get("jerry_model_selectbox")
+    if sel_label in MODEL_OPTIONS:
+        st.session_state["jerry_gpt_model"] = MODEL_OPTIONS[sel_label]
+    sel_len = st.session_state.get("jerry_length_radio")
+    if sel_len in LENGTH_OPTIONS:
+        st.session_state["jerry_gpt_length"] = sel_len
+
     model = st.session_state["jerry_gpt_model"]
     length = st.session_state["jerry_gpt_length"]
 
