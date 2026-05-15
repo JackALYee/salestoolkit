@@ -277,6 +277,36 @@ def _save_turn_inner(
     return True
 
 
+def load_session_by_id(user_email: str, session_id: str) -> list[dict]:
+    """Return the full message history for ONE specific past session.
+
+    Used when the user clicks a row in the "Past chats" sidebar to switch
+    back to that conversation. Returns [] if not configured / not found.
+    """
+    if not (user_email and session_id and is_configured()):
+        return []
+    conn = _get_connection()
+    if conn is None:
+        return []
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT role, content FROM jerry_gpt_chats
+                WHERE user_email = %s AND session_id = %s
+                ORDER BY created_at ASC, id ASC
+                LIMIT %s
+                """,
+                (user_email, session_id, MAX_HISTORY_LOAD),
+            )
+            rows = cur.fetchall()
+        return [{"role": r["role"], "content": r["content"]} for r in rows]
+    except Exception as e:
+        print(f"[JERRY_GPT_DB_ERROR] load_session_by_id failed: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        return []
+
+
 def list_past_sessions(user_email: str, limit: int = 20) -> list[dict]:
     """Summaries of the user's past sessions, most recent first.
 

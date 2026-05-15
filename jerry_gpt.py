@@ -543,6 +543,43 @@ THEME_CSS = """
         margin: 0 auto; line-height: 1.6;
     }
 
+    /* "Continuing your conversation" banner at top of chat history */
+    .jerry-continuing-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        margin-bottom: 18px;
+        background: rgba(0, 158, 253, 0.06);
+        border: 1px solid rgba(0, 158, 253, 0.18);
+        border-left: 3px solid var(--secondary-blue);
+        border-radius: 0 8px 8px 0;
+        color: var(--text-grey);
+        font-size: 0.82rem;
+        line-height: 1.5;
+    }
+    .jerry-continuing-banner i {
+        color: var(--secondary-blue);
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+    .jerry-continuing-banner strong {
+        color: var(--text-white);
+        font-weight: 600;
+    }
+
+    /* Past chats button styling — Streamlit native st.button overrides */
+    .jerry-side-card .stButton button {
+        text-align: left !important;
+        white-space: pre-wrap !important;
+        font-size: 0.74rem !important;
+        line-height: 1.35 !important;
+        padding: 8px 10px !important;
+        margin-bottom: 6px !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
     /* Side panel (settings + stats) */
     .jerry-side-card {
         background: var(--glass-bg);
@@ -844,6 +881,78 @@ def _init_session_state() -> None:
             st.session_state["jerry_gpt_session_id"] = f"local_{_uuid.uuid4().hex[:16]}"
 
 
+def _render_past_chats() -> None:
+    """List the user's past sessions as clickable buttons. Clicking a row
+    swaps the current chat into that session. The currently-active session
+    is shown disabled with a chevron marker.
+
+    No-ops silently if chat_history isn't configured or the user has no
+    past sessions yet.
+    """
+    if _chat_history is None or not _chat_history.is_configured():
+        return
+    user_email = st.session_state.get("user_email", "") or ""
+    user_name = st.session_state.get("user_name", "") or ""
+    db_key = user_email or user_name
+    if not db_key:
+        return
+    try:
+        sessions = _chat_history.list_past_sessions(db_key, limit=20)
+    except Exception:
+        sessions = []
+    if not sessions:
+        return
+
+    current_session = st.session_state.get("jerry_gpt_session_id", "")
+
+    st.markdown(
+        '<div class="jerry-side-card"><div class="jerry-side-title">'
+        '<i class="fa-solid fa-clock-rotate-left"></i><span>Past chats</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    for sess in sessions:
+        sess_id = sess.get("session_id", "")
+        first_q = (sess.get("first_question") or "").strip() or "(empty session)"
+        if len(first_q) > 38:
+            first_q = first_q[:38] + "…"
+        msg_count = sess.get("message_count", 0)
+        started_at = sess.get("started_at")
+        # Postgres TIMESTAMPTZ → Python datetime (timezone-aware). Display
+        # in China time to match the audit log convention.
+        try:
+            from datetime import timedelta, timezone as _tz
+            cn = _tz(timedelta(hours=8))
+            local = started_at.astimezone(cn) if started_at else None
+            date_str = local.strftime("%b %d %H:%M") if local else "—"
+        except Exception:
+            date_str = "—"
+
+        is_current = sess_id == current_session
+        prefix = "▸ " if is_current else ""
+        label = f"{prefix}{date_str} · {msg_count}\n{first_q}"
+
+        if st.button(
+            label,
+            key=f"past_chat_{sess_id}",
+            use_container_width=True,
+            disabled=is_current,
+        ):
+            try:
+                loaded = _chat_history.load_session_by_id(db_key, sess_id)
+                if loaded:
+                    st.session_state["jerry_gpt_history"] = loaded
+                    st.session_state["jerry_gpt_session_id"] = sess_id
+                    st.rerun()
+            except Exception as e:
+                import sys as _sys
+                print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
+                      f"{type(e).__name__}: {e}",
+                      file=_sys.stderr, flush=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def _render_side_panel() -> None:
     """Right column: model selector, response length, cumulative stats."""
     # --- Settings card ---
@@ -878,6 +987,9 @@ def _render_side_panel() -> None:
     st.session_state["jerry_gpt_length"] = selected_length
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- Past chats card ---
+    _render_past_chats()
 
     # --- Stats card ---
     usage = st.session_state["jerry_gpt_usage"]
@@ -1018,6 +1130,24 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
                 if cols[i % 3].button(label, key=f"qp_{i}", use_container_width=True):
                     _submit_message(prompt, system_blocks, api_key, model, length)
                     st.rerun()
+
+        # Banner: tell the user they're continuing a saved conversation,
+        # NOT one that started in this tab. We can detect this because the
+        # _jerry_history_hydrated flag was set during _init_session_state(),
+        # AND the in-memory history matches what was hydrated (i.e., the
+        # user hasn't yet sent a new message that pushed history past the
+        # loaded state).
+        if history and st.session_state.get("_jerry_history_hydrated"):
+            st.markdown(
+                '<div class="jerry-continuing-banner">'
+                '<i class="fa-solid fa-clock-rotate-left"></i>'
+                '<span>You\'re continuing a saved conversation. '
+                'Click <strong>🔄 New chat</strong> to start fresh, or '
+                'browse <strong>Past chats</strong> in the side panel to '
+                'switch to an older session.</span>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
         # Chat history
         for msg in history:
