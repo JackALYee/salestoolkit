@@ -331,10 +331,14 @@ def render_login():
             </div>
         """, unsafe_allow_html=True)
         
-        time.sleep(8)
+        time.sleep(12)
         st.session_state['show_jhsun_anim'] = False
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'JHSun'
+        # Normalize user_email so downstream jhsun-only customizations
+        # (Global Trucking title, Emily entry, Jack GPT route) work even
+        # when the user authenticated via the jhsun_test shortcut.
+        st.session_state['user_email'] = 'jhsun@streamax.com'
         _grant_leadership('JHSun')
         _persist('JHSun')
         st.rerun()
