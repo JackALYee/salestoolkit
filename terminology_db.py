@@ -391,7 +391,11 @@ TERMINOLOGY_DB = [
         "term": "Emily",
         "category": "TEAM",
         "desc": "深圳罗湖区“觉”皇，锐明新任西南欧客户经理。",
-        "related": ["Jerry", "Jack"],
+        # Emily stands alone — no related links (and therefore no
+        # Relevance button on the card). Keep this empty so the
+        # bidirectional resolver doesn't add her name back into
+        # Jerry/Jack's related arrays either.
+        "related": [],
         "exact": True,
         "jhsun_only": True,
         "special": {
