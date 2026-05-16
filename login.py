@@ -59,6 +59,27 @@ def resolve_leadership(name_or_email: str) -> bool:
     return val in LEADERSHIP_EMAILS
 
 
+def resolve_user_email(name_or_email: str) -> str:
+    """Return the canonical streamax.com email for a user identity.
+
+    Handles three cases:
+    - The input is already an email (contains '@') → returned lowercased.
+    - The input is a known easter-egg display name (Jerry/Hekun/ZNTang/JHSun)
+      → mapped via _EASTER_EGG_TO_EMAIL.
+    - Anything else → empty string (caller should treat as "unknown").
+
+    Used by auth.restore_session() so a cookie-restored user_name can
+    re-derive user_email after a page reload — without that, jhsun-only
+    customizations vanish whenever the tab is refreshed.
+    """
+    if not name_or_email:
+        return ""
+    val = name_or_email.strip().lower()
+    if "@" in val:
+        return val
+    return _EASTER_EGG_TO_EMAIL.get(val, "")
+
+
 # --- SPECIAL RELATIONSHIPS — Jerry's self + inner circle ---------------------
 # These accounts receive a personalized first-message greeting and are
 # addressed as 你 (informal) instead of 您, regardless of LEADERSHIP status.

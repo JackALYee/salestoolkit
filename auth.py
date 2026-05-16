@@ -161,11 +161,18 @@ def restore_session() -> None:
     if user:
         st.session_state["authenticated"] = True
         st.session_state["user_name"] = user
-        # Re-derive leadership clearance from the restored user identity
-        # so Jerry GPT enforces access control immediately after page reload.
+        # Re-derive leadership clearance + canonical email from the restored
+        # user identity so Jerry GPT enforces access control and the
+        # jhsun-only Streamaxpedia customizations (Emily, Global Trucking
+        # title, Jack GPT route) survive a page reload. The cookie carries
+        # only the user_name (display name for easter-egg accounts, full
+        # email for regular logins) — we look up the matching email here.
         try:
-            from login import resolve_leadership
+            from login import resolve_leadership, resolve_user_email
             st.session_state["is_leadership"] = resolve_leadership(user)
+            restored_email = resolve_user_email(user)
+            if restored_email:
+                st.session_state["user_email"] = restored_email
         except Exception:
             st.session_state["is_leadership"] = False
 
@@ -195,7 +202,7 @@ def logout() -> None:
             cm.delete(COOKIE_NAME)
         except Exception:
             pass
-    for key in ("authenticated", "user_name", "is_leadership"):
+    for key in ("authenticated", "user_name", "user_email", "is_leadership"):
         st.session_state.pop(key, None)
 
 
