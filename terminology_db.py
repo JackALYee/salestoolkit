@@ -383,7 +383,24 @@ TERMINOLOGY_DB = [
     # Team
     { "term": "Jerry", "category": "TEAM", "desc": "J总/6哥，商务环球飞行大师，羽毛球网前搞心态国家健将，锐明产品市场总监。<br><br>名言：“我有点爆炸...”", "exact": True },
     { "term": "Ryan", "category": "TEAM", "desc": "堃哥，南山智园爆肝王，全国熬夜加班总冠军，锐明货运产品线总监。<br><br>名言：“干就完了！”", "related": ["Jerry"], "exact": True },
-    { "term": "Jack", "category": "TEAM", "desc": "杰克，理工科市场推广练习生，为爱发电型上班族，尽量别找他写PPT，也别带他吃椰子鸡。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry"], "exact": True }
+    { "term": "Jack", "category": "TEAM", "desc": "杰克，理工科市场推广练习生，为爱发电型上班族，尽量别找他写PPT，也别带他吃椰子鸡。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry"], "exact": True },
+    # Emily — visible ONLY when the logged-in user is jhsun@streamax.com.
+    # streamaxpedia_app.build_content(user_email) filters this row out for
+    # everyone else so the search engine never returns it.
+    {
+        "term": "Emily",
+        "category": "TEAM",
+        "desc": "深圳罗湖区“觉”皇，锐明新任西南欧客户经理。",
+        "related": ["Jerry", "Jack"],
+        "exact": True,
+        "jhsun_only": True,
+        "special": {
+            "label": "Jack GPT",
+            "view": "jack_gpt",
+            "blurb": "Special Feature — talk to Jack GPT (coming soon).",
+            "icon": "fa-solid fa-robot",
+        },
+    }
 ]
 
 

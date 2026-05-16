@@ -18,9 +18,17 @@ except Exception as _jerry_import_err:  # noqa: BLE001
     _JERRY_IMPORT_ERR = _jerry_import_err
 
 try:
-    from streamaxpedia_app import content as streamaxpedia_content
+    # build_content(user_email) lets us filter user-gated terminology rows
+    # (e.g. Emily, visible only to jhsun@streamax.com). Older deployments
+    # may still expose only the static `content` symbol — fall back to it.
+    from streamaxpedia_app import build_content as _build_streamaxpedia_content
+    _STREAMAXPEDIA_FALLBACK = None
 except ImportError:
-    streamaxpedia_content = "<div id='streamaxpedia' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ streamaxpedia_app.py not found</h2></div>"
+    _build_streamaxpedia_content = None
+    try:
+        from streamaxpedia_app import content as _STREAMAXPEDIA_FALLBACK
+    except ImportError:
+        _STREAMAXPEDIA_FALLBACK = "<div id='streamaxpedia' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ streamaxpedia_app.py not found</h2></div>"
 
 try:
     from prospecting_flow import content as prospecting_flow_content
@@ -134,10 +142,18 @@ if st.query_params.get("logout") == "1":
 if not st.session_state['authenticated']:
     render_login()
 else:
-    # --- QUERY-PARAM ROUTER: Jerry GPT sub-page ---
-    # When the user clicks the Jerry GPT tab inside Streamaxpedia, the link
-    # navigates to ?view=jerry_gpt. We detect that here and render the
-    # Streamlit-native chat module instead of the toolkit HTML.
+    # --- Per-user context ---
+    # user_email drives jhsun-only customizations: the "Global Trucking"
+    # header swap, Emily's terminology entry, and the Jack GPT route. We
+    # normalize to lowercase for comparison robustness; the cookie restore
+    # in auth.py persists user_email across reloads/new tabs.
+    _user_email = (st.session_state.get("user_email", "") or "").strip().lower()
+    _is_jhsun = (_user_email == "jhsun@streamax.com")
+
+    # --- QUERY-PARAM ROUTER: Jerry GPT + Jack GPT sub-pages ---
+    # Streamaxpedia's launch buttons navigate to ?view=jerry_gpt /
+    # ?view=jack_gpt. We detect that here and render the Streamlit-native
+    # module instead of the toolkit HTML.
     _view = st.query_params.get("view", "")
     if _view == "jerry_gpt":
         if render_jerry_gpt is None:
@@ -145,6 +161,68 @@ else:
             st.stop()
         render_jerry_gpt()
         st.stop()
+
+    if _view == "jack_gpt":
+        # Jack GPT is jhsun-only and not yet built. Show a polished
+        # "coming soon" placeholder for jhsun and a clean 404-ish notice
+        # for anyone who guesses the URL.
+        if not _is_jhsun:
+            st.markdown(
+                """
+                <div style='max-width:560px; margin:80px auto; padding:32px;
+                            background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+                            border-radius:14px; color:#A0AEC0; text-align:center;'>
+                    <h2 style='color:#fff; margin-bottom:12px;'>Not available</h2>
+                    <p>This page is restricted. Return to the
+                    <a href='/' style='color:#2AF598; text-decoration:none;'>Sales Toolkit</a>.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.stop()
+        st.markdown(
+            """
+            <div style='max-width:680px; margin:80px auto; padding:48px 36px;
+                        background:linear-gradient(135deg, rgba(42,245,152,0.06) 0%, rgba(0,158,253,0.06) 100%);
+                        border:1px solid rgba(42,245,152,0.25); border-radius:18px;
+                        color:#A0AEC0; text-align:center;
+                        box-shadow:0 20px 60px rgba(0,0,0,0.5);'>
+                <div style='display:inline-flex; align-items:center; gap:8px;
+                            padding:6px 14px; background:rgba(42,245,152,0.10);
+                            border:1px solid rgba(42,245,152,0.30); border-radius:30px;
+                            color:#2AF598; font-size:0.7rem; font-weight:700;
+                            text-transform:uppercase; letter-spacing:2px; margin-bottom:24px;'>
+                    <i class="fa-solid fa-robot"></i> Coming Soon
+                </div>
+                <h1 style='color:#fff; font-size:2.6rem; margin-bottom:14px;
+                           background:linear-gradient(135deg, #2AF598 0%, #009EFD 100%);
+                           -webkit-background-clip:text; background-clip:text; color:transparent;'>
+                    Jack GPT
+                </h1>
+                <p style='font-size:1.05rem; line-height:1.6; margin-bottom:20px;'>
+                    Jack is still in the kitchen. Hi Emily — this is your private
+                    workspace, custom-built so you walk into every Southwest-Europe
+                    customer meeting fully armed.
+                </p>
+                <a href='/' style='display:inline-flex; align-items:center; gap:8px;
+                                   padding:11px 24px; border-radius:24px; text-decoration:none;
+                                   background:rgba(255,255,255,0.06); color:#fff;
+                                   border:1px solid rgba(255,255,255,0.15); font-weight:600;'>
+                    <i class="fa-solid fa-arrow-left"></i> Back to Toolkit
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.stop()
+
+    # Build the per-user Streamaxpedia bundle (filters Emily out for
+    # non-jhsun callers). If the older `content`-only import was hit,
+    # fall back to that pre-rendered string.
+    if _build_streamaxpedia_content is not None:
+        streamaxpedia_content = _build_streamaxpedia_content(_user_email)
+    else:
+        streamaxpedia_content = _STREAMAXPEDIA_FALLBACK
 
     # 1. HTML Head & CSS
     html_head = r"""<!DOCTYPE html>
@@ -1582,6 +1660,18 @@ else:
         email_tool_content + "\n" +
         html_tail
     )
+
+    # JHSun-only customization: rebrand the main header from
+    # "North America Trucking Division" to "Global Trucking Division".
+    # Done as a targeted string replace so the html_head r-string stays
+    # untouched and the swap is gated to one logged-in user.
+    if _is_jhsun:
+        html_code = html_code.replace(
+            '<span class="gradient-text">North America</span><br>\n'
+            '                <span style="font-weight: 300;">Trucking Division</span>',
+            '<span class="gradient-text">Global</span><br>\n'
+            '                <span style="font-weight: 300;">Trucking Division</span>',
+        )
 
     # 4. RENDER WITHOUT COMPONENT BRIDGE
     components.html(html_code, height=1800, scrolling=True)

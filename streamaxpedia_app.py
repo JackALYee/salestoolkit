@@ -262,6 +262,53 @@ css_and_html = r"""
                 .relevance-btn { background: rgba(0, 158, 253, 0.1); color: var(--secondary-blue); border: 1px solid var(--secondary-blue); }
                 .relevance-btn:hover { background: var(--secondary-blue); color: var(--text-white); box-shadow: 0 0 15px rgba(0, 158, 253, 0.4); }
 
+                /* --- SPECIAL FEATURE CTA (e.g. Emily → Jack GPT) --- */
+                .special-feature-wrap {
+                    margin-top: 14px;
+                    padding: 12px 14px;
+                    background: linear-gradient(135deg, rgba(42,245,152,0.06) 0%, rgba(0,158,253,0.06) 100%);
+                    border: 1px solid rgba(42,245,152,0.22);
+                    border-radius: 12px;
+                }
+                .special-feature-title {
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                    color: var(--primary-green);
+                    margin-bottom: 6px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .special-feature-title i { font-size: 0.75rem; }
+                .special-blurb {
+                    font-size: 0.82rem;
+                    color: var(--text-grey);
+                    margin-bottom: 10px;
+                    line-height: 1.45;
+                }
+                .special-feature-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 9px 18px;
+                    border-radius: 22px;
+                    text-decoration: none;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%);
+                    color: #050810;
+                    border: none;
+                    transition: var(--transition);
+                    box-shadow: 0 6px 14px rgba(42,245,152,0.18);
+                }
+                .special-feature-btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 10px 22px rgba(42,245,152,0.30);
+                }
+
                 /* --- DIAGRAMS --- */
                 .diagram-box { margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
                 .diagram-title { text-align: center; font-weight: 700; margin-bottom: 15px; color: var(--primary-green); font-size: 0.9rem; }
@@ -745,11 +792,11 @@ css_and_html = r"""
 
 js_code = """
             <script>
-                const terminologyDB = """ + db_json + """;
+                const terminologyDB = __TERMINOLOGY_DB_JSON__;
                 const matrixData = """ + matrix_json + """;
                 const ALL_PRODUCTS = """ + products_json + """;
                 const pdfBase64 = \"""" + pdf_base64 + """\";
-                
+
                 const ENABLE_DOWNLOADS = true;
 """ + r"""
                 let selectedBasket = new Set();
@@ -1264,7 +1311,37 @@ js_code = """
                         }
                         
                         let relHTML = (item.related && item.related.length > 0) ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="window.openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
-                        
+
+                        // Special Feature: a custom CTA on a result card that
+                        // navigates the PARENT Streamlit frame to ?view=<view>.
+                        // Used today for Emily → Jack GPT; the routing trick
+                        // mirrors the Jerry GPT launch card.
+                        let specialHTML = '';
+                        if (item.special && item.special.view) {
+                            const sp = item.special;
+                            const iconCls = sp.icon || 'fa-solid fa-sparkles';
+                            const lbl = String(sp.label || 'Open');
+                            const blurb = sp.blurb ? `<div class="special-blurb">${String(sp.blurb)}</div>` : '';
+                            specialHTML = `
+                                <div class="special-feature-wrap">
+                                    <div class="special-feature-title"><i class="fa-solid fa-star"></i> Special Feature</div>
+                                    ${blurb}
+                                    <a href="?view=${encodeURIComponent(sp.view)}" target="_blank" rel="noopener" class="special-feature-btn" onclick="
+                                        (function(evt, anchor) {
+                                            evt.preventDefault();
+                                            var base = '';
+                                            try { if (document.referrer) base = document.referrer; } catch (e) {}
+                                            if (!base) { try { base = window.parent.location.href; } catch (e) { base = ''; } }
+                                            if (!base) base = anchor.href;
+                                            var url = base.split('?')[0].split('#')[0] + '?view=${encodeURIComponent(sp.view)}';
+                                            window.open(url, '_blank', 'noopener');
+                                        })(event, this);
+                                        return false;
+                                    "><i class="${iconCls}"></i> ${lbl} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem; margin-left:4px;"></i></a>
+                                </div>
+                            `;
+                        }
+
                         return `
                             <div class="result-card" style="animation-delay: ${delay}s">
                                 <div class="term-header">
@@ -1273,6 +1350,7 @@ js_code = """
                                 </div>
                                 <p class="term-desc">${highlightText(item.desc, query)}</p>
                                 ${relHTML}
+                                ${specialHTML}
                                 ${downHTML}
                             </div>
                         `;
@@ -1627,5 +1705,67 @@ else:
     )
 css_and_html = css_and_html.replace("__JERRY_PORTRAIT_HTML__", _jerry_portrait_html)
 
-# Stitch everything together into a variable that app.py imports
-content = css_and_html + js_code
+
+# --- Per-user content assembly ----------------------------------------
+# Some terminology rows are gated to a specific logged-in user (today:
+# Emily, visible only to jhsun@streamax.com). The terminology DB is
+# embedded as JSON inside the JS bundle, so gating has to happen at the
+# moment we hand the HTML to Streamlit — not at module-import time.
+#
+# build_content(user_email) filters TERMINOLOGY_DB accordingly and
+# substitutes the resulting JSON into the js_code template placeholder
+# (__TERMINOLOGY_DB_JSON__). Falls back to the unfiltered list for any
+# unknown caller.
+JHSUN_EMAIL = "jhsun@streamax.com"
+
+
+def _filtered_db_for(user_email: str) -> list:
+    """Return TERMINOLOGY_DB filtered to entries the caller is allowed to see.
+
+    Strips not only the gated rows themselves but also any back-references
+    to those rows in other entries' `related` arrays — the bidirectional
+    link resolver in terminology_db.py + streamaxpedia_app's auto-link
+    step adds Emily into Jerry/Jack's related lists, and we don't want
+    that name leaking into non-jhsun bundles either.
+    """
+    email_norm = (user_email or "").strip().lower()
+    if email_norm == JHSUN_EMAIL:
+        # JHSun sees everything, including Emily.
+        return TERMINOLOGY_DB
+
+    # Build the set of term names that should be hidden, then strip them
+    # from every other entry's related list AND drop the rows themselves.
+    hidden_terms = {
+        row.get("term", "")
+        for row in TERMINOLOGY_DB
+        if row.get("jhsun_only")
+    }
+    out = []
+    for row in TERMINOLOGY_DB:
+        if row.get("jhsun_only"):
+            continue
+        if hidden_terms and row.get("related"):
+            row = dict(row)  # don't mutate the shared module-level list
+            row["related"] = [r for r in row["related"] if r not in hidden_terms]
+        out.append(row)
+    return out
+
+
+def build_content(user_email: str = "") -> str:
+    """Return the full Streamaxpedia HTML+JS bundle for a given user.
+
+    The terminology DB is filtered per-user so jhsun-only rows (Emily and
+    her Jack GPT shortcut) never reach non-jhsun browsers — not even as
+    inert JSON. Matrix data and the static product list are user-agnostic
+    and substituted at module-import time.
+    """
+    filtered = _filtered_db_for(user_email)
+    js_filled = js_code.replace(
+        "__TERMINOLOGY_DB_JSON__", json.dumps(filtered)
+    )
+    return css_and_html + js_filled
+
+
+# Backwards-compat: any caller still doing `from streamaxpedia_app import
+# content` gets the no-jhsun-extras default (safest for unknown callers).
+content = build_content("")
