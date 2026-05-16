@@ -326,7 +326,7 @@ def render_login():
             <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
                 <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
                 <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>这是销售工具，你来干啥😏</h2>
+                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3); text-align: center; max-width: 700px; line-height: 1.4;'>Congratulations to your new position! 🎉<br><span style='font-size: 1.1rem; font-weight: 500; color: #E0E6ED;'>As promised, no matter which sales market you are fighting for, we will support and empower you.</span></h2>
                 <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
             </div>
         """, unsafe_allow_html=True)
