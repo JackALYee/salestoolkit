@@ -1029,9 +1029,97 @@ else:
         .tooltip-arrow-border {
             border-top-color: rgba(255, 255, 255, 0.1);
         }
+
+        /* --- User identity pill + sign-out button (top-right) -------------- */
+        .user-pill {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 14px 7px 12px;
+            background: var(--glass-bg);
+            border: var(--glass-border);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            font-size: 0.8rem;
+            color: var(--text-grey);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+        }
+        .user-pill .user-icon {
+            color: var(--primary-green);
+            font-size: 0.95rem;
+        }
+        .user-pill .user-identity {
+            color: var(--text-white);
+            font-weight: 500;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .user-pill .signout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 11px;
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.25);
+            border-radius: 20px;
+            color: #fca5a5;
+            text-decoration: none;
+            font-size: 0.72rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-family: var(--font-main);
+        }
+        .user-pill .signout-btn:hover {
+            background: rgba(248, 113, 113, 0.18);
+            border-color: rgba(248, 113, 113, 0.5);
+            color: #fecaca;
+        }
+        @media (max-width: 640px) {
+            .user-pill {
+                top: 10px;
+                right: 10px;
+                padding: 5px 10px 5px 9px;
+                gap: 6px;
+                font-size: 0.7rem;
+            }
+            .user-pill .user-identity { max-width: 110px; }
+            .user-pill .signout-btn { padding: 3px 9px; font-size: 0.65rem; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- User identity pill — fixed top-right. The Sign-out link drives the
+         parent Streamlit frame to ?logout=1 (auth.logout() clears the
+         signed cookie + session_state). Same parent-window trick used by
+         the Jerry GPT and Jack GPT launch buttons. -->
+    <div class="user-pill">
+        <i class="fa-solid fa-user-circle user-icon"></i>
+        <span class="user-identity">__USER_IDENTITY__</span>
+        <a href="?logout=1" class="signout-btn" onclick="
+            (function(evt) {
+                evt.preventDefault();
+                var base = '';
+                try { if (document.referrer) base = document.referrer; } catch (e) {}
+                if (!base) { try { base = window.parent.location.href; } catch (e) {} }
+                if (!base) base = window.location.href;
+                var url = base.split('?')[0].split('#')[0] + '?logout=1';
+                try { window.parent.location.href = url; }
+                catch (e) {
+                    try { window.top.location.href = url; }
+                    catch (e2) { window.location.href = url; }
+                }
+            })(event);
+            return false;
+        "><i class="fa-solid fa-right-from-bracket"></i> Sign out</a>
+    </div>
 
     <header>
         <div class="container">
@@ -1640,6 +1728,20 @@ else:
             '<span class="gradient-text">Global</span><br>\n'
             '                <span style="font-weight: 300;">Trucking Division</span>',
         )
+
+    # Substitute the user identity placeholder inside the top-right pill.
+    # Prefers email when available (e.g. real SMTP logins), falls back to
+    # display name (e.g. easter-egg "JHSun"), then to a generic label.
+    _display_identity = (
+        st.session_state.get("user_email", "")
+        or st.session_state.get("user_name", "")
+        or "Signed in"
+    )
+    # Defensive HTML-escape — user_name comes from form input on real logins
+    import html as _html
+    html_code = html_code.replace(
+        "__USER_IDENTITY__", _html.escape(_display_identity)
+    )
 
     # 4. RENDER WITHOUT COMPONENT BRIDGE
     components.html(html_code, height=1800, scrolling=True)
