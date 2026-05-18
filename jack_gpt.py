@@ -3,9 +3,10 @@
 Lives at salestoolkit/jack_gpt.py. Activated when the user clicks "Jack GPT"
 inside Streamaxpedia's Emily card, which navigates to ?view=jack_gpt.
 
-Whitelist: jhsun@streamax.com (Emily) only. Anyone else who reaches this
-route — even authenticated Streamax employees — gets an access-denied
-screen. This is a private workspace, not a team tool.
+Whitelist: jhsun@streamax.com (Emily) + jcyi@streamax.com (Jack himself,
+owner/admin access). Anyone else who reaches this route — even other
+authenticated Streamax employees — gets an access-denied screen. This is
+a private workspace, not a team tool.
 
 API key separation: Jack GPT reads JACK_GPT_ANTHROPIC_API_KEY from
 st.secrets first, falling back to the JACK_GPT_ANTHROPIC_API_KEY env var.
@@ -53,7 +54,8 @@ except Exception:
 # ---------------------------------------------------------------------------
 
 JACK_GPT_WHITELIST = frozenset({
-    "jhsun@streamax.com",  # Emily 孙境鸿 — the only authorized user
+    "jhsun@streamax.com",  # Emily 孙境鸿
+    "jcyi@streamax.com",   # Jack 易嘉辰 — owner/admin access
 })
 
 
@@ -885,9 +887,9 @@ def render() -> None:
             </a>
         </div>
         <div class="jack-header">
-            <div class="jack-subtitle">A PRIVATE WORKSPACE FOR EMILY</div>
+            <div class="jack-subtitle">A PRIVATE WORKSPACE</div>
             <h1 class="jack-title">Jack GPT</h1>
-            <p class="jack-tagline">Talk to Jack — distilled from 6 years bedside-tabling sales playbooks. 转岗销售第一周可能踩雷的事 Jack 都踩过。客户怎么聊、邮件怎么写、价格怎么报，问就完了。</p>
+            <p class="jack-tagline">一个不会攻击你的蒸馏版Jack。转岗销售第一周可能踩雷的事 Jack 都踩过。客户怎么聊、邮件怎么写、价格怎么报，问就完了。</p>
             <div class="jack-meta">
                 <span class="dot"></span>
                 <span>{model_label}</span>
