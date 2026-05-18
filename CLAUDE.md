@@ -90,9 +90,22 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 `st.secrets` (or `.streamlit/secrets.toml` locally):
 
-- `ANTHROPIC_API_KEY` — required for Jerry GPT
+- `ANTHROPIC_API_KEY` — required for Jerry GPT (public-facing assistant in Streamaxpedia)
 - `JERRY_MODEL` — optional, defaults to `claude-opus-4-7`
+- `JACK_GPT_ANTHROPIC_API_KEY` — required for Jack GPT (Emily-only private workspace). **Intentionally a different key from Jerry's** so the two surfaces are isolated for cost / quota / abuse. `jack_gpt._get_api_key()` does NOT fall back to `ANTHROPIC_API_KEY` — a missing Jack key produces a clean configuration error rather than silently routing Jack's traffic through Jerry's account.
+- `JACK_GPT_MODEL` — optional, defaults to `claude-opus-4-7`
 - `AUTH_SECRET` — required for session cookie signing (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`)
 - `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging
+- `JERRY_GPT_DB_URL` — optional, enables cross-session chat history via Supabase Postgres
 
 If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
+
+## Jack GPT — Emily's private workspace
+
+`jack_gpt.py` is structurally similar to `jerry_gpt.py` but with a tighter access model:
+
+- **Whitelist**: `JACK_GPT_WHITELIST = frozenset({"jhsun@streamax.com"})`. Even authenticated Streamax employees who guess the URL get the access-denied screen — this is not a team tool.
+- **Routing**: launched from Emily's terminology card in Streamaxpedia (gated to jhsun via `streamaxpedia_app.build_content(user_email)`). The card's "Special Feature → Jack GPT" button opens `?view=jack_gpt`, which `app.py` routes to `jack_gpt.render()`.
+- **Knowledge bundle**: lives at `salestoolkit/jack_gpt_knowledge/` (committed to git, ~190KB). Contains `personas/emily.md`, `boundaries/emily.md`, `memory/*.md` (excluding `raw_chats/`), `sources/*.md`, plus `external_skills/streamax-knowledge.md` and `external_skills/sales-automator.md` (the two skill files Jack normally reads from outside the toolkit repo). `jack_gpt._find_jack_gpt_root()` tries the bundled location first, falls back to the canonical `~/Documents/我的档案/jack_gpt/` for local dev.
+- **Runtime contract from upstream README**: only the Emily channel files are loaded — `philosophy/`, `internal/`, `personas/jack_self.md`, `boundaries/jack_self.md`, `memory/raw_chats/` are explicitly excluded and **not bundled**. When the upstream `jack_gpt/` content updates, re-run the bundling step (`cp` the same file list from `~/Documents/我的档案/jack_gpt/`); do not add files that aren't on the Emily-channel allowlist.
+- **Model + sampling**: `claude-opus-4-7`, `max_tokens=1500`, `temperature=1.0` (Jack needs lexical variety — deterministic sampling produces same-opener responses).
