@@ -399,9 +399,9 @@ TERMINOLOGY_DB = [
         "exact": True,
         "jhsun_only": True,
         "special": {
-            "label": "Jack GPT",
+            "label": "Talk to Jack GPT",
             "view": "jack_gpt",
-            "blurb": "Special Feature — talk to Jack GPT (coming soon).",
+            "blurb": "Your private workspace — sales coaching, Streamax knowledge, anything.",
             "icon": "fa-solid fa-robot",
         },
     }
