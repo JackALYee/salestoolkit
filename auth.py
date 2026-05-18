@@ -135,6 +135,15 @@ def _cm():
 # Public API
 # ---------------------------------------------------------------------------
 
+# Session-state key set by logout() and respected by restore_session().
+# Sticky across reruns within the same tab; only cleared by persist_login()
+# (i.e. a fresh, explicit authentication). Defends against the async
+# extra-streamlit-components CookieManager.delete() not propagating to the
+# browser before the next rerun reads the cookie back — which used to cause
+# silent auto-re-authentication immediately after Sign Out.
+LOGOUT_FLAG_KEY = "_stmx_just_logged_out"
+
+
 def restore_session() -> None:
     """Re-hydrate session_state from the auth cookie if valid.
 
@@ -151,6 +160,14 @@ def restore_session() -> None:
 
     if st.session_state.get("authenticated"):
         return
+
+    # If the user just clicked Sign Out in this tab, refuse to auto-restore
+    # from cookie. The flag stays set across reruns until persist_login()
+    # explicitly pops it, so even multiple Streamlit auto-reruns triggered
+    # by the cookie component reporting back can't silently re-authenticate.
+    if st.session_state.get(LOGOUT_FLAG_KEY):
+        return
+
     cm = _cm()
     if cm is None:
         return
@@ -181,7 +198,9 @@ def persist_login(user_name: str) -> None:
     """Called from login.py after credentials are validated.
 
     Writes the signed token to a browser cookie so the next refresh
-    or tab navigation stays authenticated.
+    or tab navigation stays authenticated. Also clears the logout flag
+    set by a previous Sign Out — a fresh authentication overrides the
+    "don't auto-restore" guard.
     """
     cm = _cm()
     if cm is None:
@@ -192,18 +211,47 @@ def persist_login(user_name: str) -> None:
     except Exception:
         # Cookie write failed (unusual) — session still works for this tab
         pass
+    # Clear the post-logout block so subsequent reloads / tabs auto-restore
+    st.session_state.pop(LOGOUT_FLAG_KEY, None)
 
 
 def logout() -> None:
-    """Clear session state and the auth cookie."""
+    """Clear session state and the auth cookie.
+
+    Three-layer defense to make Sign Out actually stick:
+      1. Force-overwrite the cookie with an empty value and an expiry in
+         the past. Browsers honor this immediately by dropping the cookie,
+         which is more reliable than CookieManager.delete() (whose JS
+         side-effect doesn't always propagate before the next rerun).
+      2. Also call CookieManager.delete() as belt-and-suspenders.
+      3. Set a sticky session_state flag (LOGOUT_FLAG_KEY) that
+         restore_session() checks first — survives Streamlit's reruns
+         within the same tab even if the cookie write loses the race.
+    """
     cm = _cm()
     if cm is not None:
         try:
+            # Layer 1: overwrite cookie with an expiry in the past so the
+            # browser drops it on receipt, regardless of CookieManager
+            # async behavior.
+            cm.set(
+                COOKIE_NAME,
+                "",
+                expires_at=datetime.now() - timedelta(days=1),
+            )
+        except Exception:
+            pass
+        try:
+            # Layer 2: explicit delete (no-op if layer 1 already worked).
             cm.delete(COOKIE_NAME)
         except Exception:
             pass
     for key in ("authenticated", "user_name", "user_email", "is_leadership"):
         st.session_state.pop(key, None)
+    # Layer 3: sticky flag. Survives reruns within this tab and blocks
+    # restore_session() from re-hydrating from any cookie value that the
+    # browser-side delete didn't manage to clear in time.
+    st.session_state[LOGOUT_FLAG_KEY] = True
 
 
 def current_user() -> str | None:
