@@ -32,6 +32,21 @@ except Exception as _imp_err:
     Anthropic = None  # type: ignore
     _ANTHROPIC_IMPORT_ERR = _imp_err
 
+# Audit-log + chat-history side cars. Both are optional — Jack still
+# works without them, just without persistence and without the Google
+# Sheets audit trail. Mirrors Jerry's `usage_logger` / `chat_history`
+# pattern but points at SEPARATE secrets (JACK_GPT_SHEET_ID,
+# JACK_GPT_DB_URL) and a SEPARATE Postgres table (jack_gpt_chats).
+try:
+    import jack_usage_logger as _usage_logger
+except Exception:
+    _usage_logger = None  # type: ignore
+
+try:
+    import jack_chat_history as _chat_history
+except Exception:
+    _chat_history = None  # type: ignore
+
 
 # ---------------------------------------------------------------------------
 # Whitelist (login is already enforced by app.py — this is a SECOND gate)
@@ -632,15 +647,48 @@ def _render_error(html_body: str) -> None:
 
 
 def _init_session_state() -> None:
-    if "jack_gpt_history" not in st.session_state:
-        st.session_state["jack_gpt_history"] = []
+    """Seed session state. On first run for an authenticated jhsun user,
+    try to restore the most recent persisted session from Postgres so the
+    user picks up where they left off across reloads / tabs / devices."""
+    if "jack_gpt_history" in st.session_state:
+        return
+
+    st.session_state["jack_gpt_history"] = []
+    st.session_state["jack_gpt_session_id"] = ""
+
+    # Attempt cross-session restore (silent no-op if DB not configured)
+    if _chat_history is not None and _chat_history.is_configured():
+        user_email = st.session_state.get("user_email", "") or ""
+        user_name = st.session_state.get("user_name", "") or ""
+        db_key = user_email or user_name
+        if db_key:
+            try:
+                loaded_history, loaded_session_id = _chat_history.load_recent_session(db_key)
+                if loaded_history and loaded_session_id:
+                    st.session_state["jack_gpt_history"] = loaded_history
+                    st.session_state["jack_gpt_session_id"] = loaded_session_id
+            except Exception as e:
+                print(f"[JACK_GPT_DB_ERROR] init restore failed: "
+                      f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+
+    # If nothing was restored, mint a fresh session id so save_turn() has
+    # something to anchor the first row on.
+    if not st.session_state["jack_gpt_session_id"]:
+        if _chat_history is not None:
+            st.session_state["jack_gpt_session_id"] = _chat_history.new_session_id()
+        else:
+            # Fallback when chat_history module didn't import at all
+            import uuid as _uuid
+            st.session_state["jack_gpt_session_id"] = f"sess_{_uuid.uuid4().hex[:16]}"
 
 
 def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: str) -> None:
     """Append user turn, stream Jack's response, append assistant turn.
 
     Handles max_tokens auto-continuation via the assistant-prefill pattern
-    (no "continue from where you left off" prompt needed).
+    (no "continue from where you left off" prompt needed). After the stream
+    completes successfully, persists the turn to Postgres and logs it to
+    Google Sheets — both side cars are best-effort and never crash the chat.
     """
     history: list[dict] = st.session_state["jack_gpt_history"]
     history.append({"role": "user", "content": text})
@@ -652,6 +700,12 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
     api_messages = [{"role": m["role"], "content": m["content"]} for m in history]
 
     client = Anthropic(api_key=api_key)
+
+    # Token-usage accumulators across the (possibly multi-segment) reply
+    total_input = 0
+    total_output = 0
+    total_cache_read = 0
+    total_cache_creation = 0
 
     with st.chat_message("assistant", avatar=JACK_AVATAR):
         placeholder = st.empty()
@@ -673,6 +727,14 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
                         placeholder.markdown(full_text + "▊")
                     final_message = stream.get_final_message()
 
+                # Accumulate token usage from this segment
+                seg_usage = getattr(final_message, "usage", None)
+                if seg_usage is not None:
+                    total_input += getattr(seg_usage, "input_tokens", 0) or 0
+                    total_output += getattr(seg_usage, "output_tokens", 0) or 0
+                    total_cache_read += getattr(seg_usage, "cache_read_input_tokens", 0) or 0
+                    total_cache_creation += getattr(seg_usage, "cache_creation_input_tokens", 0) or 0
+
                 stop_reason = getattr(final_message, "stop_reason", None)
                 if stop_reason != "max_tokens" or continuations >= _MAX_CONTINUATIONS:
                     break
@@ -693,6 +755,60 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
             return
 
     history.append({"role": "assistant", "content": full_text})
+
+    # ── Post-stream: persist + log. Both wrapped in their own try/except so
+    # one failure doesn't sabotage the other or roll back the conversation.
+    user_email = (st.session_state.get("user_email", "") or "").strip().lower()
+    user_name = st.session_state.get("user_name", "") or ""
+    session_id = st.session_state.get("jack_gpt_session_id", "") or ""
+
+    # Compute cost once so DB row and Sheet row stay in sync
+    cost_usd = 0.0
+    if _usage_logger is not None:
+        try:
+            cost_usd = _usage_logger._estimate_cost_usd(
+                model, total_input, total_output,
+                total_cache_read, total_cache_creation,
+            )
+        except Exception:
+            pass
+
+    # Sink A: Postgres
+    try:
+        if _chat_history is not None and _chat_history.is_configured() and session_id:
+            _chat_history.save_turn(
+                user_email=user_email or user_name,
+                user_name=user_name,
+                session_id=session_id,
+                user_message=text,
+                assistant_message=full_text,
+                model=model,
+                input_tokens=total_input,
+                output_tokens=total_output,
+                cache_read_tokens=total_cache_read,
+                cache_creation_tokens=total_cache_creation,
+                cost_usd=cost_usd,
+            )
+    except Exception as e:
+        print(f"[JACK_GPT_POSTWORK_ERROR] chat_history.save_turn failed: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+
+    # Sink B: Google Sheets (via jack_usage_logger.log_query)
+    try:
+        if _usage_logger is not None:
+            _usage_logger.log_query(
+                question=text,
+                answer=full_text,
+                model=model,
+                session_id=session_id,
+                input_tokens=total_input,
+                output_tokens=total_output,
+                cache_read_tokens=total_cache_read,
+                cache_creation_tokens=total_cache_creation,
+            )
+    except Exception as e:
+        print(f"[JACK_GPT_POSTWORK_ERROR] log_query failed: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
 
 
 def render() -> None:
@@ -808,7 +924,8 @@ def render() -> None:
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    # ── New chat button
+    # ── New chat button — mint a fresh session_id so the next turn anchors
+    # to a new conversation in the DB (instead of bleeding into the old one)
     _col_a, _col_b = st.columns([6, 1])
     with _col_b:
         if st.button(
@@ -818,6 +935,11 @@ def render() -> None:
             key="jack_new_chat_btn",
         ):
             st.session_state["jack_gpt_history"] = []
+            if _chat_history is not None:
+                st.session_state["jack_gpt_session_id"] = _chat_history.new_session_id()
+            else:
+                import uuid as _uuid
+                st.session_state["jack_gpt_session_id"] = f"sess_{_uuid.uuid4().hex[:16]}"
             st.rerun()
 
     # ── Chat input

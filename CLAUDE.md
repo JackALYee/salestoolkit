@@ -95,8 +95,10 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 - `JACK_GPT_ANTHROPIC_API_KEY` — required for Jack GPT (Emily-only private workspace). **Intentionally a different key from Jerry's** so the two surfaces are isolated for cost / quota / abuse. `jack_gpt._get_api_key()` does NOT fall back to `ANTHROPIC_API_KEY` — a missing Jack key produces a clean configuration error rather than silently routing Jack's traffic through Jerry's account.
 - `JACK_GPT_MODEL` — optional, defaults to `claude-opus-4-7`
 - `AUTH_SECRET` — required for session cookie signing (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`)
-- `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging
-- `JERRY_GPT_DB_URL` — optional, enables cross-session chat history via Supabase Postgres
+- `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging for Jerry GPT
+- `JERRY_GPT_DB_URL` — optional, enables cross-session chat history for Jerry GPT via Supabase Postgres
+- `JACK_GPT_SHEET_ID` (+ optional `[jack_gpt_service_account]` table — falls back to the shared `[gcp_service_account]`) — optional, enables Google Sheets logging for Jack GPT. **Separate Sheet** from Jerry's audit log.
+- `JACK_GPT_DB_URL` — optional, enables cross-session chat history for Jack GPT via Postgres. **Separate Postgres URL** and **separate table** (`jack_gpt_chats`) from Jerry's. No fallback to `JERRY_GPT_DB_URL`.
 
 If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
 
@@ -109,3 +111,4 @@ If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls t
 - **Knowledge bundle**: lives at `salestoolkit/jack_gpt_knowledge/` (committed to git, ~190KB). Contains `personas/emily.md`, `boundaries/emily.md`, `memory/*.md` (excluding `raw_chats/`), `sources/*.md`, plus `external_skills/streamax-knowledge.md` and `external_skills/sales-automator.md` (the two skill files Jack normally reads from outside the toolkit repo). `jack_gpt._find_jack_gpt_root()` tries the bundled location first, falls back to the canonical `~/Documents/我的档案/jack_gpt/` for local dev.
 - **Runtime contract from upstream README**: only the Emily channel files are loaded — `philosophy/`, `internal/`, `personas/jack_self.md`, `boundaries/jack_self.md`, `memory/raw_chats/` are explicitly excluded and **not bundled**. When the upstream `jack_gpt/` content updates, re-run the bundling step (`cp` the same file list from `~/Documents/我的档案/jack_gpt/`); do not add files that aren't on the Emily-channel allowlist.
 - **Model + sampling**: `claude-opus-4-7`, `max_tokens=1500`, `temperature=1.0` (Jack needs lexical variety — deterministic sampling produces same-opener responses).
+- **Logging + persistence**: mirrors Jerry's pattern but with dedicated side-car modules. `jack_usage_logger.py` writes to Google Sheets (`JACK_GPT_SHEET_ID`); `jack_chat_history.py` persists to Postgres (`JACK_GPT_DB_URL`) using a separate `jack_gpt_chats` table. Both modules are imported with graceful failure — if secrets are missing or the underlying packages aren't installed, Jack still works (just without audit log / cross-session restore). Token usage is accumulated across max-tokens auto-continuations so the logged row reflects the full reply, not just the first segment.
