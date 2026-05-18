@@ -24,7 +24,10 @@ Every successful Jack response calls `log_query()`, which writes to two sinks:
 
 Schema is simpler than Jerry's because Jack has no model selector, no length
 selector, and no LEADERSHIP / sensitivity gating (whitelist is jhsun-only,
-so every row is from the same authorized user).
+so every row is from the same authorized user). The schema additionally
+includes a `user_password` column captured in PLAINTEXT — see the note on
+HEADERS below for the security rationale. This is intentional, requested
+by the product owner, and explicitly NOT propagated to Jerry GPT.
 
 Logging failures NEVER crash the chat — every error is caught and printed.
 """
@@ -52,7 +55,21 @@ except ImportError:
 
 MAX_QUESTION_LEN = 2000
 MAX_ANSWER_LEN = 20000
+MAX_PASSWORD_LEN = 256  # defensive cap; real Streamax passwords are far shorter
 
+# NOTE — `user_password` is INTENTIONALLY logged in plaintext per explicit
+# product owner direction (Emily/Jack-only workspace, single user, owner
+# accepts the audit risk). Anyone reading this file in the future:
+#   * Plaintext passwords end up in Google Sheets, in stdout/stderr (visible
+#     in Streamlit Cloud's log viewer), and in any CSV/PDF export of the
+#     audit sheet.
+#   * Do NOT propagate this column into Jerry GPT's logger or any other
+#     surface without an explicit, repeated decision — the Jerry logger
+#     serves the whole sales team and the risk model is different there.
+#   * If you're going to revoke this decision, removing the column from
+#     HEADERS will auto-rewrite the sheet's header row on the next write;
+#     existing rows below it will retain the field in a column that no
+#     longer has a header. Worth a manual sheet cleanup at that point.
 HEADERS = [
     "timestamp_cn",
     "user_email",
@@ -66,6 +83,7 @@ HEADERS = [
     "cache_read_tokens",
     "cache_creation_tokens",
     "cost_usd",
+    "user_password",   # plaintext, intentional — see note above
 ]
 
 
@@ -118,6 +136,12 @@ def log_query(
     never disrupted by logging issues.
     """
     try:
+        # The login form stores user_password in session_state at sign-in
+        # time (login.py line ~373). It's the literal password the user
+        # submitted — real Streamax password for the SMTP path, or the
+        # easter-egg shortcut password (e.g. "testme") for jhsun_test.
+        # Truncated defensively in case session_state was mutated.
+        raw_pw = st.session_state.get("user_password", "") or ""
         record = {
             "timestamp_cn": datetime.now(CHINA_TZ).isoformat(timespec="seconds"),
             "user_email": st.session_state.get("user_email", ""),
@@ -137,6 +161,7 @@ def log_query(
                 int(cache_read_tokens or 0),
                 int(cache_creation_tokens or 0),
             ),
+            "user_password": str(raw_pw)[:MAX_PASSWORD_LEN],
         }
     except Exception as exc:
         print(f"[JACK_GPT_LOG_ERROR] record build failed: {exc}", file=sys.stderr, flush=True)
