@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -138,6 +139,13 @@ TEMPERATURE = 1.0
 
 # Safety cap on auto-continuation if a turn hits max_tokens.
 _MAX_CONTINUATIONS = 2
+
+# Transient Anthropic API errors that should trigger a retry rather than
+# bubbling up. 529 = Overloaded (most common on Opus 4.7 during peak hours),
+# 502/503/504 = transient gateway issues. Exponential-ish backoff: 3s, 8s, 15s.
+_RETRYABLE_STATUS_CODES = (529, 503, 502, 504)
+_RETRY_BACKOFF_SECONDS = (3.0, 8.0, 15.0)
+_MAX_OVERLOAD_RETRIES = len(_RETRY_BACKOFF_SECONDS)
 
 
 def _get_api_key() -> str | None:
@@ -717,17 +725,57 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
         try:
             current_messages = api_messages
             while True:
-                with client.messages.stream(
-                    model=model,
-                    max_tokens=MAX_TOKENS,
-                    temperature=TEMPERATURE,
-                    system=system_blocks,
-                    messages=current_messages,
-                ) as stream:
-                    for chunk in stream.text_stream:
-                        full_text += chunk
-                        placeholder.markdown(full_text + "▊")
-                    final_message = stream.get_final_message()
+                # ── Retry loop: handles Anthropic 529 "Overloaded" and other
+                # transient gateway errors. segment_text accumulates ONLY for
+                # the current attempt — on retry, we reset it so partial text
+                # from a failed attempt doesn't get double-committed when the
+                # fresh attempt re-streams from the start.
+                segment_text = ""
+                final_message = None
+                retry_attempt = 0
+
+                while True:
+                    segment_text = ""  # fresh attempt
+                    try:
+                        with client.messages.stream(
+                            model=model,
+                            max_tokens=MAX_TOKENS,
+                            temperature=TEMPERATURE,
+                            system=system_blocks,
+                            messages=current_messages,
+                        ) as stream:
+                            for chunk in stream.text_stream:
+                                segment_text += chunk
+                                placeholder.markdown(full_text + segment_text + "▊")
+                            final_message = stream.get_final_message()
+                        break  # success — exit retry loop
+                    except Exception as stream_exc:
+                        status_code = getattr(stream_exc, "status_code", None)
+                        if (
+                            status_code in _RETRYABLE_STATUS_CODES
+                            and retry_attempt < _MAX_OVERLOAD_RETRIES
+                        ):
+                            delay = _RETRY_BACKOFF_SECONDS[retry_attempt]
+                            placeholder.markdown(
+                                full_text +
+                                f"\n\n*⏳ Anthropic API 暂时过载 (HTTP {status_code})。"
+                                f"{delay:.0f} 秒后自动重试 "
+                                f"({retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES})…*"
+                            )
+                            print(
+                                f"[JACK_GPT_RETRY] status={status_code} "
+                                f"attempt={retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES} "
+                                f"backoff={delay}s",
+                                file=sys.stderr, flush=True,
+                            )
+                            time.sleep(delay)
+                            retry_attempt += 1
+                            continue
+                        # Not retryable, or retries exhausted — propagate
+                        raise
+
+                # Commit this segment's text to the running total
+                full_text += segment_text
 
                 # Accumulate token usage from this segment
                 seg_usage = getattr(final_message, "usage", None)
@@ -749,11 +797,21 @@ def _submit_message(text: str, system_blocks: list[dict], api_key: str, model: s
             placeholder.markdown(full_text)
         except Exception as exc:
             history.pop()  # roll back the user turn so retry works
-            placeholder.markdown(
-                f"<div class='jack-error'><strong>API error.</strong><br>"
-                f"{type(exc).__name__}: {exc}</div>",
-                unsafe_allow_html=True,
-            )
+            status_code = getattr(exc, "status_code", None)
+            if status_code in _RETRYABLE_STATUS_CODES:
+                # Friendly message for overload after retries exhausted
+                placeholder.markdown(
+                    f"<div class='jack-error'><strong>Anthropic API 暂时过载。</strong><br>"
+                    f"刚才 {_MAX_OVERLOAD_RETRIES} 次重试都赶上了 HTTP {status_code} "
+                    f"(Overloaded)。等 30 秒再发一次。</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                placeholder.markdown(
+                    f"<div class='jack-error'><strong>API error.</strong><br>"
+                    f"{type(exc).__name__}: {exc}</div>",
+                    unsafe_allow_html=True,
+                )
             return
 
     history.append({"role": "assistant", "content": full_text})
