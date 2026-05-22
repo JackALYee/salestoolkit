@@ -407,8 +407,15 @@ THEME_CSS = """
     }
     @keyframes jerryPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    /* Back link */
-    .jerry-back-bar { margin: 12px 0 24px; }
+    /* Back / sign-out bar */
+    .jerry-back-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin: 12px 0 24px;
+        flex-wrap: wrap;
+    }
     .jerry-back-link {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 8px 14px; border-radius: 8px;
@@ -422,6 +429,12 @@ THEME_CSS = """
         border-color: var(--primary-green);
         color: var(--primary-green);
         background: rgba(42, 245, 152, 0.05);
+    }
+    /* Sign-out variant — red on hover so the destructive intent is obvious */
+    .jerry-signout-link:hover {
+        border-color: #f87171;
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.06);
     }
 
     /* Chat message bubbles */
@@ -1413,6 +1426,10 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         <div class="jerry-back-bar">
             <a href="/" target="_self" class="jerry-back-link">
                 <i class="fa-solid fa-arrow-left"></i> Back to Toolkit
+            </a>
+            <a href="/?logout=1" target="_self"
+               class="jerry-back-link jerry-signout-link">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out
             </a>
         </div>
         <div class="jerry-header">
