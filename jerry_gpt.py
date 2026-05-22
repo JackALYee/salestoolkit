@@ -46,6 +46,12 @@ MODEL_OPTIONS = {
 }
 MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
 
+# VIP-only model ids — non-VIP users have these filtered out of the selector
+# AND are auto-downgraded to NON_VIP_FALLBACK if they have one cached from a
+# previous (former-VIP) session.
+VIP_ONLY_MODELS = frozenset({"claude-opus-4-7"})
+NON_VIP_FALLBACK = "claude-sonnet-4-6"
+
 # --- Response length presets ---
 # max_tokens caps the response; hint is appended to the user message so Jerry
 # adjusts his structure (concise reply vs. full structured breakdown).
@@ -1207,17 +1213,52 @@ def _render_side_panel() -> None:
             unsafe_allow_html=True,
         )
 
-        # Model selector — preserves choice across reruns via session_state key
+        # --- VIP gating ----------------------------------------------------
+        # VIP users see all models. Non-VIP users have Opus 4.7 hidden from
+        # the selector AND are silently downgraded if they have a stale Opus
+        # selection in session_state (e.g., logged in as VIP earlier, then
+        # logged out and back in as non-VIP).
+        is_vip = bool(st.session_state.get("is_vip", False))
+        if is_vip:
+            available_options = MODEL_OPTIONS
+        else:
+            available_options = {
+                k: v for k, v in MODEL_OPTIONS.items() if v not in VIP_ONLY_MODELS
+            }
+
         current_model = st.session_state.get("jerry_gpt_model", DEFAULT_MODEL)
-        current_label = MODEL_ID_TO_LABEL.get(current_model, list(MODEL_OPTIONS.keys())[0])
-        model_labels = list(MODEL_OPTIONS.keys())
+        if not is_vip and current_model in VIP_ONLY_MODELS:
+            current_model = NON_VIP_FALLBACK
+            st.session_state["jerry_gpt_model"] = current_model
+            # Also clear the selectbox widget key — Streamlit re-reads it on
+            # next render and would otherwise re-apply the old VIP selection.
+            st.session_state.pop("jerry_model_selectbox", None)
+
+        current_label = MODEL_ID_TO_LABEL.get(
+            current_model, list(available_options.keys())[0]
+        )
+        model_labels = list(available_options.keys())
+        # Defensive: if current_label somehow isn't in the filtered list,
+        # fall back to the first available option.
+        index = model_labels.index(current_label) if current_label in model_labels else 0
+
         selected_label = st.selectbox(
             "Model",
             model_labels,
-            index=model_labels.index(current_label),
+            index=index,
             key="jerry_model_selectbox",
         )
-        st.session_state["jerry_gpt_model"] = MODEL_OPTIONS[selected_label]
+        st.session_state["jerry_gpt_model"] = available_options[selected_label]
+
+        if not is_vip:
+            st.markdown(
+                '<div style="font-size: 0.7rem; color: #6b7689; '
+                'margin-top: 4px; line-height: 1.4;">'
+                '<i class="fa-solid fa-lock" style="margin-right: 4px;"></i>'
+                'Opus 4.7 is VIP-only. Ask Jack for access.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
         # Length selector
         length_keys = list(LENGTH_OPTIONS.keys())
@@ -1332,6 +1373,17 @@ JERRY_MODEL = "claude-opus-4-7"</pre>
         st.session_state["jerry_gpt_length"] = sel_len
 
     model = st.session_state["jerry_gpt_model"]
+
+    # Final VIP gate — defense in depth. If a non-VIP user somehow ends up
+    # with a VIP-only model (env override, secrets injection, race condition,
+    # cookie restore before _render_side_panel runs), downgrade before
+    # sending to the API.
+    if (
+        not bool(st.session_state.get("is_vip", False))
+        and model in VIP_ONLY_MODELS
+    ):
+        model = NON_VIP_FALLBACK
+        st.session_state["jerry_gpt_model"] = model
     length = st.session_state["jerry_gpt_length"]
 
     # --- Header (full width) ---
