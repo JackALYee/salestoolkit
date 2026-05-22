@@ -32,7 +32,22 @@ LEADERSHIP_EMAILS = frozenset({
     "xdwang@streamax.com",
     "zjzhao@streamax.com",
     "liulei@streamax.com",
+    "xbhu@streamax.com",
 })
+
+# --- VIP — power users who can use Opus 4.7 (the most expensive model) -------
+# Everyone in LEADERSHIP is automatically VIP. Add additional emails to
+# EXTRA_VIP_EMAILS to grant Opus access without giving them full leadership
+# pricing clearance. Edit this set to grow the VIP roster.
+EXTRA_VIP_EMAILS = frozenset({
+    "jhsun@streamax.com",      # Emily — 西南欧客户经理
+    "caojun@streamax.com",     # Cao Jun
+    "johnz@streamax.com",      # John Z
+    "wangrui@streamax.com",    # Wang Rui — Jerry's real-life good friend (SPECIAL)
+})
+
+# Computed at module load: every user with VIP privileges.
+VIP_EMAILS = LEADERSHIP_EMAILS | EXTRA_VIP_EMAILS
 
 # Easter-egg auth shortcuts (jerry_test, hekun_test, etc.) authenticate as a
 # display name. Map the display name back to the canonical streamax.com email
@@ -57,6 +72,19 @@ def resolve_leadership(name_or_email: str) -> bool:
     # If it's a known display name, swap to canonical email
     val = _EASTER_EGG_TO_EMAIL.get(val, val)
     return val in LEADERSHIP_EMAILS
+
+
+def resolve_vip(name_or_email: str) -> bool:
+    """Return True if the user is in the VIP list (Opus 4.7 access).
+
+    VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS. Accepts emails or easter-egg display
+    names. Case-insensitive. Same resolution logic as resolve_leadership.
+    """
+    if not name_or_email:
+        return False
+    val = name_or_email.strip().lower()
+    val = _EASTER_EGG_TO_EMAIL.get(val, val)
+    return val in VIP_EMAILS
 
 
 def resolve_user_email(name_or_email: str) -> str:
@@ -108,6 +136,15 @@ def resolve_special_relationship(name_or_email: str) -> dict | None:
 def _grant_leadership(name_or_email: str) -> None:
     """Set session_state['is_leadership'] for the just-authenticated user."""
     st.session_state["is_leadership"] = resolve_leadership(name_or_email)
+
+
+def _grant_vip(name_or_email: str) -> None:
+    """Set session_state['is_vip'] for the just-authenticated user.
+
+    Called from every login branch alongside _grant_leadership so VIP status
+    is available immediately on first render. VIP = LEADERSHIP ∪ EXTRA_VIP.
+    """
+    st.session_state["is_vip"] = resolve_vip(name_or_email)
 
 def verify_streamax_credentials(email, password):
     # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
@@ -294,6 +331,7 @@ def render_login():
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'Jerry'
         _grant_leadership('Jerry')
+        _grant_vip('Jerry')
         _persist('Jerry')
         st.rerun()
 
@@ -313,6 +351,7 @@ def render_login():
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'Hekun'
         _grant_leadership('Hekun')
+        _grant_vip('Hekun')
         _persist('Hekun')
         st.rerun()
 
@@ -335,6 +374,7 @@ def render_login():
         st.session_state['authenticated'] = True
         st.session_state['user_name'] = 'ZNTang'
         _grant_leadership('ZNTang')
+        _grant_vip('ZNTang')
         _persist('ZNTang')
         st.rerun()
 
@@ -361,6 +401,7 @@ def render_login():
         # when the user authenticated via the jhsun_test shortcut.
         st.session_state['user_email'] = 'jhsun@streamax.com'
         _grant_leadership('JHSun')
+        _grant_vip('JHSun')
         _persist('JHSun')
         st.rerun()
 
@@ -415,6 +456,7 @@ def render_login():
                             st.session_state['authenticated'] = True
                             st.session_state['user_name'] = email_input
                             _grant_leadership(email_input)
+                            _grant_vip(email_input)
                             _persist(email_input)
                             st.rerun()
                     else:

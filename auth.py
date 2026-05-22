@@ -185,13 +185,15 @@ def restore_session() -> None:
         # only the user_name (display name for easter-egg accounts, full
         # email for regular logins) — we look up the matching email here.
         try:
-            from login import resolve_leadership, resolve_user_email
+            from login import resolve_leadership, resolve_user_email, resolve_vip
             st.session_state["is_leadership"] = resolve_leadership(user)
+            st.session_state["is_vip"] = resolve_vip(user)
             restored_email = resolve_user_email(user)
             if restored_email:
                 st.session_state["user_email"] = restored_email
         except Exception:
             st.session_state["is_leadership"] = False
+            st.session_state["is_vip"] = False
 
 
 def persist_login(user_name: str) -> None:
@@ -246,7 +248,7 @@ def logout() -> None:
             cm.delete(COOKIE_NAME)
         except Exception:
             pass
-    for key in ("authenticated", "user_name", "user_email", "is_leadership"):
+    for key in ("authenticated", "user_name", "user_email", "is_leadership", "is_vip"):
         st.session_state.pop(key, None)
     # Layer 3: sticky flag. Survives reruns within this tab and blocks
     # restore_session() from re-hydrating from any cookie value that the
