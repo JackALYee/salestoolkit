@@ -1320,6 +1320,25 @@ def render() -> None:
     """
     st.markdown(THEME_CSS, unsafe_allow_html=True)
 
+    # ── Defensive: re-derive is_vip from authenticated identity on EVERY
+    # render, so a stale session_state["is_vip"] = True (e.g. inherited from
+    # a previous VIP user who logged out before a test_account login on the
+    # same machine, or a cookie-restore race) cannot leak Opus access.
+    # This is the only authoritative source — login.py grants are eventually
+    # consistent but this is immediate.
+    try:
+        from login import resolve_vip
+        _id_email = (st.session_state.get("user_email", "") or "").strip()
+        _id_name = (st.session_state.get("user_name", "") or "").strip()
+        st.session_state["is_vip"] = (
+            resolve_vip(_id_email) or resolve_vip(_id_name)
+        )
+    except Exception:
+        # If login module fails to import for any reason, default to safe
+        # (non-VIP). Better to lose Opus access for one render than to leak
+        # it to a non-VIP user.
+        st.session_state["is_vip"] = False
+
     api_key = _get_api_key()
 
     # --- API key check (fail early, before initing state we don't need) ---
