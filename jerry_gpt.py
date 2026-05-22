@@ -1257,7 +1257,7 @@ def _render_side_panel() -> None:
                 '<div style="font-size: 0.7rem; color: #6b7689; '
                 'margin-top: 4px; line-height: 1.4;">'
                 '<i class="fa-solid fa-lock" style="margin-right: 4px;"></i>'
-                'Opus 4.7 is VIP-only. Ask Jack for access.'
+                'Opus 4.7 needs supervisor permission. Ask Jack for access.'
                 '</div>',
                 unsafe_allow_html=True,
             )
