@@ -39,10 +39,12 @@ ASSETS_DIR = Path(__file__).parent / "assets"
 DEFAULT_MODEL = "claude-opus-4-7"
 
 # --- Model catalog (display label -> Anthropic model id) ---
+# Labels intentionally short — selectbox lives in a narrow sidebar column;
+# longer labels get truncated to "Opus 4.7 — ..." which hides the qualifier.
 MODEL_OPTIONS = {
-    "Opus 4.7 — highest quality": "claude-opus-4-7",
-    "Sonnet 4.6 — balanced": "claude-sonnet-4-6",
-    "Haiku 4.5 — fastest, cheapest": "claude-haiku-4-5-20251001",
+    "Opus 4.7": "claude-opus-4-7",
+    "Sonnet 4.6": "claude-sonnet-4-6",
+    "Haiku 4.5": "claude-haiku-4-5-20251001",
 }
 MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
 
