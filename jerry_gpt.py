@@ -36,13 +36,13 @@ except Exception:
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
-DEFAULT_MODEL = "claude-opus-4-7"
+DEFAULT_MODEL = "claude-opus-4-8"
 
 # --- Model catalog (display label -> Anthropic model id) ---
 # Labels intentionally short — selectbox lives in a narrow sidebar column;
-# longer labels get truncated to "Opus 4.7 — ..." which hides the qualifier.
+# longer labels get truncated to "Opus 4.8 — ..." which hides the qualifier.
 MODEL_OPTIONS = {
-    "Opus 4.7": "claude-opus-4-7",
+    "Opus 4.8": "claude-opus-4-8",
     "Sonnet 4.6": "claude-sonnet-4-6",
     "Haiku 4.5": "claude-haiku-4-5-20251001",
 }
@@ -51,7 +51,7 @@ MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
 # VIP-only model ids — non-VIP users have these filtered out of the selector
 # AND are auto-downgraded to NON_VIP_FALLBACK if they have one cached from a
 # previous (former-VIP) session.
-VIP_ONLY_MODELS = frozenset({"claude-opus-4-7"})
+VIP_ONLY_MODELS = frozenset({"claude-opus-4-8"})
 NON_VIP_FALLBACK = "claude-sonnet-4-6"
 
 # --- Response length presets ---
@@ -85,7 +85,7 @@ _MAX_CONTINUATIONS = 3
 
 # Transient Anthropic API errors that should trigger a retry rather than
 # bubbling up to the user. 529 = Overloaded (the common one during peak hours
-# on Opus 4.7), 502/503/504 = transient gateway issues. Exponential-ish
+# on Opus 4.8), 502/503/504 = transient gateway issues. Exponential-ish
 # backoff: 3s, 8s, 15s. Matches the values in jack_gpt.py.
 _RETRYABLE_STATUS_CODES = (529, 503, 502, 504)
 _RETRY_BACKOFF_SECONDS = (3.0, 8.0, 15.0)
@@ -1229,7 +1229,7 @@ def _render_side_panel() -> None:
         )
 
         # --- VIP gating ----------------------------------------------------
-        # VIP users see all models. Non-VIP users have Opus 4.7 hidden from
+        # VIP users see all models. Non-VIP users have Opus 4.8 hidden from
         # the selector AND are silently downgraded if they have a stale Opus
         # selection in session_state (e.g., logged in as VIP earlier, then
         # logged out and back in as non-VIP).
@@ -1270,7 +1270,7 @@ def _render_side_panel() -> None:
                 '<div style="font-size: 0.7rem; color: #6b7689; '
                 'margin-top: 4px; line-height: 1.4;">'
                 '<i class="fa-solid fa-lock" style="margin-right: 4px;"></i>'
-                'Opus 4.7 needs supervisor permission.'
+                'Opus 4.8 needs supervisor permission.'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -1366,7 +1366,7 @@ def render() -> None:
                 (locally) or to your Streamlit Cloud app secrets:
                 <pre style="background:rgba(0,0,0,0.4); padding:12px; border-radius:6px; margin-top:10px;">
 ANTHROPIC_API_KEY = "sk-ant-..."
-JERRY_MODEL = "claude-opus-4-7"</pre>
+JERRY_MODEL = "claude-opus-4-8"</pre>
                 Then refresh this page.
             </div>
             """,

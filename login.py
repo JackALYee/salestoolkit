@@ -36,7 +36,7 @@ LEADERSHIP_EMAILS = frozenset({
     "sunyan@streamax.com",
 })
 
-# --- VIP — power users who can use Opus 4.7 (the most expensive model) -------
+# --- VIP — power users who can use Opus 4.8 (the most expensive model) -------
 # Everyone in LEADERSHIP is automatically VIP. Add additional emails to
 # EXTRA_VIP_EMAILS to grant Opus access without giving them full leadership
 # pricing clearance. Edit this set to grow the VIP roster.
@@ -76,7 +76,7 @@ def resolve_leadership(name_or_email: str) -> bool:
 
 
 def resolve_vip(name_or_email: str) -> bool:
-    """Return True if the user is in the VIP list (Opus 4.7 access).
+    """Return True if the user is in the VIP list (Opus 4.8 access).
 
     VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS. Accepts emails or easter-egg display
     names. Case-insensitive. Same resolution logic as resolve_leadership.
