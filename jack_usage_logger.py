@@ -91,11 +91,11 @@ HEADERS = [
 # Identical table to usage_logger.PRICING so Jerry and Jack rows in their
 # respective sheets stay directly comparable. When updating one, update both.
 PRICING = {
-    "claude-opus-4-7":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
+    "claude-opus-4-8":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
     "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
     "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
 }
-_PRICING_FALLBACK = PRICING["claude-opus-4-7"]  # Jack defaults to opus 4.7
+_PRICING_FALLBACK = PRICING["claude-opus-4-8"]  # Jack defaults to opus 4.8
 
 
 def _estimate_cost_usd(

@@ -129,7 +129,7 @@ USER_AVATAR = "💁‍♀️"  # Emily's seat
 # Model config
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODEL = "claude-opus-4-7"
+DEFAULT_MODEL = "claude-opus-4-8"
 # 1500: enough room for a multi-bubble WeChat-style reply without
 # letting the model balloon into AI-essay territory. Jack 不写小作文。
 MAX_TOKENS = 1500
@@ -141,7 +141,7 @@ TEMPERATURE = 1.0
 _MAX_CONTINUATIONS = 2
 
 # Transient Anthropic API errors that should trigger a retry rather than
-# bubbling up. 529 = Overloaded (most common on Opus 4.7 during peak hours),
+# bubbling up. 529 = Overloaded (most common on Opus 4.8 during peak hours),
 # 502/503/504 = transient gateway issues. Exponential-ish backoff: 3s, 8s, 15s.
 _RETRYABLE_STATUS_CODES = (529, 503, 502, 504)
 _RETRY_BACKOFF_SECONDS = (3.0, 8.0, 15.0)
@@ -177,7 +177,7 @@ def _get_model() -> str:
 
 # Human-readable label for the model pill in the header.
 _MODEL_LABELS = {
-    "claude-opus-4-7": "Claude Opus 4.7",
+    "claude-opus-4-8": "Claude Opus 4.8",
     "claude-opus-4-5": "Claude Opus 4.5",
     "claude-sonnet-4-5": "Claude Sonnet 4.5",
     "claude-sonnet-4-6": "Claude Sonnet 4.6",
