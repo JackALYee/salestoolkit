@@ -33,6 +33,7 @@ LEADERSHIP_EMAILS = frozenset({
     "zjzhao@streamax.com",
     "liulei@streamax.com",
     "xbhu@streamax.com",
+    "sunyan@streamax.com",
 })
 
 # --- VIP — power users who can use Opus 4.7 (the most expensive model) -------
