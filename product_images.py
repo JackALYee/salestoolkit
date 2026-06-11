@@ -48,6 +48,32 @@ _IMAGE_CAPTIONS = {
     "pis_box_ims100":          "PIS Box (IMS 100) — onboard media player",
     "mdvr_tiers":              "MDVR tiers — M1N2.0 · X3NPro · A8Pro2.0 · A16Max",
     "bus_operation_portfolio": "Bus operation portfolio — XPAD · X3NPro · A8Pro · A16Max",
+    # Mining solution
+    "mining_product_store":    "Mining product store — M10 / M10 PRO / M1N 2.0 tiers + IPC line",
+    "mining_system_schematic": "Mining safety system — M10 MDVR + DMS + BSD + radar",
+    "mining_bsd":              "Mining BSD — dual-lens blacklight, 270° dead-zone-free",
+    "mining_fcw":              "Mining ADAS — Forward Collision Warning IPC",
+    "mining_dms_edge":         "Mining Driver Behavior IPC — edge DMS (gas-mask fatigue)",
+    "mining_blacklight_cam":   "Mining blacklight smart camera (0.01–0.03 lux)",
+    "mining_radar_vision":     "Radar-vision fusion — dust-penetrating mmWave + camera",
+    "mining_v2v":              "V2V — vehicle-to-vehicle beyond-visual-range alerts",
+    "mining_reverse_radar":    "Reverse radar-vision fusion warning",
+    "mining_reversing_cam":    "Intelligent reversing camera (tire-to-wall distance)",
+    "mining_bucket_tooth":     "Excavator bucket-tooth detachment detection",
+    "mining_large_block":      "Large-block detection system",
+    "mining_minesync_cloud":   "MineSync-Cloud + SafeGPT mining platform",
+    "mining_scenario_overview":"Mining solution — full scenario coverage",
+    # Vision 2.0 / new products
+    "dcmax_gt1":               "DC MAX AI dashcam + GT1 telematics gateway",
+    "dcmax_6ch_architecture":  "DC MAX — 6-channel video-telematics architecture",
+    "fms_tracker":             "FMS Tracker — dead-reckoning asset tracker",
+    "safegpt_dashboard":       "SafeGPT — real-time risk dashboard",
+    "safegpt_driver_eval":     "SafeGPT — driver evaluation & coaching",
+    "trailer_4k_blacklight":   "In-cargo 4K + 1080P blacklight cameras",
+    "trailer_volume_ai":       "AI cargo-volume detection (95% accuracy)",
+    "cargo_security_device":   "All-in-one cargo-security device (Q4 2025)",
+    "cargo_device_allinone":   "Cargo-security device — all-in-one interfaces",
+    "blacklight_ultra":        "Blacklight Ultra — 0.02-lux night vision",
 }
 
 # product alias -> image filename. Aliases are matched case-insensitively with
@@ -102,6 +128,35 @@ _ALIAS_TO_IMAGE = {
     "A8Pro": "mdvr_tiers",
     "A8PRO": "mdvr_tiers",
     "XPAD": "bus_operation_portfolio",
+    # Mining solution
+    "M10 PRO": "mining_product_store",
+    "M10PRO": "mining_product_store",
+    "M10": "mining_product_store",
+    "Mining BSD": "mining_bsd",
+    "Mining ADAS": "mining_fcw",
+    "Mining Driver Behavior": "mining_dms_edge",
+    "Thermal Smart CAM": "mining_product_store",
+    "bucket tooth": "mining_bucket_tooth",
+    "bucket teeth": "mining_bucket_tooth",
+    "large block": "mining_large_block",
+    "V2V": "mining_v2v",
+    "V2X": "mining_v2v",
+    "MineSync-Cloud": "mining_minesync_cloud",
+    "MineSync": "mining_minesync_cloud",
+    "reversing camera": "mining_reversing_cam",
+    "smart reversing": "mining_reversing_cam",
+    "radar-vision": "mining_radar_vision",
+    "radar vision": "mining_radar_vision",
+    "millimeter-wave radar": "mining_product_store",
+    "blacklight smart camera": "mining_blacklight_cam",
+    # Vision 2.0 / new products
+    "DC MAX": "dcmax_gt1",
+    "DC-MAX": "dcmax_gt1",
+    "DCMAX": "dcmax_gt1",
+    "GT1": "dcmax_gt1",
+    "FMS Tracker": "fms_tracker",
+    "Blacklight Ultra": "blacklight_ultra",
+    "cargo security": "cargo_security_device",
 }
 
 # Pre-compile one regex per alias with alphanumeric boundary guards.
@@ -157,7 +212,9 @@ def find_product_images(text: str) -> list[tuple[str, str]]:
 PRODUCT_NAME_HINT = (
     "When you discuss a specific Streamax product, refer to it by its exact "
     "model name (e.g. C29N, CA20D, C53, IBCU, P3D, M1N 2.0, C34, DP7S, CMS20, "
-    "L16MAX-286). The interface automatically shows the user a product photo "
-    "for the models you name, so precise naming helps them see what you mean. "
-    "Do not invent image links or markdown images — just name the product."
+    "L16MAX-286; mining: M10, M10 PRO, Mining BSD, Mining ADAS, V2V, MineSync-Cloud; "
+    "new products: DC MAX, GT1, FMS Tracker, Blacklight Ultra). The interface "
+    "automatically shows the user a product photo for the models you name, so "
+    "precise naming helps them see what you mean. Do not invent image links or "
+    "markdown images — just name the product."
 )
