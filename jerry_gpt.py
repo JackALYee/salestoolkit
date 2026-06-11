@@ -33,6 +33,13 @@ try:
 except Exception:
     _chat_history = None
 
+# Product image library — optional sibling module. Surfaces a product photo
+# below Jerry's answer whenever he names a Streamax model. Never raises.
+try:
+    import product_images as _product_images
+except Exception:
+    _product_images = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -250,6 +257,13 @@ def _load_system_blocks() -> list[dict]:
     spedia = _generate_streamaxpedia_knowledge()
     if spedia:
         sections.append(f"<knowledge file=\"streamaxpedia_generated.md\">\n{spedia}\n</knowledge>")
+
+    # Tell Jerry that naming a product by exact model triggers an auto-shown
+    # photo, so he names models precisely. Static string — keeps cache stable.
+    if _product_images is not None:
+        sections.append(
+            f"<interface_capabilities>\n{_product_images.PRODUCT_NAME_HINT}\n</interface_capabilities>"
+        )
 
     combined = "\n\n".join(sections)
     return [
@@ -955,6 +969,40 @@ def _render_copy_button(text: str) -> None:
     )
 
 
+def _render_product_images(text: str) -> None:
+    """Show product photos for any Streamax models named in `text`.
+
+    Renders a small gallery (up to product_images.MAX_IMAGES) beneath an
+    assistant message so the user can see the hardware Jerry is describing.
+    Best-effort — silently does nothing if the module is missing or no
+    product is mentioned.
+    """
+    if _product_images is None:
+        return
+    try:
+        matches = _product_images.find_product_images(text)
+    except Exception as e:
+        print(f"[JERRY_GPT_IMG_ERROR] match failed: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        return
+    if not matches:
+        return
+
+    st.markdown(
+        '<div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; '
+        'letter-spacing:1.5px; color:var(--primary-green); margin:10px 0 6px;">'
+        '<i class="fa-solid fa-image"></i> Products mentioned</div>',
+        unsafe_allow_html=True,
+    )
+    # Two-per-row keeps each slide legible without dominating the column.
+    for i in range(0, len(matches), 2):
+        pair = matches[i:i + 2]
+        cols = st.columns(len(pair))
+        for col, (path, caption) in zip(cols, pair):
+            with col:
+                st.image(path, caption=caption, use_container_width=True)
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -1499,6 +1547,7 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
             with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
                 st.markdown(_md_safe(msg["content"]))
                 if msg["role"] == "assistant":
+                    _render_product_images(msg["content"])
                     _render_copy_button(msg["content"])
 
         # New-chat button row
@@ -2069,6 +2118,16 @@ def _submit_message(
             import sys as _sys
             print(
                 f"[JERRY_GPT_POSTWORK_ERROR] chat_history.save_turn failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
+
+        try:
+            _render_product_images(full_text)
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] product_images failed: "
                 f"{type(e).__name__}: {e}",
                 file=_sys.stderr, flush=True,
             )
