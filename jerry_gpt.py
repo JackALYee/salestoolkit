@@ -316,24 +316,12 @@ THEME_CSS = """
         --gradient-text: linear-gradient(135deg, #2AF598 0%, #009EFD 100%);
     }
 
-    /* App-wide background + grid overlay */
+    /* App-wide background — flat, clean, GPT-like (no grid overlay, no glow) */
     .stApp {
-        background-color: var(--bg-deep) !important;
-        background-image: radial-gradient(circle at 50% -20%, #0B1221, #050810) !important;
+        background-color: #0b0d12 !important;
+        background-image: none !important;
         font-family: 'Inter', sans-serif !important;
         color: var(--text-white) !important;
-    }
-    .stApp::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        background-image:
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        background-size: 50px 50px;
-        opacity: 0.05;
-        z-index: 0;
-        pointer-events: none;
     }
 
     /* Hide default Streamlit chrome */
@@ -373,92 +361,73 @@ THEME_CSS = """
 
     .block-container {
         max-width: 1080px !important;
-        padding-top: 2rem !important;
-        padding-bottom: 8rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: 7rem !important;
         position: relative;
         z-index: 1;
     }
 
-    /* Header */
-    .jerry-header { text-align: center; padding: 16px 0 24px; }
-    .jerry-subtitle {
-        font-size: 0.75rem; text-transform: uppercase; letter-spacing: 3px;
-        color: var(--primary-green); margin-bottom: 12px; font-weight: 600;
-    }
-    .jerry-title {
-        font-size: 2.8rem; font-weight: 800; letter-spacing: -1px;
-        background: var(--gradient-text);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
-        margin-bottom: 12px; line-height: 1.1;
-    }
-    .jerry-tagline {
-        color: var(--text-grey) !important;
-        max-width: 680px !important;
-        width: auto !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        margin-top: 0 !important;
-        margin-bottom: 16px !important;
-        padding-left: 20px !important;
-        padding-right: 20px !important;
-        font-size: 1rem !important;
-        line-height: 1.6 !important;
-        text-align: center !important;
-        display: block !important;
-    }
-    .jerry-meta {
-        display: inline-flex; align-items: center; gap: 10px;
-        padding: 6px 14px;
-        background: var(--glass-bg); border: var(--glass-border); border-radius: 30px;
-        backdrop-filter: blur(8px);
-        font-size: 0.78rem; color: var(--text-grey);
-    }
-    .jerry-meta .dot {
-        width: 6px; height: 6px; border-radius: 50%;
-        background: var(--primary-green);
-        box-shadow: 0 0 6px var(--primary-green);
-        animation: jerryPulse 2s ease-in-out infinite;
-    }
-    @keyframes jerryPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-    /* Back / sign-out bar */
-    .jerry-back-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-        margin: 12px 0 24px;
+    /* Slim top bar — replaces the big gradient hero. Brand mark on the left,
+       model + nav on the right. Clean, minimal, ChatGPT-like. */
+    .jerry-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 4px 2px 14px; margin-bottom: 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
         flex-wrap: wrap;
     }
+    .jerry-brand { display: inline-flex; align-items: center; gap: 10px; }
+    .jerry-brand-mark {
+        width: 30px; height: 30px; border-radius: 50%;
+        object-fit: cover; border: 1px solid rgba(255,255,255,0.12);
+    }
+    .jerry-brand-name { font-size: 1.05rem; font-weight: 600; color: var(--text-white); letter-spacing: -0.2px; }
+    .jerry-brand-model {
+        font-size: 0.72rem; color: var(--text-grey);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+        padding: 2px 9px; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .jerry-brand-model .dot {
+        width: 5px; height: 5px; border-radius: 50%; background: var(--primary-green);
+    }
+    .jerry-topnav { display: inline-flex; align-items: center; gap: 8px; }
     .jerry-back-link {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 8px 14px; border-radius: 8px;
-        background: rgba(255,255,255,0.04);
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 6px 12px; border-radius: 8px;
+        background: transparent;
         border: 1px solid rgba(255,255,255,0.08);
         color: var(--text-grey); text-decoration: none;
-        font-size: 0.85rem; font-weight: 500;
+        font-size: 0.8rem; font-weight: 500;
         transition: all 0.2s;
     }
     .jerry-back-link:hover {
-        border-color: var(--primary-green);
-        color: var(--primary-green);
-        background: rgba(42, 245, 152, 0.05);
+        border-color: rgba(255,255,255,0.25);
+        color: var(--text-white);
+        background: rgba(255,255,255,0.04);
     }
-    /* Sign-out variant — red on hover so the destructive intent is obvious */
     .jerry-signout-link:hover {
         border-color: #f87171;
         color: #f87171;
         background: rgba(248, 113, 113, 0.06);
     }
 
-    /* Chat message bubbles */
+    /* Chat messages — GPT-like: assistant is plain (no card), user gets a
+       subtle right-aligned bubble. Flat, no blur, no glow. */
     [data-testid="stChatMessage"] {
-        background: var(--glass-bg) !important;
-        border: var(--glass-border) !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 6px 2px !important;
+        margin-bottom: 6px !important;
+        backdrop-filter: none !important;
+    }
+    /* User turn: light bubble, tucked to the right */
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.07) !important;
         border-radius: 14px !important;
-        padding: 14px 18px !important;
-        margin-bottom: 14px !important;
-        backdrop-filter: blur(12px);
+        padding: 12px 16px !important;
+        margin: 6px 0 10px auto !important;
+        max-width: 88% !important;
     }
     [data-testid="stChatMessage"] p,
     [data-testid="stChatMessage"] li,
@@ -500,7 +469,7 @@ THEME_CSS = """
         background: var(--gradient-text) !important;
         color: #050810 !important;
         padding: 2px !important;
-        box-shadow: 0 0 12px rgba(42, 245, 152, 0.25) !important;
+        box-shadow: none !important;
     }
     [data-testid="stChatMessageAvatarAssistant"] img {
         border-radius: 50% !important;
@@ -528,13 +497,13 @@ THEME_CSS = """
         forced-color-adjust: none !important;
     }
     [data-testid="stChatInput"] {
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 14px !important;
-        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.14) !important;
+        border-radius: 26px !important;
+        backdrop-filter: none !important;
     }
     [data-testid="stChatInput"]:focus-within {
-        border-color: rgba(42, 245, 152, 0.4) !important;
-        box-shadow: 0 0 20px rgba(42, 245, 152, 0.15) !important;
+        border-color: rgba(42, 245, 152, 0.45) !important;
+        box-shadow: none !important;
     }
     /* Textarea itself: transparent, so the dark wrapper shows through */
     [data-testid="stChatInput"] textarea {
@@ -577,14 +546,13 @@ THEME_CSS = """
         transform: translateY(-1px);
     }
 
-    /* Welcome empty state */
+    /* Welcome empty state — lighter, centered, no heavy card */
     .jerry-welcome {
         text-align: center;
-        padding: 36px 24px;
-        background: var(--glass-bg);
-        border: var(--glass-border);
-        border-radius: 16px;
-        margin: 20px 0 24px;
+        padding: 48px 24px 28px;
+        background: transparent;
+        border: none;
+        margin: 8px 0 18px;
     }
     .jerry-welcome-badge {
         display: inline-flex; align-items: center; gap: 8px;
@@ -1260,22 +1228,10 @@ def _render_past_chats() -> None:
                 st.rerun()
 
 
-def _render_side_panel() -> None:
-    """Right column: settings (model + length) and cumulative session usage.
-
-    Each card uses st.container(border=True) so widgets render INSIDE the
-    bordered area — the older approach of opening a markdown <div> didn't
-    work because Streamlit renders each widget in its own DOM container,
-    sibling to the markdown HTML rather than nested in it.
-    """
-    # --- Settings card (model + length INSIDE the bordered container) ---
-    with st.container(border=True):
-        st.markdown(
-            '<div class="jerry-side-title">'
-            '<i class="fa-solid fa-sliders"></i><span>Settings</span></div>',
-            unsafe_allow_html=True,
-        )
-
+def _render_settings_panel() -> None:
+    """Sidebar settings: model selector + response length. GPT-like — lives
+    in a collapsible expander so it's available but out of the way."""
+    with st.expander("⚙️  Settings", expanded=False):
         # --- VIP gating ----------------------------------------------------
         # VIP users see all models. Non-VIP users have Opus 4.8 hidden from
         # the selector AND are silently downgraded if they have a stale Opus
@@ -1335,8 +1291,10 @@ def _render_side_panel() -> None:
         )
         st.session_state["jerry_gpt_length"] = selected_length
 
-    # --- Stats card ---
-    with st.container(border=True):
+
+def _render_usage_panel() -> None:
+    """Sidebar session usage — tucked into a collapsed expander (GPT-like)."""
+    with st.expander("📊  Session usage", expanded=False):
         usage = st.session_state["jerry_gpt_usage"]
         total_tokens = (
             usage["input_tokens"]
@@ -1346,9 +1304,6 @@ def _render_side_panel() -> None:
         )
         st.markdown(
             f"""
-            <div class="jerry-side-title">
-                <i class="fa-solid fa-chart-line"></i><span>Session usage</span>
-            </div>
             <div class="jerry-stat-row"><span>Messages</span><span class="val">{usage['message_count']}</span></div>
             <div class="jerry-stat-row"><span>Input tokens</span><span class="val">{usage['input_tokens']:,}</span></div>
             <div class="jerry-stat-row"><span>Output tokens</span><span class="val">{usage['output_tokens']:,}</span></div>
@@ -1442,10 +1397,10 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
     _init_session_state()
     history: list[dict] = st.session_state["jerry_gpt_history"]
 
-    # Sync canonical model/length from the side-panel widget keys BEFORE we
-    # read them for the header. Streamlit runs top-to-bottom: without this
+    # Sync canonical model/length from the settings-panel widget keys BEFORE
+    # we read them for the top bar. Streamlit runs top-to-bottom: without this
     # sync, changing the selectbox would only update jerry_gpt_model after
-    # _render_side_panel() runs (below the header), so the header would
+    # _render_settings_panel() runs (below the top bar), so the bar would
     # display the previous model until the next rerun.
     sel_label = st.session_state.get("jerry_model_selectbox")
     if sel_label in MODEL_OPTIONS:
@@ -1458,7 +1413,7 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
 
     # Final VIP gate — defense in depth. If a non-VIP user somehow ends up
     # with a VIP-only model (env override, secrets injection, race condition,
-    # cookie restore before _render_side_panel runs), downgrade before
+    # cookie restore before _render_settings_panel runs), downgrade before
     # sending to the API.
     if (
         not bool(st.session_state.get("is_vip", False))
@@ -1468,39 +1423,42 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
         st.session_state["jerry_gpt_model"] = model
     length = st.session_state["jerry_gpt_length"]
 
-    # --- Header (full width) ---
+    # --- Slim top bar (brand + model on the left, nav on the right) ---
     st.markdown(
         f"""
-        <div class="jerry-back-bar">
-            <a href="/" target="_self" class="jerry-back-link">
-                <i class="fa-solid fa-arrow-left"></i> Back to Toolkit
-            </a>
-            <a href="/?logout=1" target="_self"
-               class="jerry-back-link jerry-signout-link">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out
-            </a>
-        </div>
-        <div class="jerry-header">
-            <div class="jerry-subtitle">A STREAMAX SALES TOOLKIT Extension - By Trucking BU</div>
-            <h1 class="jerry-title">Jerry GPT</h1>
-            <p class="jerry-tagline">Talk to Streamax's Product Marketing Director Jerry. Distilled by Jerry himself from 10 years at Streamax — so every customer conversation lands with a clearer, more convincing pitch.</p>
-            <div class="jerry-meta">
-                <span class="dot"></span>
-                <span>{MODEL_ID_TO_LABEL.get(model, model)}</span>
+        <div class="jerry-topbar">
+            <div class="jerry-brand">
+                <span class="jerry-brand-name">Jerry GPT</span>
+                <span class="jerry-brand-model"><span class="dot"></span>{MODEL_ID_TO_LABEL.get(model, model)}</span>
+            </div>
+            <div class="jerry-topnav">
+                <a href="/" target="_self" class="jerry-back-link">
+                    <i class="fa-solid fa-arrow-left"></i> Toolkit
+                </a>
+                <a href="/?logout=1" target="_self" class="jerry-back-link jerry-signout-link">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out
+                </a>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # --- Three-column body: past chats (left) | main chat | settings + usage (right)
-    col_left, col_main, col_right = st.columns([1.1, 3, 1.1], gap="large")
+    # --- Two-column body: a slim sidebar (new chat · settings · past chats ·
+    # usage) on the left, the conversation on the right. Cleaner and more
+    # GPT-like than the previous three-column split.
+    col_side, col_main = st.columns([1, 3.1], gap="large")
 
-    with col_left:
+    with col_side:
+        # New chat at the very top of the sidebar (GPT convention)
+        if st.button("✏️  New chat", use_container_width=True, key="new_chat_btn_side"):
+            st.session_state["jerry_gpt_history"] = []
+            if _chat_history is not None:
+                st.session_state["jerry_gpt_session_id"] = _chat_history.new_session_id()
+            st.rerun()
+        _render_settings_panel()
         _render_past_chats()
-
-    with col_right:
-        _render_side_panel()
+        _render_usage_panel()
 
     with col_main:
         # Welcome + quick prompts when empty
@@ -1535,9 +1493,9 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                 '<div class="jerry-continuing-banner">'
                 '<i class="fa-solid fa-clock-rotate-left"></i>'
                 '<span>You\'re continuing a saved conversation. '
-                'Click <strong>🔄 New chat</strong> to start fresh, or '
-                'browse <strong>Past chats</strong> in the side panel to '
-                'switch to an older session.</span>'
+                'Click <strong>✏️ New chat</strong> in the sidebar to start '
+                'fresh, or browse <strong>Past chats</strong> to switch to an '
+                'older session.</span>'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -1550,18 +1508,7 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                     _render_product_images(msg["content"])
                     _render_copy_button(msg["content"])
 
-        # New-chat button row
-        _col_a, _col_b = st.columns([6, 1])
-        with _col_b:
-            if st.button("🔄 New chat", use_container_width=True, disabled=not history, key="new_chat_btn"):
-                # Clear in-memory history AND assign a fresh session_id, so
-                # the next saved turn lands in a new conversation and
-                # subsequent loads pick up THIS empty session as the
-                # "most recent" instead of the old one.
-                st.session_state["jerry_gpt_history"] = []
-                if _chat_history is not None:
-                    st.session_state["jerry_gpt_session_id"] = _chat_history.new_session_id()
-                st.rerun()
+        # (New chat moved to the top of the sidebar — GPT convention.)
 
         # Chat input (renders inline at bottom of col_main)
         user_input = st.chat_input("Ask Jerry anything…")
