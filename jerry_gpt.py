@@ -798,12 +798,12 @@ THEME_CSS = """
 
 
 QUICK_PROMPTS = [
-    ("📣 60-second TSP pitch", "Give me the 60-second TSP pitch."),
-    ("🎯 vs. Motive in NA", "How do I position Streamax against Motive in North America?"),
-    ("👤 Drivers won't accept", "A fleet manager says drivers won't accept cameras. How do I respond?"),
-    ("👁️ DSC vs DMS", "Walk me through the DSC vs DMS argument for fatigue detection."),
-    ("🇮🇳 India strategy", "What's the strategy for entering India?"),
-    ("🔄 Data flywheel", "Explain the data flywheel and why it matters."),
+    ("60-second TSP pitch", "Give me the 60-second TSP pitch."),
+    ("vs. Motive in NA", "How do I position Streamax against Motive in North America?"),
+    ("Drivers won't accept", "A fleet manager says drivers won't accept cameras. How do I respond?"),
+    ("DSC vs DMS", "Walk me through the DSC vs DMS argument for fatigue detection."),
+    ("India strategy", "What's the strategy for entering India?"),
+    ("Data flywheel", "Explain the data flywheel and why it matters."),
 ]
 
 
@@ -1231,7 +1231,7 @@ def _render_past_chats() -> None:
 def _render_settings_panel() -> None:
     """Sidebar settings: model selector + response length. GPT-like — lives
     in a collapsible expander so it's available but out of the way."""
-    with st.expander("⚙️  Settings", expanded=False):
+    with st.expander("Settings", expanded=False):
         # --- VIP gating ----------------------------------------------------
         # VIP users see all models. Non-VIP users have Opus 4.8 hidden from
         # the selector AND are silently downgraded if they have a stale Opus
@@ -1294,7 +1294,7 @@ def _render_settings_panel() -> None:
 
 def _render_usage_panel() -> None:
     """Sidebar session usage — tucked into a collapsed expander (GPT-like)."""
-    with st.expander("📊  Session usage", expanded=False):
+    with st.expander("Session usage", expanded=False):
         usage = st.session_state["jerry_gpt_usage"]
         total_tokens = (
             usage["input_tokens"]
@@ -1451,7 +1451,7 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
 
     with col_side:
         # New chat at the very top of the sidebar (GPT convention)
-        if st.button("✏️  New chat", use_container_width=True, key="new_chat_btn_side"):
+        if st.button("New chat", use_container_width=True, key="new_chat_btn_side"):
             st.session_state["jerry_gpt_history"] = []
             if _chat_history is not None:
                 st.session_state["jerry_gpt_session_id"] = _chat_history.new_session_id()
@@ -1461,59 +1461,65 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
         _render_usage_panel()
 
     with col_main:
-        # Welcome + quick prompts when empty
-        if not history:
-            st.markdown(
-                """
-                <div class="jerry-welcome">
-                    <div class="jerry-welcome-badge">
-                        <i class="fa-solid fa-comments"></i> READY TO TALK
+        # Scrollable conversation area. st.container(height=...) gives a
+        # fixed-height region that scrolls INTERNALLY — so the top bar, the
+        # sidebar, and the chat input below all stay put while only the
+        # messages scroll once they overflow. New turns (live streaming AND
+        # quick prompts) render INSIDE this container so they land in the
+        # scroll region, not below the input box.
+        msg_box = st.container(height=520)
+
+        with msg_box:
+            # Welcome + quick prompts when empty
+            if not history:
+                st.markdown(
+                    """
+                    <div class="jerry-welcome">
+                        <div class="jerry-welcome-badge">
+                            <i class="fa-solid fa-comments"></i> READY TO TALK
+                        </div>
+                        <h2>What would Jerry say?</h2>
+                        <p>Ask about positioning, the competitive landscape, regional strategy, product portfolio, objection handling, or any conversation you're prepping for. Jerry leads with outcomes, sources, and structured frameworks.</p>
                     </div>
-                    <h2>What would Jerry say?</h2>
-                    <p>Ask about positioning, the competitive landscape, regional strategy, product portfolio, objection handling, or any conversation you're prepping for. Jerry leads with outcomes, sources, and structured frameworks.</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            cols = st.columns(3)
-            for i, (label, prompt) in enumerate(QUICK_PROMPTS):
-                if cols[i % 3].button(label, key=f"qp_{i}", use_container_width=True):
-                    _submit_message(prompt, system_blocks, api_key, model, length)
-                    st.rerun()
+                cols = st.columns(3)
+                for i, (label, prompt) in enumerate(QUICK_PROMPTS):
+                    if cols[i % 3].button(label, key=f"qp_{i}", use_container_width=True):
+                        # Already inside `with msg_box:` — renders into the scroll area.
+                        _submit_message(prompt, system_blocks, api_key, model, length)
+                        st.rerun()
 
-        # Banner: tell the user they're continuing a saved conversation,
-        # NOT one that started in this tab. We can detect this because the
-        # _jerry_history_hydrated flag was set during _init_session_state(),
-        # AND the in-memory history matches what was hydrated (i.e., the
-        # user hasn't yet sent a new message that pushed history past the
-        # loaded state).
-        if history and st.session_state.get("_jerry_history_hydrated"):
-            st.markdown(
-                '<div class="jerry-continuing-banner">'
-                '<i class="fa-solid fa-clock-rotate-left"></i>'
-                '<span>You\'re continuing a saved conversation. '
-                'Click <strong>✏️ New chat</strong> in the sidebar to start '
-                'fresh, or browse <strong>Past chats</strong> to switch to an '
-                'older session.</span>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
+            # Banner: tell the user they're continuing a saved conversation,
+            # NOT one that started in this tab.
+            if history and st.session_state.get("_jerry_history_hydrated"):
+                st.markdown(
+                    '<div class="jerry-continuing-banner">'
+                    '<i class="fa-solid fa-clock-rotate-left"></i>'
+                    '<span>You\'re continuing a saved conversation. '
+                    'Click <strong>New chat</strong> in the sidebar to start '
+                    'fresh, or browse <strong>Past chats</strong> to switch to an '
+                    'older session.</span>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
 
-        # Chat history
-        for msg in history:
-            with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
-                st.markdown(_md_safe(msg["content"]))
-                if msg["role"] == "assistant":
-                    _render_product_images(msg["content"])
-                    _render_copy_button(msg["content"])
+            # Chat history
+            for msg in history:
+                with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
+                    st.markdown(_md_safe(msg["content"]))
+                    if msg["role"] == "assistant":
+                        _render_product_images(msg["content"])
+                        _render_copy_button(msg["content"])
 
-        # (New chat moved to the top of the sidebar — GPT convention.)
-
-        # Chat input (renders inline at bottom of col_main)
+        # Chat input — OUTSIDE the scroll box, so it's always visible at the
+        # bottom of the conversation column. New messages render into msg_box.
         user_input = st.chat_input("Ask Jerry anything…")
         if user_input:
-            _submit_message(user_input, system_blocks, api_key, model, length)
+            with msg_box:
+                _submit_message(user_input, system_blocks, api_key, model, length)
             st.rerun()
 
 
