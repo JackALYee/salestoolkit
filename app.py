@@ -60,6 +60,11 @@ try:
 except ImportError:
     value_calculator_content = "<div id='value-calculator' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ value_calculator.py not found</h2></div>"
 
+try:
+    from sales_onboarding import content as sales_onboarding_content
+except ImportError:
+    sales_onboarding_content = "<div id='onboarding' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ sales_onboarding.py not found</h2></div>"
+
 
 # --- EMAIL TOOL EXPLANATORY SECTION ---
 email_tool_content = r"""
@@ -1303,6 +1308,9 @@ else:
 
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
+            <button class="nav-btn" onclick="switchTab('onboarding', this)">
+                <i data-lucide="graduation-cap"></i> Sales Onboarding
+            </button>
             <!-- Set Streamaxpedia as default internal tab -->
             <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
@@ -1708,6 +1716,7 @@ else:
     # 3. ASSEMBLE HTML EXACTLY AS ORIGINAL
     html_code = (
         html_head + "\n" +
+        sales_onboarding_content + "\n" +
         streamaxpedia_content + "\n" +
         prospecting_flow_content + "\n" +
         discovery_meeting_content + "\n" +
