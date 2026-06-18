@@ -1308,9 +1308,6 @@ else:
 
         <!-- Navigation -->
         <nav class="nav-tabs fade-up">
-            <button class="nav-btn" onclick="switchTab('onboarding', this)">
-                <i data-lucide="graduation-cap"></i> Sales Onboarding
-            </button>
             <!-- Set Streamaxpedia as default internal tab -->
             <button class="nav-btn active" onclick="switchTab('streamaxpedia', this)">
                 <i data-lucide="book-open"></i> Streamaxpedia
@@ -1329,6 +1326,9 @@ else:
             </button>
             <button class="nav-btn" onclick="switchTab('email-tool', this)">
                 <i data-lucide="mail"></i> Email Tool
+            </button>
+            <button class="nav-btn" onclick="switchTab('onboarding', this)">
+                <i data-lucide="graduation-cap"></i> Sales Onboarding
             </button>
         </nav>
 """
