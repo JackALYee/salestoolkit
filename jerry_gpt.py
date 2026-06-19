@@ -640,49 +640,71 @@ THEME_CSS = """
         backdrop-filter: blur(8px);
     }
 
-    /* Past-chat row: each session button + its delete affordance */
-    .jerry-past-row {
-        display: block;
+    /* Past-chat row: a keyed container (st-key-jr_pastrow_*) holding the
+       session button + a delete X. The container is position:relative so the
+       X can be absolutely pinned to its top-right corner, overlapping the
+       card instead of sitting in a separate box beside it. */
+    [class*="st-key-jr_pastrow_"] {
+        position: relative;
         margin-bottom: 4px;
     }
-    .jerry-past-row .stButton button {
+    /* Session button — fills the row; right padding leaves room for the X */
+    [class*="st-key-past_chat_"] .stButton button,
+    [class*="st-key-past_chat_"] button {
         text-align: left !important;
         white-space: pre-wrap !important;
         font-size: 0.72rem !important;
         line-height: 1.35 !important;
-        padding: 6px 10px !important;
+        padding: 6px 26px 6px 10px !important;
         min-height: 0 !important;
         height: auto !important;
         background: rgba(255,255,255,0.02) !important;
         border: 1px solid rgba(255,255,255,0.06) !important;
         color: var(--text-grey) !important;
     }
-    .jerry-past-row .stButton button:hover {
+    [class*="st-key-past_chat_"] button:hover {
         border-color: var(--primary-green) !important;
         color: var(--text-white) !important;
         background: rgba(42, 245, 152, 0.04) !important;
     }
-    .jerry-past-row .stButton button:disabled {
-        opacity: 0.55 !important;
+    [class*="st-key-past_chat_"] button:disabled {
+        opacity: 0.6 !important;
         cursor: default !important;
         border-color: rgba(42, 245, 152, 0.35) !important;
         color: var(--text-white) !important;
     }
 
-    /* Delete (✕) icon: subtle by default, red on hover */
-    .jerry-past-del .stButton button {
-        background: transparent !important;
-        border: 1px solid transparent !important;
-        color: var(--text-grey) !important;
-        font-size: 0.85rem !important;
-        padding: 6px 0 !important;
-        opacity: 0.5;
-        transition: all 0.15s;
+    /* Delete X — small round close button pinned to the row's top-right
+       corner. Absolutely positioned within the keyed row container. */
+    [class*="st-key-del_chat_"] {
+        position: absolute !important;
+        top: 5px;
+        right: 5px;
+        width: auto !important;
+        min-width: 0 !important;
+        z-index: 6;
     }
-    .jerry-past-del .stButton button:hover {
+    [class*="st-key-del_chat_"] button {
+        width: 20px !important;
+        height: 20px !important;
+        min-height: 20px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        line-height: 1 !important;
+        font-size: 0.62rem !important;
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: var(--text-grey) !important;
+        opacity: 0.7;
+        transition: all 0.15s;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    [class*="st-key-del_chat_"] button:hover {
         color: #fca5a5 !important;
-        border-color: rgba(252, 165, 165, 0.4) !important;
-        background: rgba(252, 165, 165, 0.06) !important;
+        border-color: rgba(252, 165, 165, 0.5) !important;
+        background: rgba(252, 165, 165, 0.12) !important;
         opacity: 1;
     }
 
@@ -1128,17 +1150,13 @@ def _render_past_chats() -> None:
             prefix = "▸ " if is_current else ""
             label = f"{prefix}{date_str} · {msg_count} msgs\n{first_q}"
 
-            # Wrap the row in a styled div so CSS can target the trash button
-            # as a subtle icon-only control rather than a full pill button.
-            row_class = (
-                "jerry-past-row jerry-past-row-current"
-                if is_current else "jerry-past-row"
-            )
-            st.markdown(
-                f'<div class="{row_class}">', unsafe_allow_html=True
-            )
-            col_load, col_del = st.columns([6, 1], gap="small")
-            with col_load:
+            # Each row is a keyed container so CSS can scope to it precisely
+            # (Streamlit adds a `st-key-<key>` class). The chat button fills
+            # the row; the delete button is absolutely positioned into the
+            # top-right corner of the card via CSS (see THEME_CSS:
+            # .st-key-del_chat_*). Stacking them — rather than using two
+            # columns — is what lets the X overlap the card corner.
+            with st.container(key=f"jr_pastrow_{sess_id}"):
                 if st.button(
                     label,
                     key=f"past_chat_{sess_id}",
@@ -1156,12 +1174,9 @@ def _render_past_chats() -> None:
                         print(f"[JERRY_GPT_DB_ERROR] switch session failed: "
                               f"{type(e).__name__}: {e}",
                               file=_sys.stderr, flush=True)
-            with col_del:
-                st.markdown('<div class="jerry-past-del">', unsafe_allow_html=True)
                 if st.button(
                     "✕",
                     key=f"del_chat_{sess_id}",
-                    use_container_width=True,
                     help="Delete this conversation",
                 ):
                     try:
@@ -1177,8 +1192,6 @@ def _render_past_chats() -> None:
                         print(f"[JERRY_GPT_DB_ERROR] delete session failed: "
                               f"{type(e).__name__}: {e}",
                               file=_sys.stderr, flush=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         # --- Clear-all footer with confirm step -----------------------------
         st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
