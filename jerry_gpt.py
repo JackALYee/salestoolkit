@@ -40,6 +40,13 @@ try:
 except Exception:
     _product_images = None
 
+# Downloadable-asset library — optional sibling module. Surfaces a download
+# button (e.g. the eSIM deck) when the conversation matches. Never raises.
+try:
+    import downloads as _downloads
+except Exception:
+    _downloads = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -263,6 +270,13 @@ def _load_system_blocks() -> list[dict]:
     if _product_images is not None:
         sections.append(
             f"<interface_capabilities>\n{_product_images.PRODUCT_NAME_HINT}\n</interface_capabilities>"
+        )
+
+    # Tell Jerry an eSIM deck is downloadable so he names the topic and the
+    # UI can attach the download button.
+    if _downloads is not None:
+        sections.append(
+            f"<interface_capabilities>\n{_downloads.DOWNLOAD_HINT}\n</interface_capabilities>"
         )
 
     combined = "\n\n".join(sections)
@@ -993,6 +1007,49 @@ def _render_product_images(text: str) -> None:
                 st.image(path, caption=caption, use_container_width=True)
 
 
+@st.cache_data(show_spinner=False)
+def _read_download_bytes(path: str) -> bytes:
+    """Read a downloadable asset's bytes once, cached across reruns."""
+    with open(path, "rb") as f:
+        return f.read()
+
+
+def _render_downloads(text: str, key_prefix: str) -> None:
+    """Offer a download button for any bundled asset the text matches
+    (e.g. eSIM → the Streamax eSIM deck). Best-effort; never raises."""
+    if _downloads is None:
+        return
+    try:
+        matches = _downloads.find_downloads(text)
+    except Exception as e:
+        print(f"[JERRY_GPT_DL_ERROR] match failed: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        return
+    if not matches:
+        return
+    for j, d in enumerate(matches):
+        try:
+            data = _read_download_bytes(d["path"])
+        except Exception as e:
+            print(f"[JERRY_GPT_DL_ERROR] read failed: {type(e).__name__}: {e}",
+                  file=sys.stderr, flush=True)
+            continue
+        if d.get("blurb"):
+            st.markdown(
+                f'<div style="font-size:0.78rem; color:var(--text-grey); '
+                f'margin:8px 0 4px;">{d["blurb"]}</div>',
+                unsafe_allow_html=True,
+            )
+        st.download_button(
+            label=d["label"],
+            data=data,
+            file_name=d["filename"],
+            mime=d.get("mime"),
+            key=f"dl_{key_prefix}_{d['id']}_{j}",
+            use_container_width=True,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -1520,11 +1577,20 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                 )
 
             # Chat history
-            for msg in history:
+            for _i, msg in enumerate(history):
                 with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
                     st.markdown(_md_safe(msg["content"]))
                     if msg["role"] == "assistant":
                         _render_product_images(msg["content"])
+                        # Include the preceding user question so an eSIM ask
+                        # still surfaces the deck on replay even if Jerry's
+                        # wording omitted the keyword.
+                        _prev_user = (
+                            history[_i - 1]["content"]
+                            if _i > 0 and history[_i - 1].get("role") == "user"
+                            else ""
+                        )
+                        _render_downloads(f"{_prev_user}\n{msg['content']}", f"hist_{_i}")
                         _render_copy_button(msg["content"])
 
         # Chat input — OUTSIDE the scroll box, so it's always visible at the
@@ -2094,6 +2160,18 @@ def _submit_message(
             import sys as _sys
             print(
                 f"[JERRY_GPT_POSTWORK_ERROR] product_images failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
+
+        try:
+            # Scan BOTH the user's question and Jerry's answer so an eSIM ask
+            # surfaces the deck even if Jerry phrases his reply without the word.
+            _render_downloads(f"{text}\n{full_text}", "live")
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] downloads failed: "
                 f"{type(e).__name__}: {e}",
                 file=_sys.stderr, flush=True,
             )
