@@ -10,6 +10,7 @@ st.download_button for each.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 _DOWNLOADS_DIR = Path(__file__).parent / "assets" / "downloads"
@@ -26,24 +27,44 @@ ASSETS = [
         "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "blurb": "The full Streamax eSIM Solutions deck — pain points, form factors, value props, TCO, and data-plan pooling.",
     },
+    {
+        "id": "can_deck",
+        # Distinctive multi-char tokens only — never bare "can" (the English word).
+        "triggers": ["can bus", "canbus", "can-bus", "inherent can",
+                     "can license", "j1939", "obd"],
+        "filename": "Streamax Inherent CAN — Partner Enablement.pptx",
+        "label": "Download · Streamax Inherent CAN — Partner Enablement (PPTX)",
+        "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "blurb": "The full Inherent CAN partner-enablement deck — the $20 license vs. $60 tracker economics, 24+ parameters, 3,000+ vehicle coverage, and FT Cloud activation.",
+    },
 ]
 
 MAX_DOWNLOADS = 3
 
+# Pre-compile a word-boundary regex per asset so triggers match as whole
+# tokens — "obd" fires on "OBD-II" but NOT inside "obdurate", and bare "can"
+# is never a trigger so the English word "can" can't false-match.
+_ASSET_PATTERNS = {
+    asset["id"]: re.compile(
+        r"(?<![A-Za-z0-9])(?:" + "|".join(re.escape(kw) for kw in asset["triggers"]) + r")(?![A-Za-z0-9])",
+        re.IGNORECASE,
+    )
+    for asset in ASSETS
+}
+
 
 def find_downloads(text: str) -> list[dict]:
     """Return [{id, path, filename, label, mime, blurb}, ...] for every asset
-    whose trigger keywords appear in `text`. De-duped, capped, file-existence
-    checked. Empty list if nothing matches."""
+    whose trigger keywords appear in `text` as whole tokens. De-duped, capped,
+    file-existence checked. Empty list if nothing matches."""
     if not text:
         return []
-    low = text.lower()
     out: list[dict] = []
     seen: set[str] = set()
     for asset in ASSETS:
         if asset["id"] in seen:
             continue
-        if any(kw in low for kw in asset["triggers"]):
+        if _ASSET_PATTERNS[asset["id"]].search(text):
             path = _DOWNLOADS_DIR / asset["filename"]
             if path.is_file():
                 out.append({
@@ -63,9 +84,13 @@ def find_downloads(text: str) -> list[dict]:
 # Injected into Jerry's system prompt so he names the topic (which is what
 # lets the scanner attach the file) and knows the download exists.
 DOWNLOAD_HINT = (
-    "When the user asks about eSIM, eUICC, MFF2, or SIM/connectivity for "
-    "Streamax devices, a downloadable Streamax eSIM Solutions deck (PPTX) is "
-    "available. Answer the question normally and mention 'eSIM' explicitly — "
-    "the interface then automatically shows the user a download button for the "
-    "deck. Do not paste links or invent a URL; just answer and name the topic."
+    "Two Streamax decks can be offered to the user as downloads:\n"
+    "- eSIM: when the user asks about eSIM, eUICC, MFF2, or SIM/connectivity, "
+    "mention 'eSIM' explicitly in your answer.\n"
+    "- Inherent CAN: when the user asks about CAN bus, the CAN license, OBD/"
+    "J1939 data, or reading vehicle data from the dashcam, mention 'CAN bus' "
+    "explicitly in your answer.\n"
+    "When you name the matching topic, the interface automatically shows the "
+    "user a download button for that deck. Do not paste links or invent a URL "
+    "— just answer the question and name the topic."
 )
