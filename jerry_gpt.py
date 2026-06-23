@@ -147,6 +147,33 @@ def _find_jerry_avatar() -> str:
 JERRY_AVATAR = _find_jerry_avatar()
 
 
+def _jerry_portrait_data_uri() -> str | None:
+    """Return Jerry's portrait as a base64 data URI for inline HTML <img>.
+
+    st.chat_message takes a file path, but an <img> rendered via st.markdown
+    needs a browser-loadable src — a filesystem path won't load. Encode the
+    portrait inline so the top-bar brand mark shows the same face as the chat.
+    Returns None if no portrait file is present.
+    """
+    for name, mime in (
+        ("jerry.png", "image/png"),
+        ("jerry.jpg", "image/jpeg"),
+        ("jerry.jpeg", "image/jpeg"),
+        ("jerry.webp", "image/webp"),
+    ):
+        path = ASSETS_DIR / name
+        if path.is_file():
+            try:
+                b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+                return f"data:{mime};base64,{b64}"
+            except Exception:
+                continue
+    return None
+
+
+JERRY_PORTRAIT_URI = _jerry_portrait_data_uri()
+
+
 def _md_safe(text: str) -> str:
     """Escape characters that Streamlit's markdown renderer treats specially
     but Jerry's content doesn't intend that way.
@@ -879,7 +906,7 @@ QUICK_PROMPTS = [
     ("vs. Motive in NA", "How do I position Streamax against Motive in North America?"),
     ("Drivers won't accept", "A fleet manager says drivers won't accept cameras. How do I respond?"),
     ("DSC vs DMS", "Walk me through the DSC vs DMS argument for fatigue detection."),
-    ("India strategy", "What's the strategy for entering India?"),
+    ("Quiz me product (Sales Onboarding)", "Quiz me on the Streamax product portfolio, like the Sales Onboarding Phase 1 check. Ask me 8 questions one at a time, wait for my answer each time, tell me right or wrong with a one-line why, then give a final score out of 8. Start with the first question."),
     ("Data flywheel", "Explain the data flywheel and why it matters."),
 ]
 
@@ -1535,10 +1562,17 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
     length = st.session_state["jerry_gpt_length"]
 
     # --- Slim top bar (brand + model on the left, nav on the right) ---
+    _brand_mark = (
+        f'<img class="jerry-brand-mark" src="{JERRY_PORTRAIT_URI}" alt="Jerry">'
+        if JERRY_PORTRAIT_URI
+        else '<span class="jerry-brand-mark" style="display:inline-flex;align-items:center;'
+             'justify-content:center;background:var(--gradient-text);">🤖</span>'
+    )
     st.markdown(
         f"""
         <div class="jerry-topbar">
             <div class="jerry-brand">
+                {_brand_mark}
                 <span class="jerry-brand-name">Jerry GPT</span>
                 <span class="jerry-brand-model"><span class="dot"></span>{MODEL_ID_TO_LABEL.get(model, model)}</span>
             </div>
