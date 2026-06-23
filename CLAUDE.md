@@ -6,6 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Streamax Sales Toolkit** — internal tooling for the Trucking BU sales org. Entry point is `app.py`. The app combines a heavyweight HTML/JS UI (rendered inside `streamlit.components.v1.html`) with native Streamlit pages for the interactive features. SMTP-credential login gates access; a signed cookie keeps sessions alive across reloads.
 
+## ⚠️ ALWAYS bump the version + date on every change
+
+The main header (`app.py`, the `header-meta` div — search `Version `) shows `Version X.Y.Z • 货运产品线 Trucking BU • <Month Year>`. **Every time you make a change to this repo, before finishing, update that line in the same edit batch.** This is a hard, standing rule — never skip it, never ask whether to do it.
+
+**Version scheme `X.Y.Z`:**
+- **X** — major version. Bump only on a big milestone, and only when the user explicitly asks. Otherwise leave it.
+- **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `sales_onboarding.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
+- **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`. (Jack GPT changes — `jack_gpt.py` etc. — also bump **Z**, since it's an AI chat surface.)
+
+Rules of thumb:
+- A change that spans both surfaces bumps **both** Y and Z (+1 each).
+- A change to neither (docs-only, CLAUDE.md, requirements housekeeping) needs no bump — but if in doubt, bump the surface most affected.
+- One logical change = +1 (not +1 per file touched).
+- **Always** update the trailing `<Month Year>` to the current month/year of the change (e.g. `June 2026`).
+
+The version string lives in exactly one place (the `header-meta` div) — that's the single source of truth; don't duplicate it elsewhere.
+
 ## Common commands
 
 ```bash
