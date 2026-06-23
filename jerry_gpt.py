@@ -61,6 +61,15 @@ try:
 except Exception:
     _file_io = None
 
+# Ecosystem topology — optional sibling module. Lets Jerry suggest an
+# interactive Ecosystem Map that pops up in a dialog. Never raises.
+try:
+    import topology as _topology
+except Exception:
+    _topology = None
+
+import re as _re  # for the ecosystem-map marker
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -358,6 +367,32 @@ def _load_system_blocks() -> list[dict]:
             "Word, Excel, PowerPoint). Their contents arrive inline in the "
             "conversation — read and use them directly when present.\n\n"
             f"{_file_io.ARTIFACT_HINT}\n"
+            "</interface_capabilities>"
+        )
+
+    # Ecosystem Map: let Jerry offer the interactive product-relationship map
+    # via a marker the UI turns into a clickable pop-up. Static → cache-stable.
+    if _topology is not None:
+        sections.append(
+            "<interface_capabilities>\n"
+            "ECOSYSTEM MAP: There is an interactive Streamax Ecosystem Map — a "
+            "force-directed graph of products, cameras/sensors, capabilities "
+            "(ADAS/DMS/BSD/AVM/Child Check/Stop-Arm/etc.), cloud platforms "
+            "(SafeGPT, FT/SBS/PT Cloud, MineSync), solutions (Fleet, School Bus, "
+            "Public Transport, Mining), and competitors, showing how they all "
+            "connect.\n"
+            "- When the user asks which products are relevant, how products/"
+            "capabilities relate, for a solution spanning several products, or "
+            "for a portfolio overview, you MAY offer the map as a visual guide.\n"
+            "- To offer it, place the marker [[ECOSYSTEM_MAP]] on its own line at "
+            "the end of that part of your reply. To open it centered on a "
+            "specific node, use [[ECOSYSTEM_MAP:Exact Name]] — the name must "
+            "match a node exactly, e.g. [[ECOSYSTEM_MAP:AD Plus 2.0]], "
+            "[[ECOSYSTEM_MAP:Public Transport]], [[ECOSYSTEM_MAP:DMS]].\n"
+            "- The interface replaces the marker with a clickable 'Open "
+            "Ecosystem Map' button that pops up the interactive graph, so don't "
+            "describe the marker or paste any URL. Offer it as a helpful guide "
+            "when it genuinely adds value — not on every answer.\n"
             "</interface_capabilities>"
         )
 
@@ -1185,6 +1220,63 @@ def _render_artifacts(text: str, key_prefix: str) -> None:
         )
 
 
+# Marker Jerry emits to offer the interactive Ecosystem Map:
+#   [[ECOSYSTEM_MAP]]            → opens the full map
+#   [[ECOSYSTEM_MAP:AD Plus 2.0]] → opens centered on that node
+_ECO_RE = _re.compile(r"\[\[ECOSYSTEM_MAP(?::\s*([^\]]+?))?\s*\]\]", _re.IGNORECASE)
+
+
+def _clean_display(text: str) -> str:
+    """Strip machinery (artifact specs + ecosystem-map markers) from text
+    before it is shown to the user. Never raises."""
+    t = text or ""
+    if _file_io is not None:
+        try:
+            t = _file_io.strip_artifacts(t)
+        except Exception:
+            pass
+    t = _ECO_RE.sub("", t)
+    return t.strip()
+
+
+def _open_ecosystem_dialog(focus: str = "") -> None:
+    """Pop the interactive Streamax Ecosystem Map. Uses st.dialog when
+    available; falls back to an inline expander on older Streamlit."""
+    if _topology is None:
+        return
+    html = _topology.ecosystem_map_html(focus)
+    dlg = getattr(st, "dialog", None) or getattr(st, "experimental_dialog", None)
+    if dlg is None:
+        with st.expander("Streamax Ecosystem Map", expanded=True):
+            components.html(html, height=600, scrolling=False)
+        return
+
+    try:
+        @dlg("Streamax Ecosystem Map", width="large")
+        def _eco_modal():  # noqa: ANN202
+            components.html(html, height=600, scrolling=False)
+    except TypeError:
+        # Older signature without width kwarg
+        @dlg("Streamax Ecosystem Map")
+        def _eco_modal():  # noqa: ANN202
+            components.html(html, height=600, scrolling=False)
+    _eco_modal()
+
+
+def _render_ecosystem(text: str, key_prefix: str) -> None:
+    """If Jerry's reply contains an Ecosystem-Map marker, render a button that
+    pops the interactive map (optionally focused on a named node)."""
+    if _topology is None:
+        return
+    m = _ECO_RE.search(text or "")
+    if not m:
+        return
+    focus = (m.group(1) or "").strip()
+    label = "Open Ecosystem Map" + (f" · {focus}" if focus else "")
+    if st.button(label, key=f"eco_{key_prefix}", use_container_width=True):
+        _open_ecosystem_dialog(focus)
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -1735,8 +1827,8 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                     # For assistant messages, hide any ```artifact``` JSON from
                     # the displayed text (the download button replaces it).
                     display_text = msg["content"]
-                    if msg["role"] == "assistant" and _file_io is not None:
-                        display_text = _file_io.strip_artifacts(display_text)
+                    if msg["role"] == "assistant":
+                        display_text = _clean_display(display_text)
                     st.markdown(_md_safe(display_text))
                     if msg["role"] == "assistant":
                         _render_product_images(msg["content"])
@@ -1750,7 +1842,8 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                         )
                         _render_downloads(f"{_prev_user}\n{msg['content']}", f"hist_{_i}")
                         _render_artifacts(msg["content"], f"hist_{_i}")
-                        _render_copy_button(_file_io.strip_artifacts(msg["content"]) if _file_io else msg["content"])
+                        _render_ecosystem(msg["content"], f"hist_{_i}")
+                        _render_copy_button(_clean_display(msg["content"]))
 
         # --- Composer: a single chat input with a built-in paperclip
         # (click-to-attach + drag-and-drop), OUTSIDE the scroll box so it stays
@@ -2312,9 +2405,7 @@ def _submit_message(
             # Final render: hide any ```artifact``` JSON (the download button
             # replaces it). The raw block was visible while streaming — that's
             # fine; this cleans it up once the answer completes.
-            _final_display = (
-                _file_io.strip_artifacts(full_text) if _file_io else full_text
-            )
+            _final_display = _clean_display(full_text)
             placeholder.markdown(_md_safe(_final_display))
         except Exception as exc:
             # Streaming itself failed — roll back the user turn so the
@@ -2421,9 +2512,18 @@ def _submit_message(
             )
 
         try:
-            _render_copy_button(
-                _file_io.strip_artifacts(full_text) if _file_io else full_text
+            # Offer the interactive Ecosystem Map if Jerry suggested it.
+            _render_ecosystem(full_text, "live")
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] ecosystem failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
             )
+
+        try:
+            _render_copy_button(_clean_display(full_text))
         except Exception as e:
             import sys as _sys
             print(

@@ -109,6 +109,8 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 `terminology_db.py` is the single source of truth for product terms (114+ entries) and validated product architectures (70+ entries). It's imported by both `streamaxpedia_app.py` (for the toolkit UI) and `jerry_gpt.py` (so Jerry knows every SKU + the download URLs for spec sheets/manuals). Updating an entry there propagates to both places on next deploy.
 
+`topology.py` is the single source of truth for the **interactive Ecosystem Map** — a curated force-directed graph (60 nodes / 125 edges) of products, cameras/sensors, capabilities, cloud platforms, solutions, and competitors and how they connect (`cat ∈ capability | device | camera | platform | solution | competitor`). It exposes `TOPOLOGY` + `topology_json` (the data) and `ecosystem_map_html(focus="")` (a self-contained D3 widget for `st.components.v1.html`). Two consumers: `streamaxpedia_app.py` embeds the data into its in-iframe "Ecosystem map" modal (per-term button → opens focused on that term, D3 loaded from cdnjs); `jerry_gpt.py` imports `ecosystem_map_html()` and pops the same map in an `st.dialog`. Jerry offers it by emitting a `[[ECOSYSTEM_MAP]]` / `[[ECOSYSTEM_MAP:Exact Node]]` marker (described in a cached `<interface_capabilities>` block) — `_ECO_RE` strips it from the displayed text via `_clean_display()` and `_render_ecosystem()` turns it into an "Open Ecosystem Map" button. **Edit the graph data only in `topology.py`** so both surfaces stay in sync. The map depends on D3 from `cdnjs.cloudflare.com`; a network that blocks cdnjs renders a blank graph (nothing else is affected).
+
 ## Required secrets
 
 `st.secrets` (or `.streamlit/secrets.toml` locally):

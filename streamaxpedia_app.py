@@ -377,7 +377,7 @@ css_and_html = r"""
                 .close-modal:hover { color: var(--text-white); }
                 
                 /* ---- Ecosystem topology graph (D3) ---- */
-                .topo-header { width:100%; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+                .topo-header { width:100%; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; padding-right:42px; box-sizing:border-box; }
                 .topo-title { color:var(--text-white); font-size:1.25rem; font-weight:700; margin:0; }
                 .topo-sub { color:var(--text-grey); font-size:0.78rem; margin-top:4px; }
                 .topo-tools { display:flex; align-items:center; gap:8px; }
@@ -784,143 +784,9 @@ css_and_html = r"""
             </div>
 """
 
-# ---------------------------------------------------------------------------
-# ECOSYSTEM TOPOLOGY — curated, accurate product/relationship graph distilled
-# from the Jerry knowledge base (company/products, SafeGPT, school bus, public
-# transport, mining, eSIM, CAN, Vision 2.0). Replaces the old auto-generated
-# relevance graph. Rendered as an interactive D3 force-directed map.
-#   cat: capability | device | camera | platform | solution | competitor
-# ---------------------------------------------------------------------------
-_TOPO_NODES = [
-    # Capabilities
-    ("ADAS", "capability", "Advanced Driver Assistance — forward-collision, lane-departure, headway and pedestrian warnings."),
-    ("DMS", "capability", "Driver Monitoring — fatigue, distraction, phone, smoking, seatbelt via in-cab face-tracing AI."),
-    ("BSD", "capability", "Blind Spot Detection — warns of pedestrians/cyclists in the vehicle's blind zones; predicts trajectory."),
-    ("AVM", "capability", "Around-View Monitor — stitched seamless 360° bird's-eye view of the vehicle."),
-    ("DSC", "capability", "Driver Safety Camera — entry-level driver-facing safety, below a full DMS."),
-    ("Child Check", "capability", "Anti-left-behind — guarantees no child is left on a school bus (button + AI camera + motion sensor)."),
-    ("APC", "capability", "Automatic Passenger Counting — boarding/alighting counts plus origin-destination analysis."),
-    ("Stop-Arm Capture", "capability", "Captures vehicles illegally passing a stopped school bus with court-grade evidence."),
-    ("ANPR", "capability", "Automatic Number Plate Recognition — reads license plates for evidence/enforcement."),
-    ("V2V", "capability", "Vehicle-to-vehicle warning beyond line of sight, independent of network infrastructure."),
-    ("Blacklight", "capability", "Full-colour night vision in near-darkness (down to ~0.5 / 0.02 lux)."),
-    ("CAN / OBD", "capability", "Reads the vehicle bus (fuel, RPM, DTCs) — the $20 inherent-CAN license on the AD Plus 2.0."),
-    ("eSIM", "capability", "Built-in connectivity (eSIM / eUICC) — OTA carrier provisioning, lower TCO, higher uptime."),
-    # Platforms / cloud
-    ("SafeGPT", "platform", "Cloud behavioural-AI engine — prioritises risk, profiles & coaches drivers, real-time accident response."),
-    ("FT Cloud", "platform", "Fleet management platform (trucking) — devices, video, telematics, CAN, alerts."),
-    ("SBS Cloud", "platform", "School Bus Solution cloud — attendance, child-check, stop-arm evidence."),
-    ("PT Cloud", "platform", "Public Transport platform — safety, passenger-flow analytics, operations."),
-    ("MineSync-Cloud", "platform", "Mining production + transportation safety platform (big-data + video AI)."),
-    # Devices / MDVRs
-    ("AD Plus 2.0", "device", "Flagship 3-channel AI dashcam/MDVR — hosts ADAS + DMS, inherent CAN."),
-    ("C6 Lite 2.0", "device", "Cost-effective 2-channel AI dashcam — ADAS + DSC."),
-    ("M1N 2.0", "device", "Entry MDVR — child check + attendance + surveillance (school bus / mining basic)."),
-    ("X3N", "device", "MDVR for 2–4 lane stop-arm capture and standard buses."),
-    ("X5N Pro", "device", "MDVR for 5–8 lane stop-arm capture / regional regulatory needs."),
-    ("IBCU", "device", "Intelligent Bus Central Unit (A16Max) — all-in-one flagship, up to 24 HD ch, 6 TOPS."),
-    ("M10", "device", "Mining MDVR (Advanced tier)."),
-    ("M10 PRO", "device", "Mining MDVR flagship (+ thermal cam, fuel management)."),
-    ("DC MAX", "device", "Next-gen AI dashcam — dual 2K lenses, onboard large AI model, dual tamper-proof storage."),
-    ("GT1", "device", "Independent telematics gateway pairing with DC MAX."),
-    ("FMS Tracker", "device", "Compact dead-reckoning asset tracker — positioning without GPS."),
-    # Cameras / sensors
-    ("C29N", "camera", "DMS driver-monitoring camera with face-tracing IR."),
-    ("CA20S", "camera", "Single-lens ADAS camera."),
-    ("C20D", "camera", "Dual-lens ADAS camera (adds near-pedestrian + close-range)."),
-    ("CA20D", "camera", "Triple-lens ADAS camera (adds ANPR)."),
-    ("C46", "camera", "Top-down BSD camera (16 m both sides)."),
-    ("C53", "camera", "Flagship long-range black-light BSD (50 m lateral)."),
-    ("CA24S", "camera", "Rear-to-front BSD camera for core blind-spot zones."),
-    ("AI-AVM", "camera", "360° around-view monitor with transparent-vehicle effect."),
-    ("CMS20", "camera", "Digital rear-view mirror (Blacklight 1.8T)."),
-    ("C34", "camera", "AI child-check camera (92% accuracy)."),
-    ("DP7S", "camera", "Motion sensor for child check (99.9% accuracy)."),
-    ("P3", "camera", "Automatic passenger counter (99%)."),
-    ("P3D", "camera", "Passenger counter + origin-destination (85%)."),
-    ("Palm Vein Reader", "camera", "Palm-vein student attendance — forget/lose/copy-proof."),
-    ("C28", "camera", "Stop-arm AI detection camera."),
-    ("C27", "camera", "Stop-arm license-plate camera."),
-    ("B2", "camera", "Stop-arm audio-visual alarm."),
-    ("Thermal Smart CAM", "camera", "Thermal imaging camera (mining loading hazards)."),
-    ("mmWave Radar", "camera", "Millimeter-wave radar — dust-penetrating, mining BSD / fusion."),
-    # Solutions / verticals
-    ("Fleet / Trucking", "solution", "Core video-telematics for commercial trucking fleets and TSP partners."),
-    ("School Bus", "solution", "Known · protected · never left behind — attendance, stop-arm, child check."),
-    ("Public Transport", "solution", "One platform, four jobs — driving safety, operations, passenger service, recording."),
-    ("Mining", "solution", "Safety + intelligent dispatch for open-pit & underground mining fleets."),
-    ("Cargo Security", "solution", "Trailer / cargo theft prevention with black-light in-cargo cameras."),
-    # Competitors
-    ("Samsara", "competitor", "US fleet-telematics incumbent — subscription dashcam + platform."),
-    ("Motive", "competitor", "US fleet safety/ELD platform; missing fatigue/FCW/PCW today."),
-    ("Lytx", "competitor", "Video-based driver-risk / DMS vendor."),
-    ("Netradyne", "competitor", "AI dashcam / driver-behaviour vendor (Driveri)."),
-    ("Geotab", "competitor", "Telematics / OBD data platform."),
-    ("MiTac", "competitor", "OEM AI camera competitor."),
-    ("Hikvision", "competitor", "Surveillance / camera vendor."),
-]
-
-_TOPO_LINKS = [
-    # device → capability
-    ("AD Plus 2.0", "ADAS"), ("AD Plus 2.0", "DMS"), ("AD Plus 2.0", "DSC"),
-    ("AD Plus 2.0", "CAN / OBD"), ("AD Plus 2.0", "SafeGPT"),
-    ("C6 Lite 2.0", "ADAS"), ("C6 Lite 2.0", "DSC"),
-    ("DC MAX", "ADAS"), ("DC MAX", "DMS"), ("DC MAX", "DSC"), ("DC MAX", "SafeGPT"),
-    ("GT1", "FT Cloud"), ("GT1", "eSIM"),
-    ("FMS Tracker", "FT Cloud"), ("FMS Tracker", "eSIM"),
-    ("IBCU", "ADAS"), ("IBCU", "DMS"), ("IBCU", "BSD"), ("IBCU", "AVM"),
-    ("IBCU", "APC"), ("IBCU", "SafeGPT"),
-    ("M10", "DMS"), ("M10", "BSD"), ("M10", "ADAS"),
-    ("M10 PRO", "DMS"), ("M10 PRO", "BSD"), ("M10 PRO", "ADAS"), ("M10 PRO", "Thermal Smart CAM"),
-    ("M1N 2.0", "Child Check"),
-    ("X3N", "Stop-Arm Capture"), ("X3N", "Child Check"),
-    ("X5N Pro", "Stop-Arm Capture"), ("X5N Pro", "BSD"),
-    # camera → capability
-    ("C29N", "DMS"), ("CA20S", "ADAS"), ("C20D", "ADAS"),
-    ("CA20D", "ADAS"), ("CA20D", "ANPR"),
-    ("C46", "BSD"), ("C53", "BSD"), ("C53", "Blacklight"), ("CA24S", "BSD"),
-    ("AI-AVM", "AVM"), ("CMS20", "BSD"), ("CMS20", "Blacklight"),
-    ("C34", "Child Check"), ("DP7S", "Child Check"),
-    ("P3", "APC"), ("P3D", "APC"),
-    ("C28", "Stop-Arm Capture"), ("C27", "Stop-Arm Capture"), ("C27", "ANPR"),
-    ("B2", "Stop-Arm Capture"),
-    ("Thermal Smart CAM", "Mining"), ("mmWave Radar", "BSD"), ("mmWave Radar", "Mining"),
-    # platform wiring
-    ("SafeGPT", "ADAS"), ("SafeGPT", "DMS"), ("SafeGPT", "BSD"),
-    ("SafeGPT", "FT Cloud"), ("SafeGPT", "SBS Cloud"), ("SafeGPT", "PT Cloud"),
-    ("SafeGPT", "MineSync-Cloud"),
-    ("FT Cloud", "Fleet / Trucking"), ("SBS Cloud", "School Bus"),
-    ("PT Cloud", "Public Transport"), ("MineSync-Cloud", "Mining"),
-    ("eSIM", "FT Cloud"), ("CAN / OBD", "FT Cloud"),
-    # solution → key parts
-    ("Fleet / Trucking", "AD Plus 2.0"), ("Fleet / Trucking", "C6 Lite 2.0"),
-    ("Fleet / Trucking", "DC MAX"), ("Fleet / Trucking", "GT1"), ("Fleet / Trucking", "FMS Tracker"),
-    ("Fleet / Trucking", "ADAS"), ("Fleet / Trucking", "DMS"), ("Fleet / Trucking", "DSC"),
-    ("School Bus", "M1N 2.0"), ("School Bus", "X3N"), ("School Bus", "X5N Pro"),
-    ("School Bus", "IBCU"), ("School Bus", "Palm Vein Reader"), ("School Bus", "C34"),
-    ("School Bus", "DP7S"), ("School Bus", "C28"), ("School Bus", "C27"), ("School Bus", "B2"),
-    ("School Bus", "Child Check"), ("School Bus", "Stop-Arm Capture"),
-    ("Public Transport", "IBCU"), ("Public Transport", "C29N"), ("Public Transport", "CA20D"),
-    ("Public Transport", "C53"), ("Public Transport", "C46"), ("Public Transport", "AI-AVM"),
-    ("Public Transport", "CMS20"), ("Public Transport", "P3"), ("Public Transport", "P3D"),
-    ("Public Transport", "APC"), ("Public Transport", "BSD"), ("Public Transport", "AVM"),
-    ("Mining", "M10"), ("Mining", "M10 PRO"), ("Mining", "V2V"), ("Mining", "DMS"), ("Mining", "BSD"),
-    ("Cargo Security", "Blacklight"), ("Cargo Security", "FT Cloud"), ("Cargo Security", "Fleet / Trucking"),
-    # competitor → where they compete
-    ("Samsara", "Fleet / Trucking"), ("Samsara", "ADAS"), ("Samsara", "DMS"),
-    ("Motive", "Fleet / Trucking"), ("Motive", "ADAS"), ("Motive", "DMS"),
-    ("Lytx", "DMS"), ("Lytx", "ADAS"),
-    ("Netradyne", "DMS"), ("Netradyne", "ADAS"),
-    ("Geotab", "Fleet / Trucking"), ("Geotab", "CAN / OBD"),
-    ("MiTac", "ADAS"), ("MiTac", "DMS"),
-    ("Hikvision", "BSD"), ("Hikvision", "Public Transport"),
-]
-
-TOPOLOGY = {
-    "nodes": [{"id": n, "cat": c, "desc": d} for (n, c, d) in _TOPO_NODES],
-    "links": [{"source": a, "target": b} for (a, b) in _TOPO_LINKS],
-}
-topology_json = json.dumps(TOPOLOGY)
+# Ecosystem topology graph data lives in topology.py (single source of
+# truth, shared with Jerry GPT). TOPOLOGY/topology_json imported below.
+from topology import TOPOLOGY, topology_json  # noqa: E402
 
 
 js_code = """
