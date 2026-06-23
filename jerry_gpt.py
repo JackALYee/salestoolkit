@@ -54,6 +54,13 @@ try:
 except Exception:
     _pm_skills = None
 
+# File I/O — optional sibling module. Lets users upload files (image/PDF/Office)
+# and lets Jerry emit downloadable docs (docx/pptx/xlsx/pdf). Never raises.
+try:
+    import file_io as _file_io
+except Exception:
+    _file_io = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -335,6 +342,18 @@ def _load_system_blocks() -> list[dict]:
         "user can verify. Don't search for things you already know.\n"
         "</interface_capabilities>"
     )
+
+    # File I/O: users can attach files (Jerry reads them); Jerry can emit
+    # downloadable documents via the artifact protocol.
+    if _file_io is not None:
+        sections.append(
+            "<interface_capabilities>\n"
+            "FILE UPLOADS: The user can attach files to a message (images, PDFs, "
+            "Word, Excel, PowerPoint). Their contents arrive inline in the "
+            "conversation — read and use them directly when present.\n\n"
+            f"{_file_io.ARTIFACT_HINT}\n"
+            "</interface_capabilities>"
+        )
 
     # PM skills catalog: let Jerry suggest/apply PM frameworks and announce
     # which he used. Static catalog → stays cache-stable.
@@ -1118,6 +1137,48 @@ def _render_downloads(text: str, key_prefix: str) -> None:
         )
 
 
+_ARTIFACT_FMT_LABEL = {
+    "docx": "Download Word document",
+    "pptx": "Download PowerPoint deck",
+    "xlsx": "Download Excel workbook",
+    "pdf": "Download PDF",
+}
+
+
+def _render_artifacts(text: str, key_prefix: str) -> None:
+    """Render download buttons for any ```artifact``` documents Jerry emitted
+    in `text`. Best-effort; a bad spec shows an inline note, never raises."""
+    if _file_io is None:
+        return
+    try:
+        specs = _file_io.extract_artifacts(text)
+    except Exception as e:
+        print(f"[JERRY_GPT_ARTIFACT_ERROR] extract failed: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        return
+    for j, spec in enumerate(specs):
+        try:
+            data, filename, mime = _file_io.render_artifact(spec)
+        except Exception as e:
+            print(f"[JERRY_GPT_ARTIFACT_ERROR] render failed: {type(e).__name__}: {e}",
+                  file=sys.stderr, flush=True)
+            st.markdown(
+                f"<div style='font-size:0.8rem; color:#fca5a5;'>Couldn't build the "
+                f"{spec.get('format','')} file — ask Jerry to try again.</div>",
+                unsafe_allow_html=True,
+            )
+            continue
+        label = _ARTIFACT_FMT_LABEL.get(spec["format"], "Download file") + f" · {filename}"
+        st.download_button(
+            label=label,
+            data=data,
+            file_name=filename,
+            mime=mime,
+            key=f"art_{key_prefix}_{j}",
+            use_container_width=True,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -1654,7 +1715,12 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
             # Chat history
             for _i, msg in enumerate(history):
                 with st.chat_message(msg["role"], avatar=JERRY_AVATAR if msg["role"] == "assistant" else USER_AVATAR):
-                    st.markdown(_md_safe(msg["content"]))
+                    # For assistant messages, hide any ```artifact``` JSON from
+                    # the displayed text (the download button replaces it).
+                    display_text = msg["content"]
+                    if msg["role"] == "assistant" and _file_io is not None:
+                        display_text = _file_io.strip_artifacts(display_text)
+                    st.markdown(_md_safe(display_text))
                     if msg["role"] == "assistant":
                         _render_product_images(msg["content"])
                         # Include the preceding user question so an eSIM ask
@@ -1666,14 +1732,27 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                             else ""
                         )
                         _render_downloads(f"{_prev_user}\n{msg['content']}", f"hist_{_i}")
-                        _render_copy_button(msg["content"])
+                        _render_artifacts(msg["content"], f"hist_{_i}")
+                        _render_copy_button(_file_io.strip_artifacts(msg["content"]) if _file_io else msg["content"])
 
-        # Chat input — OUTSIDE the scroll box, so it's always visible at the
-        # bottom of the conversation column. New messages render into msg_box.
+        # --- Composer: optional file attachments + chat input (both OUTSIDE the
+        # scroll box so they stay visible). The uploader key carries a version
+        # counter so it clears after each send.
+        _upl_ver = st.session_state.get("_jerry_upload_ver", 0)
+        uploaded_files = st.file_uploader(
+            "📎 Attach files for Jerry to read (image · PDF · Word · Excel · PowerPoint)",
+            accept_multiple_files=True,
+            type=["png", "jpg", "jpeg", "gif", "webp", "pdf",
+                  "docx", "xlsx", "xlsm", "pptx", "txt", "csv", "md"],
+            key=f"jerry_uploader_{_upl_ver}",
+        )
         user_input = st.chat_input("Ask Jerry anything…")
         if user_input:
             with msg_box:
-                _submit_message(user_input, system_blocks, api_key, model, length)
+                _submit_message(user_input, system_blocks, api_key, model, length,
+                                files=uploaded_files or [])
+            # Bump the uploader version so the widget resets (clears attachments)
+            st.session_state["_jerry_upload_ver"] = _upl_ver + 1
             st.rerun()
 
 
@@ -1990,19 +2069,35 @@ def _submit_message(
     api_key: str,
     model: str,
     length: str = "Medium",
+    files: list | None = None,
 ) -> None:
     """Append user turn, call Anthropic, append assistant turn. Streams to UI.
 
     `length` is one of LENGTH_OPTIONS keys (Short / Medium / Long) — controls
     both max_tokens and an instruction appended to the user message that
     nudges Jerry's response structure.
+
+    `files` is a list of Streamlit UploadedFile objects to attach to THIS turn
+    only — converted to Anthropic content blocks (images/PDF native, Office
+    extracted to text). The stored history keeps a text-only version (typed
+    text + an "attached: …" note) so persistence and replay stay simple; the
+    binary blocks are sent only on this request, not re-sent on later turns.
     """
     history: list[dict] = st.session_state["jerry_gpt_history"]
-    history.append({"role": "user", "content": text})
+    files = files or []
+
+    # Build the multimodal content for THIS turn + a text note for history.
+    if _file_io is not None and files:
+        api_user_content, attach_note = _file_io.build_user_content(text, files)
+    else:
+        api_user_content, attach_note = (text or ""), ""
+    display_text = text + (("\n\n" + attach_note) if attach_note else "")
+
+    history.append({"role": "user", "content": display_text})
 
     # Render user turn immediately so it appears during streaming
     with st.chat_message("user", avatar=USER_AVATAR):
-        st.markdown(_md_safe(text))
+        st.markdown(_md_safe(display_text))
 
     try:
         from anthropic import Anthropic
@@ -2019,16 +2114,18 @@ def _submit_message(
     hint = length_cfg["hint"]
 
     client = Anthropic(api_key=api_key)
-    # Build API messages from history. If the user has selected a short or long
-    # response, append the length hint to the LATEST user message so Jerry
-    # adjusts structure — but don't mutate the stored history (so the hint
-    # doesn't accumulate across turns or appear in the UI).
-    api_messages = [{"role": m["role"], "content": m["content"]} for m in history]
-    if hint and api_messages and api_messages[-1]["role"] == "user":
-        api_messages[-1] = {
-            "role": "user",
-            "content": api_messages[-1]["content"] + f"\n\n[Length preference: {hint}]",
-        }
+    # Prior turns come from stored history (text); the CURRENT turn uses the
+    # multimodal content (so attachments are sent). The length hint is appended
+    # to the current turn — as a text block when content is a block list, else
+    # as a string — without mutating stored history.
+    api_messages = [{"role": m["role"], "content": m["content"]} for m in history[:-1]]
+    current_content = api_user_content
+    if hint:
+        if isinstance(current_content, list):
+            current_content = current_content + [{"type": "text", "text": f"[Length preference: {hint}]"}]
+        else:
+            current_content = current_content + f"\n\n[Length preference: {hint}]"
+    api_messages.append({"role": "user", "content": current_content})
 
     # Per-turn clearance block — varies per user, NOT cached, appended after
     # the big cached knowledge block so the cache prefix stays intact.
@@ -2161,7 +2258,13 @@ def _submit_message(
                     continue
                 break
 
-            placeholder.markdown(_md_safe(full_text))
+            # Final render: hide any ```artifact``` JSON (the download button
+            # replaces it). The raw block was visible while streaming — that's
+            # fine; this cleans it up once the answer completes.
+            _final_display = (
+                _file_io.strip_artifacts(full_text) if _file_io else full_text
+            )
+            placeholder.markdown(_md_safe(_final_display))
         except Exception as exc:
             # Streaming itself failed — roll back the user turn so the
             # retry works, surface the error in the chat bubble.
@@ -2256,7 +2359,20 @@ def _submit_message(
             )
 
         try:
-            _render_copy_button(full_text)
+            # Render download buttons for any documents Jerry generated.
+            _render_artifacts(full_text, "live")
+        except Exception as e:
+            import sys as _sys
+            print(
+                f"[JERRY_GPT_POSTWORK_ERROR] artifacts failed: "
+                f"{type(e).__name__}: {e}",
+                file=_sys.stderr, flush=True,
+            )
+
+        try:
+            _render_copy_button(
+                _file_io.strip_artifacts(full_text) if _file_io else full_text
+            )
         except Exception as e:
             import sys as _sys
             print(
