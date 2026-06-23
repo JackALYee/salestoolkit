@@ -328,18 +328,24 @@ def _load_system_blocks() -> list[dict]:
             f"<interface_capabilities>\n{_downloads.DOWNLOAD_HINT}\n</interface_capabilities>"
         )
 
-    # Web browsing: Jerry can search + read the live web (tools are attached to
-    # every request). Tell him when to use it and to cite sources.
+    # Web browsing: GATED by a Settings toggle (off by default). The web tools
+    # are attached only when the user enables it; the per-turn clearance block
+    # tells Jerry whether browsing is ON or OFF for the current turn. Here we
+    # just describe the capability + the suggest-to-enable behavior.
     sections.append(
         "<interface_capabilities>\n"
-        "WEB BROWSING: You can search and read the live web (web_search + "
-        "web_fetch tools are available on every turn). Use it for anything that "
-        "may have changed since your training — competitor moves and pricing, "
-        "recent product launches, news, current regulations, or when the user "
-        "asks for the latest information. Prefer your built-in Streamax "
-        "knowledge for Streamax facts; reach for the web for external/current "
-        "info. When you use web results, cite the source (name + link) so the "
-        "user can verify. Don't search for things you already know.\n"
+        "WEB BROWSING (user-toggled): You can search and read the live web, but "
+        "ONLY when the user has turned on 'Internet browsing' in Settings. The "
+        "per-turn note below tells you whether it's currently ON or OFF.\n"
+        "- When ON: use it for anything that may have changed since your "
+        "training — competitor moves/pricing, recent launches, news, current "
+        "regulations, or when the user asks for the latest info. Prefer your "
+        "built-in Streamax knowledge for Streamax facts; cite sources "
+        "(name + link) for anything from the web.\n"
+        "- When OFF: rely on your built-in knowledge. If answering well would "
+        "really need current/external info you don't have, say so and suggest "
+        "the user enable 'Internet browsing' in Settings (left sidebar), then "
+        "re-ask. Don't pretend to have searched.\n"
         "</interface_capabilities>"
     )
 
@@ -1490,6 +1496,17 @@ def _render_settings_panel() -> None:
         )
         st.session_state["jerry_gpt_length"] = selected_length
 
+        # Internet browsing — OFF by default. When on, Jerry's requests carry
+        # the web_search / web_fetch tools; when off, no web access (and Jerry
+        # is told per-turn to suggest enabling it if he needs current info).
+        st.session_state["jerry_web_enabled"] = st.toggle(
+            "Internet browsing",
+            value=st.session_state.get("jerry_web_enabled", False),
+            key="jerry_web_toggle",
+            help="Let Jerry search and read the live web for current info "
+                 "(competitors, pricing, news). Off by default.",
+        )
+
 
 def _render_usage_panel() -> None:
     """Sidebar session usage — tucked into a collapsed expander (GPT-like)."""
@@ -1735,25 +1752,38 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
                         _render_artifacts(msg["content"], f"hist_{_i}")
                         _render_copy_button(_file_io.strip_artifacts(msg["content"]) if _file_io else msg["content"])
 
-        # --- Composer: optional file attachments + chat input (both OUTSIDE the
-        # scroll box so they stay visible). The uploader key carries a version
-        # counter so it clears after each send.
-        _upl_ver = st.session_state.get("_jerry_upload_ver", 0)
-        uploaded_files = st.file_uploader(
-            "📎 Attach files for Jerry to read (image · PDF · Word · Excel · PowerPoint)",
-            accept_multiple_files=True,
-            type=["png", "jpg", "jpeg", "gif", "webp", "pdf",
-                  "docx", "xlsx", "xlsm", "pptx", "txt", "csv", "md"],
-            key=f"jerry_uploader_{_upl_ver}",
-        )
-        user_input = st.chat_input("Ask Jerry anything…")
-        if user_input:
-            with msg_box:
-                _submit_message(user_input, system_blocks, api_key, model, length,
-                                files=uploaded_files or [])
-            # Bump the uploader version so the widget resets (clears attachments)
-            st.session_state["_jerry_upload_ver"] = _upl_ver + 1
-            st.rerun()
+        # --- Composer: a single chat input with a built-in paperclip
+        # (click-to-attach + drag-and-drop), OUTSIDE the scroll box so it stays
+        # visible. accept_file="multiple" puts the attach affordance INSIDE the
+        # box and auto-clears on submit. Returns a ChatInputValue (.text +
+        # .files) when files are enabled, or a plain string on older Streamlit
+        # — we handle both. file_type restricts accepted extensions.
+        _FILE_TYPES = ["png", "jpg", "jpeg", "gif", "webp", "pdf",
+                       "docx", "xlsx", "xlsm", "pptx", "txt", "csv", "md"]
+        try:
+            submission = st.chat_input(
+                "Ask Jerry anything…  (or attach a file with the clip)",
+                accept_file="multiple",
+                file_type=_FILE_TYPES,
+            )
+        except TypeError:
+            # Older Streamlit without accept_file — fall back to text-only input.
+            submission = st.chat_input("Ask Jerry anything…")
+
+        if submission:
+            if isinstance(submission, str):
+                user_input, uploaded_files = submission, []
+            else:
+                user_input = (getattr(submission, "text", "") or "").strip()
+                uploaded_files = list(getattr(submission, "files", []) or [])
+            # Require either text or at least one file before sending.
+            if user_input or uploaded_files:
+                if not user_input and uploaded_files:
+                    user_input = "Please review the attached file(s)."
+                with msg_box:
+                    _submit_message(user_input, system_blocks, api_key, model,
+                                    length, files=uploaded_files)
+                st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -2159,7 +2189,28 @@ def _submit_message(
         is_first_turn=is_first_turn,
         special_relationship=special_relationship,
     )
-    system_for_request = list(system_blocks) + [clearance_block]
+
+    # Internet browsing is user-toggled (Settings, off by default). Tell Jerry
+    # the current ON/OFF state per turn, and only attach the web tools when on.
+    web_enabled = bool(st.session_state.get("jerry_web_enabled", False))
+    web_status_text = (
+        "### INTERNET BROWSING STATUS\n"
+        "Internet browsing is currently **ON** for this turn — you may use "
+        "web_search / web_fetch when current or external info would improve the "
+        "answer, and cite sources."
+        if web_enabled else
+        "### INTERNET BROWSING STATUS\n"
+        "Internet browsing is currently **OFF** for this turn — the web tools "
+        "are NOT available. Answer from your built-in knowledge. If a good "
+        "answer truly requires current/external info you don't have, say so and "
+        "suggest the user turn on 'Internet browsing' in Settings (left "
+        "sidebar), then re-ask. Do not claim to have searched."
+    )
+    system_for_request = list(system_blocks) + [
+        clearance_block,
+        {"type": "text", "text": web_status_text},
+    ]
+    _request_tools = WEB_TOOLS if web_enabled else []
 
     with st.chat_message("assistant", avatar=JERRY_AVATAR):
         placeholder = st.empty()
@@ -2194,7 +2245,7 @@ def _submit_message(
                             max_tokens=max_tokens,
                             system=system_for_request,
                             messages=current_messages,
-                            tools=WEB_TOOLS,
+                            tools=_request_tools,
                         ) as stream:
                             for chunk in stream.text_stream:
                                 segment_text += chunk
