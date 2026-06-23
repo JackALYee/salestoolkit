@@ -47,6 +47,13 @@ try:
 except Exception:
     _downloads = None
 
+# PM-skills catalog — optional sibling module. Lets Jerry suggest/apply PM
+# frameworks and announce which one he used. Never raises.
+try:
+    import pm_skills as _pm_skills
+except Exception:
+    _pm_skills = None
+
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -92,10 +99,18 @@ LENGTH_OPTIONS = {
     },
 }
 
-# Safety cap on auto-continuation. If a response keeps hitting max_tokens
-# this many times in a row, stop trying — something is wrong with the prompt
-# rather than just a long answer.
+# Safety cap on server-tool / continuation resumes per turn.
 _MAX_CONTINUATIONS = 3
+
+# Server-side web tools — let Jerry search + read the live web for current
+# info (competitor moves, news, pricing changes, recent product launches).
+# Anthropic hosts and runs these; we just declare them. The _20260209 versions
+# add on-device dynamic filtering of results (Opus 4.8) for better accuracy
+# and token efficiency. Capped uses keep per-turn cost bounded.
+WEB_TOOLS = [
+    {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
+    {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 5},
+]
 
 # Transient Anthropic API errors that should trigger a retry rather than
 # bubbling up to the user. 529 = Overloaded (the common one during peak hours
@@ -277,6 +292,32 @@ def _load_system_blocks() -> list[dict]:
     if _downloads is not None:
         sections.append(
             f"<interface_capabilities>\n{_downloads.DOWNLOAD_HINT}\n</interface_capabilities>"
+        )
+
+    # Web browsing: Jerry can search + read the live web (tools are attached to
+    # every request). Tell him when to use it and to cite sources.
+    sections.append(
+        "<interface_capabilities>\n"
+        "WEB BROWSING: You can search and read the live web (web_search + "
+        "web_fetch tools are available on every turn). Use it for anything that "
+        "may have changed since your training — competitor moves and pricing, "
+        "recent product launches, news, current regulations, or when the user "
+        "asks for the latest information. Prefer your built-in Streamax "
+        "knowledge for Streamax facts; reach for the web for external/current "
+        "info. When you use web results, cite the source (name + link) so the "
+        "user can verify. Don't search for things you already know.\n"
+        "</interface_capabilities>"
+    )
+
+    # PM skills catalog: let Jerry suggest/apply PM frameworks and announce
+    # which he used. Static catalog → stays cache-stable.
+    if _pm_skills is not None and _pm_skills.CATALOG_TEXT:
+        sections.append(
+            "<pm_skills_library>\n"
+            f"{_pm_skills.SKILLS_HINT}\n\n"
+            "## Catalog\n"
+            f"{_pm_skills.CATALOG_TEXT}\n"
+            "</pm_skills_library>"
         )
 
     combined = "\n\n".join(sections)
@@ -2022,6 +2063,7 @@ def _submit_message(
                             max_tokens=max_tokens,
                             system=system_for_request,
                             messages=current_messages,
+                            tools=WEB_TOOLS,
                         ) as stream:
                             for chunk in stream.text_stream:
                                 segment_text += chunk
@@ -2065,22 +2107,25 @@ def _submit_message(
                 total_cache_read += getattr(u, "cache_read_input_tokens", 0) or 0
                 total_cache_creation += getattr(u, "cache_creation_input_tokens", 0) or 0
 
-                # If the stop reason was anything OTHER than max_tokens, we're
-                # done. (Normal completion is `end_turn`. Other reasons —
-                # `stop_sequence`, `tool_use`, etc. — also exit cleanly.)
+                # `pause_turn` means the server-side web-tool loop hit its
+                # iteration cap mid-answer — resume by echoing the assistant's
+                # full content blocks (the trailing server_tool_use block tells
+                # the API to continue automatically). This is the supported
+                # resume path; do NOT add a "continue" user message.
+                #
+                # NOTE: we deliberately do NOT resume on `max_tokens`. The old
+                # assistant-text-prefill continuation returns a 400 on Opus 4.8
+                # (last-assistant-turn prefills are rejected). On a max_tokens
+                # stop we keep the partial answer rather than erroring; the user
+                # can ask Jerry to continue or pick a longer response length.
                 stop_reason = getattr(final_message, "stop_reason", None)
-                if stop_reason != "max_tokens" or continuations >= _MAX_CONTINUATIONS:
-                    break
-
-                # Auto-continue: use Anthropic's assistant-prefill pattern.
-                # Appending the partial response as the final assistant
-                # message tells Claude to continue from exactly that point —
-                # no "continue from where you left off" instruction needed,
-                # no preamble like "Sure, continuing:" gets generated.
-                continuations += 1
-                current_messages = current_messages + [
-                    {"role": "assistant", "content": full_text}
-                ]
+                if stop_reason == "pause_turn" and continuations < _MAX_CONTINUATIONS:
+                    continuations += 1
+                    current_messages = current_messages + [
+                        {"role": "assistant", "content": final_message.content}
+                    ]
+                    continue
+                break
 
             placeholder.markdown(_md_safe(full_text))
         except Exception as exc:
