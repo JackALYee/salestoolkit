@@ -376,55 +376,43 @@ css_and_html = r"""
                 .close-modal { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: var(--text-grey); font-size: 1.5rem; cursor: pointer; z-index: 100; transition: var(--transition); }
                 .close-modal:hover { color: var(--text-white); }
                 
-                .graph-viewport { width: 100%; flex: 1; position: relative; overflow: hidden; cursor: grab; background: rgba(0, 0, 0, 0.2); border-radius: 12px; margin-top: 10px; border: 1px solid rgba(255, 255, 255, 0.05); }
-                .graph-viewport:active { cursor: grabbing; }
-                .graph-container { position: absolute; top: 0; left: 0; display: flex; align-items: center; gap: 120px; padding: 100px; transform-origin: 0 0; will-change: transform; }
-                .graph-col { display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 2; }
-                
-                .round-node { 
-                    background: rgba(255, 255, 255, 0.05); 
-                    border: 1px solid rgba(255, 255, 255, 0.1); 
-                    color: var(--text-white); 
-                    padding: 10px 20px; 
-                    border-radius: 20px; 
-                    min-width: 80px; 
-                    max-width: 160px; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
-                    font-weight: 600; 
-                    text-align: center; 
-                    backdrop-filter: blur(10px); 
-                    cursor: pointer; 
-                    position: relative; 
-                    z-index: 2; 
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
-                    font-size: 0.85rem; 
-                    line-height: 1.3; 
-                    white-space: normal;
-                    transition: var(--transition);
-                }
-                .node-master { 
-                    background: rgba(42, 245, 152, 0.1); 
-                    border-color: var(--primary-green); 
-                    color: var(--primary-green); 
-                    padding: 15px 30px; 
-                    border-radius: 25px; 
-                    font-size: 1.1rem; 
-                    min-width: 120px; 
-                    box-shadow: 0 0 20px rgba(42, 245, 152, 0.2); 
-                    cursor: default; 
-                }
-                .node-related:hover { background: var(--secondary-blue); color: var(--text-white); box-shadow: 0 0 20px rgba(0, 158, 253, 0.4); transform: scale(1.05); }
-                .node-dist2 { margin-left: 100px; transform: scale(0.9); opacity: 0.9; }
-                .node-dist2:hover { transform: scale(0.95); }
-                
-                .graph-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
-                
-                #modalChildExplanation { position: absolute; top: 20px; left: 20px; width: 320px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: rgba(5, 8, 16, 0.95); border: 1px solid var(--secondary-blue); border-top: 4px solid var(--primary-green); padding: 16px 20px; border-radius: 8px; display: none; animation: spediaFadeUp 0.3s ease-out forwards; }
-                #modalChildExplanation.active { display: block; }
-                .see-details-btn { background: var(--secondary-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; margin-top: 15px; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
-                .see-details-btn:hover { background: var(--primary-green); color: var(--bg-deep); }
+                /* ---- Ecosystem topology graph (D3) ---- */
+                .topo-header { width:100%; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+                .topo-title { color:var(--text-white); font-size:1.25rem; font-weight:700; margin:0; }
+                .topo-sub { color:var(--text-grey); font-size:0.78rem; margin-top:4px; }
+                .topo-tools { display:flex; align-items:center; gap:8px; }
+                .topo-search { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:var(--text-white); padding:7px 12px; font-size:0.85rem; outline:none; width:170px; }
+                .topo-search:focus { border-color:var(--primary-green); }
+                .topo-btn { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:var(--text-grey); border-radius:8px; padding:7px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:var(--transition); }
+                .topo-btn:hover { border-color:var(--primary-green); color:var(--primary-green); }
+
+                .topo-legend { width:100%; display:flex; flex-wrap:wrap; gap:8px 14px; margin:12px 0 4px; }
+                .topo-legend-item { display:inline-flex; align-items:center; gap:6px; font-size:0.74rem; color:var(--text-grey); cursor:pointer; user-select:none; padding:2px 6px; border-radius:6px; transition:all 0.15s; }
+                .topo-legend-item:hover { background:rgba(255,255,255,0.05); color:var(--text-white); }
+                .topo-legend-item.off { opacity:0.35; text-decoration:line-through; }
+                .topo-legend-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+
+                .topo-viewport { width:100%; flex:1; position:relative; overflow:hidden; background:rgba(0,0,0,0.25); border-radius:12px; margin-top:8px; border:1px solid rgba(255,255,255,0.06); cursor:grab; }
+                .topo-viewport:active { cursor:grabbing; }
+                #topoSvg { width:100%; height:100%; display:block; }
+                #topoSvg text { font-family:'Inter',sans-serif; pointer-events:none; user-select:none; }
+                #topoSvg .topo-node { cursor:pointer; }
+
+                .topo-tooltip { position:absolute; pointer-events:none; background:rgba(5,8,16,0.96); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 11px; font-size:0.78rem; color:var(--text-white); max-width:260px; line-height:1.45; z-index:30; opacity:0; transition:opacity 0.12s; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+                .topo-tooltip.show { opacity:1; }
+                .topo-tooltip .tt-cat { font-size:0.62rem; text-transform:uppercase; letter-spacing:1px; font-weight:700; margin-bottom:3px; }
+
+                .topo-detail { position:absolute; top:14px; left:14px; width:300px; max-width:60%; z-index:40; background:rgba(5,8,16,0.97); border:1px solid rgba(255,255,255,0.12); border-left:4px solid var(--primary-green); border-radius:10px; padding:16px 18px; box-shadow:0 12px 32px rgba(0,0,0,0.6); display:none; }
+                .topo-detail.show { display:block; animation:spediaFadeUp 0.25s ease-out forwards; }
+                .topo-detail .td-cat { font-size:0.62rem; text-transform:uppercase; letter-spacing:1.2px; font-weight:700; margin-bottom:5px; }
+                .topo-detail .td-title { color:var(--text-white); font-size:1.1rem; font-weight:700; margin-bottom:7px; }
+                .topo-detail .td-desc { color:var(--text-grey); font-size:0.88rem; line-height:1.55; }
+                .topo-detail .td-conn { color:var(--text-grey); font-size:0.78rem; margin-top:10px; }
+                .topo-detail .td-conn b { color:var(--text-white); font-weight:600; }
+                .topo-detail .td-close { position:absolute; top:8px; right:10px; background:none; border:none; color:var(--text-grey); cursor:pointer; font-size:1rem; }
+                .topo-detail .td-close:hover { color:var(--text-white); }
+                .see-details-btn { background:var(--secondary-blue); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.83rem; margin-top:14px; display:inline-flex; align-items:center; gap:8px; transition:var(--transition); }
+                .see-details-btn:hover { background:var(--primary-green); color:var(--bg-deep); }
 
                 /* Checkbox styling */
                 .matrix-filter-label {
@@ -754,19 +742,25 @@ css_and_html = r"""
                 </div>
             </div>
 
-            <!-- RELEVANCE GRAPH MODAL -->
+            <!-- ECOSYSTEM TOPOLOGY MODAL (interactive D3 force graph) -->
             <div class="modal-overlay" id="relevanceModal">
-                <div class="modal-box">
+                <div class="modal-box" id="topoModalBox">
                     <button class="close-modal" onclick="window.closeModal()"><i class="fa-solid fa-xmark"></i></button>
-                    <h3 style="color: var(--text-white); font-size: 1.2rem; margin-bottom: 5px; z-index: 10;">Relevance Graph</h3>
-                    
-                    <div class="graph-viewport" id="graphViewport">
-                        <div class="graph-container" id="graphContainer">
-                            <svg class="graph-lines" id="graphLines" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"></svg>
-                            <div class="round-node node-master" id="graphMasterNode"></div>
-                            <div class="graph-col" id="graphRelatedNodes"></div>
+                    <div class="topo-header">
+                        <div>
+                            <h3 class="topo-title">Streamax Ecosystem Map</h3>
+                            <div class="topo-sub" id="topoSub">Drag to pan · scroll to zoom · hover to focus · click a node for details</div>
                         </div>
-                        <div id="modalChildExplanation"></div>
+                        <div class="topo-tools">
+                            <input type="text" id="topoSearch" class="topo-search" placeholder="Find a term…" autocomplete="off">
+                            <button class="topo-btn" id="topoReset" title="Reset view"><i class="fa-solid fa-expand"></i> Fit</button>
+                        </div>
+                    </div>
+                    <div class="topo-legend" id="topoLegend"></div>
+                    <div class="topo-viewport" id="topoViewport">
+                        <svg id="topoSvg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"></svg>
+                        <div class="topo-tooltip" id="topoTooltip"></div>
+                        <div class="topo-detail" id="topoDetail"></div>
                     </div>
                 </div>
             </div>
@@ -790,9 +784,150 @@ css_and_html = r"""
             </div>
 """
 
+# ---------------------------------------------------------------------------
+# ECOSYSTEM TOPOLOGY — curated, accurate product/relationship graph distilled
+# from the Jerry knowledge base (company/products, SafeGPT, school bus, public
+# transport, mining, eSIM, CAN, Vision 2.0). Replaces the old auto-generated
+# relevance graph. Rendered as an interactive D3 force-directed map.
+#   cat: capability | device | camera | platform | solution | competitor
+# ---------------------------------------------------------------------------
+_TOPO_NODES = [
+    # Capabilities
+    ("ADAS", "capability", "Advanced Driver Assistance — forward-collision, lane-departure, headway and pedestrian warnings."),
+    ("DMS", "capability", "Driver Monitoring — fatigue, distraction, phone, smoking, seatbelt via in-cab face-tracing AI."),
+    ("BSD", "capability", "Blind Spot Detection — warns of pedestrians/cyclists in the vehicle's blind zones; predicts trajectory."),
+    ("AVM", "capability", "Around-View Monitor — stitched seamless 360° bird's-eye view of the vehicle."),
+    ("DSC", "capability", "Driver Safety Camera — entry-level driver-facing safety, below a full DMS."),
+    ("Child Check", "capability", "Anti-left-behind — guarantees no child is left on a school bus (button + AI camera + motion sensor)."),
+    ("APC", "capability", "Automatic Passenger Counting — boarding/alighting counts plus origin-destination analysis."),
+    ("Stop-Arm Capture", "capability", "Captures vehicles illegally passing a stopped school bus with court-grade evidence."),
+    ("ANPR", "capability", "Automatic Number Plate Recognition — reads license plates for evidence/enforcement."),
+    ("V2V", "capability", "Vehicle-to-vehicle warning beyond line of sight, independent of network infrastructure."),
+    ("Blacklight", "capability", "Full-colour night vision in near-darkness (down to ~0.5 / 0.02 lux)."),
+    ("CAN / OBD", "capability", "Reads the vehicle bus (fuel, RPM, DTCs) — the $20 inherent-CAN license on the AD Plus 2.0."),
+    ("eSIM", "capability", "Built-in connectivity (eSIM / eUICC) — OTA carrier provisioning, lower TCO, higher uptime."),
+    # Platforms / cloud
+    ("SafeGPT", "platform", "Cloud behavioural-AI engine — prioritises risk, profiles & coaches drivers, real-time accident response."),
+    ("FT Cloud", "platform", "Fleet management platform (trucking) — devices, video, telematics, CAN, alerts."),
+    ("SBS Cloud", "platform", "School Bus Solution cloud — attendance, child-check, stop-arm evidence."),
+    ("PT Cloud", "platform", "Public Transport platform — safety, passenger-flow analytics, operations."),
+    ("MineSync-Cloud", "platform", "Mining production + transportation safety platform (big-data + video AI)."),
+    # Devices / MDVRs
+    ("AD Plus 2.0", "device", "Flagship 3-channel AI dashcam/MDVR — hosts ADAS + DMS, inherent CAN."),
+    ("C6 Lite 2.0", "device", "Cost-effective 2-channel AI dashcam — ADAS + DSC."),
+    ("M1N 2.0", "device", "Entry MDVR — child check + attendance + surveillance (school bus / mining basic)."),
+    ("X3N", "device", "MDVR for 2–4 lane stop-arm capture and standard buses."),
+    ("X5N Pro", "device", "MDVR for 5–8 lane stop-arm capture / regional regulatory needs."),
+    ("IBCU", "device", "Intelligent Bus Central Unit (A16Max) — all-in-one flagship, up to 24 HD ch, 6 TOPS."),
+    ("M10", "device", "Mining MDVR (Advanced tier)."),
+    ("M10 PRO", "device", "Mining MDVR flagship (+ thermal cam, fuel management)."),
+    ("DC MAX", "device", "Next-gen AI dashcam — dual 2K lenses, onboard large AI model, dual tamper-proof storage."),
+    ("GT1", "device", "Independent telematics gateway pairing with DC MAX."),
+    ("FMS Tracker", "device", "Compact dead-reckoning asset tracker — positioning without GPS."),
+    # Cameras / sensors
+    ("C29N", "camera", "DMS driver-monitoring camera with face-tracing IR."),
+    ("CA20S", "camera", "Single-lens ADAS camera."),
+    ("C20D", "camera", "Dual-lens ADAS camera (adds near-pedestrian + close-range)."),
+    ("CA20D", "camera", "Triple-lens ADAS camera (adds ANPR)."),
+    ("C46", "camera", "Top-down BSD camera (16 m both sides)."),
+    ("C53", "camera", "Flagship long-range black-light BSD (50 m lateral)."),
+    ("CA24S", "camera", "Rear-to-front BSD camera for core blind-spot zones."),
+    ("AI-AVM", "camera", "360° around-view monitor with transparent-vehicle effect."),
+    ("CMS20", "camera", "Digital rear-view mirror (Blacklight 1.8T)."),
+    ("C34", "camera", "AI child-check camera (92% accuracy)."),
+    ("DP7S", "camera", "Motion sensor for child check (99.9% accuracy)."),
+    ("P3", "camera", "Automatic passenger counter (99%)."),
+    ("P3D", "camera", "Passenger counter + origin-destination (85%)."),
+    ("Palm Vein Reader", "camera", "Palm-vein student attendance — forget/lose/copy-proof."),
+    ("C28", "camera", "Stop-arm AI detection camera."),
+    ("C27", "camera", "Stop-arm license-plate camera."),
+    ("B2", "camera", "Stop-arm audio-visual alarm."),
+    ("Thermal Smart CAM", "camera", "Thermal imaging camera (mining loading hazards)."),
+    ("mmWave Radar", "camera", "Millimeter-wave radar — dust-penetrating, mining BSD / fusion."),
+    # Solutions / verticals
+    ("Fleet / Trucking", "solution", "Core video-telematics for commercial trucking fleets and TSP partners."),
+    ("School Bus", "solution", "Known · protected · never left behind — attendance, stop-arm, child check."),
+    ("Public Transport", "solution", "One platform, four jobs — driving safety, operations, passenger service, recording."),
+    ("Mining", "solution", "Safety + intelligent dispatch for open-pit & underground mining fleets."),
+    ("Cargo Security", "solution", "Trailer / cargo theft prevention with black-light in-cargo cameras."),
+    # Competitors
+    ("Samsara", "competitor", "US fleet-telematics incumbent — subscription dashcam + platform."),
+    ("Motive", "competitor", "US fleet safety/ELD platform; missing fatigue/FCW/PCW today."),
+    ("Lytx", "competitor", "Video-based driver-risk / DMS vendor."),
+    ("Netradyne", "competitor", "AI dashcam / driver-behaviour vendor (Driveri)."),
+    ("Geotab", "competitor", "Telematics / OBD data platform."),
+    ("MiTac", "competitor", "OEM AI camera competitor."),
+    ("Hikvision", "competitor", "Surveillance / camera vendor."),
+]
+
+_TOPO_LINKS = [
+    # device → capability
+    ("AD Plus 2.0", "ADAS"), ("AD Plus 2.0", "DMS"), ("AD Plus 2.0", "DSC"),
+    ("AD Plus 2.0", "CAN / OBD"), ("AD Plus 2.0", "SafeGPT"),
+    ("C6 Lite 2.0", "ADAS"), ("C6 Lite 2.0", "DSC"),
+    ("DC MAX", "ADAS"), ("DC MAX", "DMS"), ("DC MAX", "DSC"), ("DC MAX", "SafeGPT"),
+    ("GT1", "FT Cloud"), ("GT1", "eSIM"),
+    ("FMS Tracker", "FT Cloud"), ("FMS Tracker", "eSIM"),
+    ("IBCU", "ADAS"), ("IBCU", "DMS"), ("IBCU", "BSD"), ("IBCU", "AVM"),
+    ("IBCU", "APC"), ("IBCU", "SafeGPT"),
+    ("M10", "DMS"), ("M10", "BSD"), ("M10", "ADAS"),
+    ("M10 PRO", "DMS"), ("M10 PRO", "BSD"), ("M10 PRO", "ADAS"), ("M10 PRO", "Thermal Smart CAM"),
+    ("M1N 2.0", "Child Check"),
+    ("X3N", "Stop-Arm Capture"), ("X3N", "Child Check"),
+    ("X5N Pro", "Stop-Arm Capture"), ("X5N Pro", "BSD"),
+    # camera → capability
+    ("C29N", "DMS"), ("CA20S", "ADAS"), ("C20D", "ADAS"),
+    ("CA20D", "ADAS"), ("CA20D", "ANPR"),
+    ("C46", "BSD"), ("C53", "BSD"), ("C53", "Blacklight"), ("CA24S", "BSD"),
+    ("AI-AVM", "AVM"), ("CMS20", "BSD"), ("CMS20", "Blacklight"),
+    ("C34", "Child Check"), ("DP7S", "Child Check"),
+    ("P3", "APC"), ("P3D", "APC"),
+    ("C28", "Stop-Arm Capture"), ("C27", "Stop-Arm Capture"), ("C27", "ANPR"),
+    ("B2", "Stop-Arm Capture"),
+    ("Thermal Smart CAM", "Mining"), ("mmWave Radar", "BSD"), ("mmWave Radar", "Mining"),
+    # platform wiring
+    ("SafeGPT", "ADAS"), ("SafeGPT", "DMS"), ("SafeGPT", "BSD"),
+    ("SafeGPT", "FT Cloud"), ("SafeGPT", "SBS Cloud"), ("SafeGPT", "PT Cloud"),
+    ("SafeGPT", "MineSync-Cloud"),
+    ("FT Cloud", "Fleet / Trucking"), ("SBS Cloud", "School Bus"),
+    ("PT Cloud", "Public Transport"), ("MineSync-Cloud", "Mining"),
+    ("eSIM", "FT Cloud"), ("CAN / OBD", "FT Cloud"),
+    # solution → key parts
+    ("Fleet / Trucking", "AD Plus 2.0"), ("Fleet / Trucking", "C6 Lite 2.0"),
+    ("Fleet / Trucking", "DC MAX"), ("Fleet / Trucking", "GT1"), ("Fleet / Trucking", "FMS Tracker"),
+    ("Fleet / Trucking", "ADAS"), ("Fleet / Trucking", "DMS"), ("Fleet / Trucking", "DSC"),
+    ("School Bus", "M1N 2.0"), ("School Bus", "X3N"), ("School Bus", "X5N Pro"),
+    ("School Bus", "IBCU"), ("School Bus", "Palm Vein Reader"), ("School Bus", "C34"),
+    ("School Bus", "DP7S"), ("School Bus", "C28"), ("School Bus", "C27"), ("School Bus", "B2"),
+    ("School Bus", "Child Check"), ("School Bus", "Stop-Arm Capture"),
+    ("Public Transport", "IBCU"), ("Public Transport", "C29N"), ("Public Transport", "CA20D"),
+    ("Public Transport", "C53"), ("Public Transport", "C46"), ("Public Transport", "AI-AVM"),
+    ("Public Transport", "CMS20"), ("Public Transport", "P3"), ("Public Transport", "P3D"),
+    ("Public Transport", "APC"), ("Public Transport", "BSD"), ("Public Transport", "AVM"),
+    ("Mining", "M10"), ("Mining", "M10 PRO"), ("Mining", "V2V"), ("Mining", "DMS"), ("Mining", "BSD"),
+    ("Cargo Security", "Blacklight"), ("Cargo Security", "FT Cloud"), ("Cargo Security", "Fleet / Trucking"),
+    # competitor → where they compete
+    ("Samsara", "Fleet / Trucking"), ("Samsara", "ADAS"), ("Samsara", "DMS"),
+    ("Motive", "Fleet / Trucking"), ("Motive", "ADAS"), ("Motive", "DMS"),
+    ("Lytx", "DMS"), ("Lytx", "ADAS"),
+    ("Netradyne", "DMS"), ("Netradyne", "ADAS"),
+    ("Geotab", "Fleet / Trucking"), ("Geotab", "CAN / OBD"),
+    ("MiTac", "ADAS"), ("MiTac", "DMS"),
+    ("Hikvision", "BSD"), ("Hikvision", "Public Transport"),
+]
+
+TOPOLOGY = {
+    "nodes": [{"id": n, "cat": c, "desc": d} for (n, c, d) in _TOPO_NODES],
+    "links": [{"source": a, "target": b} for (a, b) in _TOPO_LINKS],
+}
+topology_json = json.dumps(TOPOLOGY)
+
+
 js_code = """
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
             <script>
                 const terminologyDB = __TERMINOLOGY_DB_JSON__;
+                const TOPOLOGY = __TOPOLOGY_JSON__;
                 const matrixData = """ + matrix_json + """;
                 const ALL_PRODUCTS = """ + products_json + """;
                 const pdfBase64 = \"""" + pdf_base64 + """\";
@@ -1310,7 +1445,7 @@ js_code = """
                             });
                         }
                         
-                        let relHTML = (item.related && item.related.length > 0) ? `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="window.openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-project-diagram"></i> Relevance</button></div>` : '';
+                        let relHTML = `<div style="margin-top: 8px;"><button class="relevance-btn" onclick="window.openRelevanceGraph('${item.term}', this)"><i class="fa-solid fa-diagram-project"></i> Ecosystem map</button></div>`;
 
                         // Special Feature: a custom CTA on a result card that
                         // navigates the PARENT Streamlit frame to ?view=<view>.
@@ -1389,198 +1524,178 @@ js_code = """
                     overlay.classList.add('active');
                 };
 
-                function getCenterSafe(node) {
-                    let x = node.offsetWidth / 2;
-                    let y = node.offsetHeight / 2;
-                    let current = node;
-                    while (current && current.id !== 'graphContainer') {
-                        x += current.offsetLeft;
-                        y += current.offsetTop;
-                        current = current.offsetParent;
-                    }
-                    return { x, y };
-                }
-
-                let isGraphDragging = false;
-                let hasGraphDragged = false;
-                let graphStartX = 0;
-                let graphStartY = 0;
-                let graphTranslateX = 0;
-                let graphTranslateY = 0;
+                // --- ECOSYSTEM TOPOLOGY (interactive D3 force graph) ---
+                const TOPO_CAT = {
+                    capability: { label: 'Capability',      color: '#2AF598' },
+                    device:     { label: 'Device / MDVR',   color: '#009EFD' },
+                    camera:     { label: 'Camera / Sensor', color: '#7F77DD' },
+                    platform:   { label: 'Platform / Cloud',color: '#1D9E75' },
+                    solution:   { label: 'Solution',        color: '#EF9F27' },
+                    competitor: { label: 'Competitor',      color: '#E24B4A' },
+                };
+                let _topoState = null;
 
                 window.openRelevanceGraph = function(termName, btnElement) {
-                    const termData = terminologyDB.find(t => t.term === termName);
-                    if (!termData || !termData.related) return;
-
                     const overlay = document.getElementById('relevanceModal');
-                    const modalBox = overlay ? overlay.querySelector('.modal-box') : null;
-                    
+                    const modalBox = document.getElementById('topoModalBox');
                     if (!overlay || !modalBox) return;
-
-                    const docHeight = Math.max(
-                        document.body.scrollHeight, document.documentElement.scrollHeight,
-                        document.body.offsetHeight, document.documentElement.offsetHeight,
-                        document.documentElement.clientHeight
-                    );
+                    const docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.documentElement.clientHeight);
                     overlay.style.height = docHeight + 'px';
-                    
-                    if (btnElement) {
-                        const rect = btnElement.getBoundingClientRect();
-                        const absoluteY = rect.top + window.scrollY; 
-                        
-                        let boxHeight = modalBox.offsetHeight || 600;
-                        let boxTop = absoluteY - (boxHeight / 2) + (rect.height / 2); 
-                        
-                        if (boxTop < 20) boxTop = 20; 
-                        if (boxTop + boxHeight + 20 > docHeight) boxTop = docHeight - boxHeight - 20;
-                        
-                        modalBox.style.top = boxTop + 'px';
-                    } else {
-                        modalBox.style.top = (window.scrollY + 100) + 'px';
-                    }
-
-                    const expBox = document.getElementById('modalChildExplanation');
-                    if (expBox) expBox.classList.remove('active');
-                    
-                    const masterNode = document.getElementById('graphMasterNode');
-                    if (masterNode) masterNode.innerText = termData.term;
-
-                    const dist1 = termData.related || [];
-                    const allRelatedTermsSet = new Set(dist1);
-                    dist1.forEach(d1 => {
-                        const d1Data = terminologyDB.find(t => t.term === d1);
-                        if (d1Data && d1Data.related) d1Data.related.forEach(d2 => { if (d2 !== termName) allRelatedTermsSet.add(d2); });
-                    });
-
-                    const allRelated = Array.from(allRelatedTermsSet);
-                    const clusters = [], visited = new Set();
-
-                    allRelated.forEach(term => {
-                        if (!visited.has(term)) {
-                            const cluster = [], queue = [term];
-                            visited.add(term);
-                            while (queue.length > 0) {
-                                const curr = queue.shift();
-                                cluster.push(curr);
-                                const currData = terminologyDB.find(t => t.term === curr);
-                                if (currData && currData.related) {
-                                    currData.related.forEach(n => {
-                                        if (allRelated.includes(n) && !visited.has(n)) { visited.add(n); queue.push(n); }
-                                    });
-                                }
-                            }
-                            clusters.push(cluster);
-                        }
-                    });
-
-                    clusters.forEach(c => c.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a)?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b)?.category || '');
-                        return catA.localeCompare(catB);
-                    }));
-                    clusters.sort((a,b) => {
-                        const catA = (terminologyDB.find(t=>t.term===a[0])?.category || '');
-                        const catB = (terminologyDB.find(t=>t.term===b[0])?.category || '');
-                        return catA.localeCompare(catB);
-                    });
-
-                    const grouped = clusters.flat();
-                    const relatedNodesContainer = document.getElementById('graphRelatedNodes');
-                    if (relatedNodesContainer) relatedNodesContainer.innerHTML = '';
-
-                    grouped.forEach(rTerm => {
-                        const n = document.createElement('div');
-                        n.className = 'round-node node-related';
-                        if (!dist1.includes(rTerm)) n.classList.add('node-dist2');
-                        n.innerText = rTerm; n.dataset.term = rTerm;
-                        n.onclick = (e) => { if (hasGraphDragged) return; window.showChildTerm(rTerm); };
-                        if (relatedNodesContainer) relatedNodesContainer.appendChild(n);
-                    });
-
+                    let boxTop = (window.scrollY || 0) + 60;
+                    if (btnElement) { const r = btnElement.getBoundingClientRect(); boxTop = r.top + window.scrollY - 50; }
+                    if (boxTop < 20) boxTop = 20;
+                    modalBox.style.top = boxTop + 'px';
                     overlay.classList.add('active');
-
-                    setTimeout(() => {
-                        const vp = document.getElementById('graphViewport');
-                        const ct = document.getElementById('graphContainer');
-                        const mn = document.getElementById('graphMasterNode');
-                        
-                        if (!vp || !ct || !mn) return;
-
-                        ct.style.transform = 'translate(0,0)';
-                        
-                        const vpWidth = vp.offsetWidth;
-                        const vpHeight = vp.offsetHeight;
-                        const masterCenter = getCenterSafe(mn);
-                        
-                        graphTranslateX = (vpWidth * 0.3) - masterCenter.x;
-                        graphTranslateY = (vpHeight * 0.5) - masterCenter.y;
-                        
-                        ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`;
-                        drawLines();
-                        
-                        if (document.fonts) document.fonts.ready.then(() => drawLines());
-                    }, 50);
+                    const det = document.getElementById('topoDetail'); if (det) det.classList.remove('show');
+                    const sb = document.getElementById('topoSub');
+                    if (sb) sb.textContent = termName ? ('Focused on ' + termName + ' — drag · scroll to zoom · click any node') : 'Drag to pan · scroll to zoom · hover to focus · click a node for details';
+                    setTimeout(() => renderTopology(termName || null), 70);
                 };
 
-                function drawLines() {
-                    const svg = document.getElementById('graphLines');
-                    if (!svg) return;
-                    svg.innerHTML = '';
-                    
-                    const mNode = document.getElementById('graphMasterNode');
-                    if (!mNode) return;
-                    
-                    const mCenter = getCenterSafe(mNode);
-                    const mData = terminologyDB.find(t => t.term === mNode.innerText);
-                    const d1Terms = mData?.related || [];
-                    const nodes = Array.from(document.querySelectorAll('.node-related'));
-                    const drawn = new Set();
+                function _topoNeighbors(id, links) {
+                    const s = new Set();
+                    links.forEach(l => {
+                        const a = (l.source.id || l.source), b = (l.target.id || l.target);
+                        if (a === id) s.add(b); else if (b === id) s.add(a);
+                    });
+                    return s;
+                }
 
-                    nodes.forEach(n => {
-                        if (d1Terms.includes(n.dataset.term)) {
-                            const nc = getCenterSafe(n);
-                            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                            l.setAttribute('x1', mCenter.x); l.setAttribute('y1', mCenter.y);
-                            l.setAttribute('x2', nc.x); l.setAttribute('y2', nc.y);
-                            l.setAttribute('stroke', 'rgba(255,255,255,0.15)'); l.setAttribute('stroke-width', '2');
-                            svg.appendChild(l);
+                function renderTopology(focusId) {
+                    if (typeof d3 === 'undefined') return;
+                    const vp = document.getElementById('topoViewport');
+                    const svgEl = document.getElementById('topoSvg');
+                    if (!vp || !svgEl) return;
+                    const W = vp.clientWidth || 880, H = vp.clientHeight || 420;
+
+                    const nodes = TOPOLOGY.nodes.map(n => Object.assign({}, n));
+                    const links = TOPOLOGY.links.map(l => Object.assign({}, l));
+                    const hidden = (_topoState && _topoState.hidden) ? _topoState.hidden : new Set();
+
+                    const svg = d3.select(svgEl);
+                    svg.selectAll('*').remove();
+                    svg.attr('viewBox', '0 0 ' + W + ' ' + H);
+                    const root = svg.append('g');
+
+                    const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e) => root.attr('transform', e.transform));
+                    svg.call(zoom).on('dblclick.zoom', null);
+
+                    const deg = {}; nodes.forEach(n => deg[n.id] = 0);
+                    links.forEach(l => { deg[l.source]=(deg[l.source]||0)+1; deg[l.target]=(deg[l.target]||0)+1; });
+
+                    const link = root.append('g').selectAll('line').data(links).join('line')
+                        .attr('class','topo-link').attr('stroke','rgba(255,255,255,0.13)').attr('stroke-width',1.2);
+
+                    const node = root.append('g').selectAll('g').data(nodes).join('g').attr('class','topo-node');
+                    node.append('circle')
+                        .attr('r', d => 7 + Math.min(10, (deg[d.id]||0)))
+                        .attr('fill', d => (TOPO_CAT[d.cat]||{}).color || '#888')
+                        .attr('stroke', '#050810').attr('stroke-width', 1.5);
+                    node.append('text').text(d => d.id)
+                        .attr('x', d => 11 + Math.min(10,(deg[d.id]||0))).attr('y', 4)
+                        .attr('fill', '#E6EAF0').attr('font-size', '10px').attr('font-weight','500');
+
+                    const sim = d3.forceSimulation(nodes)
+                        .force('link', d3.forceLink(links).id(d=>d.id).distance(72).strength(0.5))
+                        .force('charge', d3.forceManyBody().strength(-280))
+                        .force('center', d3.forceCenter(W/2, H/2))
+                        .force('collide', d3.forceCollide().radius(d => 24 + Math.min(10,(deg[d.id]||0))))
+                        .on('tick', () => {
+                            link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+                            node.attr('transform', d=>'translate(' + d.x + ',' + d.y + ')');
+                        });
+                    _topoState = { svg, zoom, nodes, links, deg, hidden, W, H, sim };
+
+                    node.call(d3.drag()
+                        .on('start',(e,d)=>{ if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+                        .on('drag',(e,d)=>{ d.fx=e.x; d.fy=e.y; })
+                        .on('end',(e,d)=>{ if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+
+                    const tip = document.getElementById('topoTooltip');
+                    node.on('mouseenter', (e,d) => {
+                        const nb = _topoNeighbors(d.id, links); nb.add(d.id);
+                        node.style('opacity', n => nb.has(n.id) ? 1 : 0.12);
+                        link.style('stroke', l => (l.source.id===d.id||l.target.id===d.id) ? ((TOPO_CAT[d.cat]||{}).color || '#fff') : 'rgba(255,255,255,0.04)')
+                            .style('stroke-width', l => (l.source.id===d.id||l.target.id===d.id) ? 2 : 1);
+                        if (tip) {
+                            const c = TOPO_CAT[d.cat]||{};
+                            tip.innerHTML = '<div class="tt-cat" style="color:' + (c.color||'#fff') + '">' + (c.label||'') + '</div><b>' + d.id + '</b><br>' + (d.desc||'');
+                            tip.classList.add('show');
                         }
+                    }).on('mousemove', (e) => {
+                        if (!tip) return;
+                        const r = vp.getBoundingClientRect();
+                        let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+                        if (x + 280 > r.width) x -= 300;
+                        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+                    }).on('mouseleave', () => {
+                        node.style('opacity', 1); link.style('stroke', null).style('stroke-width', null);
+                        if (tip) tip.classList.remove('show');
                     });
 
-                    nodes.forEach(na => {
-                        const da = terminologyDB.find(t => t.term === na.dataset.term);
-                        if (da && da.related) {
-                            da.related.forEach(tb => {
-                                const nb = nodes.find(n => n.dataset.term === tb);
-                                if (nb) {
-                                    const key = [na.dataset.term, tb].sort().join('|');
-                                    if (!drawn.has(key)) {
-                                        drawn.add(key);
-                                        const ca = getCenterSafe(na), cb = getCenterSafe(nb);
-                                        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                                        const midX = Math.max(ca.x, cb.x) + (Math.abs(ca.y - cb.y) * 0.35);
-                                        const midY = (ca.y + cb.y) / 2;
-                                        p.setAttribute('d', `M ${ca.x} ${ca.y} Q ${midX} ${midY} ${cb.x} ${cb.y}`);
-                                        p.setAttribute('stroke', 'rgba(255,255,255,0.15)'); p.setAttribute('stroke-width', '2'); p.setAttribute('fill', 'none');
-                                        svg.appendChild(p);
-                                    }
-                                }
-                            });
-                        }
+                    node.on('click', (e,d) => { e.stopPropagation(); _topoShowDetail(d, links); _topoFocus(d.id); });
+
+                    _topoBuildLegend();
+                    _topoApplyHidden();
+
+                    sim.tick(140);
+                    setTimeout(() => { focusId ? _topoFocus(focusId, true) : _topoFit(); }, 380);
+                }
+
+                function _topoFit() {
+                    const st = _topoState; if (!st || !st.nodes.length) return;
+                    const xs = st.nodes.map(n=>n.x), ys = st.nodes.map(n=>n.y);
+                    const minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+                    const gw=(maxX-minX)||1, gh=(maxY-minY)||1;
+                    const k = Math.min(1.6, 0.82*Math.min(st.W/gw, st.H/gh));
+                    const tx = st.W/2 - k*(minX+maxX)/2, ty = st.H/2 - k*(minY+maxY)/2;
+                    st.svg.transition().duration(500).call(st.zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(k));
+                }
+
+                function _topoFocus(id, openDetail) {
+                    const st = _topoState; if (!st) return;
+                    const n = st.nodes.find(x=>x.id===id); if (!n) return;
+                    const k = 1.35;
+                    const tx = st.W/2 - k*n.x, ty = st.H/2 - k*n.y;
+                    st.svg.transition().duration(500).call(st.zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(k));
+                    if (openDetail) _topoShowDetail(n, st.links);
+                }
+
+                function _topoShowDetail(d, links) {
+                    const det = document.getElementById('topoDetail'); if (!det) return;
+                    const c = TOPO_CAT[d.cat]||{};
+                    const nbs = Array.from(_topoNeighbors(d.id, links)).sort();
+                    const t = terminologyDB.find(x => x.term && x.term.toLowerCase() === d.id.toLowerCase());
+                    const detailBtn = t ? '<button class="see-details-btn" onclick="window.masterSearch(\'' + t.term + '\')">Open in search <i class="fa-solid fa-arrow-right"></i></button>' : '';
+                    det.innerHTML = '<button class="td-close" onclick="document.getElementById(\'topoDetail\').classList.remove(\'show\')"><i class="fa-solid fa-xmark"></i></button>'
+                        + '<div class="td-cat" style="color:' + (c.color||'#fff') + '">' + (c.label||'') + '</div>'
+                        + '<div class="td-title">' + d.id + '</div>'
+                        + '<div class="td-desc">' + (d.desc||'') + '</div>'
+                        + (nbs.length ? '<div class="td-conn"><b>Connects to:</b> ' + nbs.join(' · ') + '</div>' : '')
+                        + detailBtn;
+                    det.classList.add('show');
+                }
+
+                function _topoBuildLegend() {
+                    const lg = document.getElementById('topoLegend'); if (!lg || !_topoState) return;
+                    if (!_topoState.hidden) _topoState.hidden = new Set();
+                    lg.innerHTML = '';
+                    Object.keys(TOPO_CAT).forEach(cat => {
+                        const c = TOPO_CAT[cat];
+                        const el = document.createElement('div');
+                        el.className = 'topo-legend-item' + (_topoState.hidden.has(cat)?' off':'');
+                        el.innerHTML = '<span class="topo-legend-dot" style="background:' + c.color + '"></span>' + c.label;
+                        el.onclick = () => { if(_topoState.hidden.has(cat)) _topoState.hidden.delete(cat); else _topoState.hidden.add(cat); el.classList.toggle('off'); _topoApplyHidden(); };
+                        lg.appendChild(el);
                     });
                 }
 
-                window.showChildTerm = function(name) {
-                    const d = terminologyDB.find(t => t.term === name);
-                    if (!d) return;
-                    const b = document.getElementById('modalChildExplanation');
-                    if (!b) return;
-                    
-                    const safeTerm = d.term || '';
-                    const safeDesc = d.desc || '';
-                    b.innerHTML = `<div style="font-weight:700; color:#2AF598; margin-bottom:5px; font-size: 1.1rem;">${safeTerm}</div><div style="font-size:0.95rem; color:#A0AEC0;">${safeDesc}</div><button class="see-details-btn" onclick="window.masterSearch('${safeTerm}')">See Details <i class="fa-solid fa-arrow-right"></i></button>`;
-                    b.classList.add('active');
-                };
+                function _topoApplyHidden() {
+                    const st = _topoState; if (!st) return;
+                    const hid = st.hidden || new Set();
+                    st.svg.selectAll('.topo-node').style('display', d => hid.has(d.cat) ? 'none' : null);
+                    st.svg.selectAll('.topo-link').style('display', l => (hid.has((l.source.cat)||'') || hid.has((l.target.cat)||'')) ? 'none' : null);
+                }
 
                 window.closeModal = function() { 
                     const modal = document.getElementById('relevanceModal');
@@ -1621,32 +1736,25 @@ js_code = """
                         });
                     }
 
-                    // 2. Relevance Graph Bindings
-                    const vp = document.getElementById('graphViewport');
-                    const ct = document.getElementById('graphContainer');
-                    if (vp && ct) {
-                        vp.onmousedown = (e) => { isGraphDragging = true; hasGraphDragged = false; graphStartX = e.clientX - graphTranslateX; graphStartY = e.clientY - graphTranslateY; };
-                        window.addEventListener('mousemove', (e) => { if(isGraphDragging) { if(Math.abs(e.clientX - graphStartX - graphTranslateX)>3 || Math.abs(e.clientY - graphStartY - graphTranslateY)>3) hasGraphDragged = true; graphTranslateX = e.clientX - graphStartX; graphTranslateY = e.clientY - graphStartY; ct.style.transform = `translate(${graphTranslateX}px, ${graphTranslateY}px)`; } });
-                        window.addEventListener('mouseup', () => isGraphDragging = false);
-                        vp.onclick = (e) => { 
-                            const modalChild = document.getElementById('modalChildExplanation');
-                            if(!hasGraphDragged && !e.target.closest('.node-related') && modalChild && !modalChild.contains(e.target)) {
-                                modalChild.classList.remove('active'); 
-                            }
-                        };
+                    // 2. Topology graph bindings
+                    const topoSearch = document.getElementById('topoSearch');
+                    if (topoSearch) {
+                        topoSearch.addEventListener('keydown', (e) => {
+                            if (e.key !== 'Enter') return;
+                            const q = topoSearch.value.trim().toLowerCase();
+                            if (!q || !_topoState) return;
+                            const hit = _topoState.nodes.find(n => n.id.toLowerCase().includes(q));
+                            if (hit) _topoFocus(hit.id, true);
+                        });
                     }
-            
-                    if (typeof ResizeObserver !== 'undefined') {
-                        const modalBox = document.querySelector('.modal-box');
-                        if (modalBox) {
-                            new ResizeObserver(() => {
-                                const modal = document.getElementById('relevanceModal');
-                                if (modal && modal.classList.contains('active')) {
-                                    drawLines();
-                                }
-                            }).observe(modalBox);
+                    const topoReset = document.getElementById('topoReset');
+                    if (topoReset) topoReset.addEventListener('click', () => _topoFit());
+                    const topoVp = document.getElementById('topoViewport');
+                    if (topoVp) topoVp.addEventListener('click', (e) => {
+                        if (e.target.id === 'topoViewport' || e.target.id === 'topoSvg') {
+                            const det = document.getElementById('topoDetail'); if (det) det.classList.remove('show');
                         }
-                    }
+                    });
                 }
                 
                 // Execute immediately bypassing DOMContentLoaded timing issues in iframes
@@ -1760,8 +1868,10 @@ def build_content(user_email: str = "") -> str:
     and substituted at module-import time.
     """
     filtered = _filtered_db_for(user_email)
-    js_filled = js_code.replace(
-        "__TERMINOLOGY_DB_JSON__", json.dumps(filtered)
+    js_filled = (
+        js_code
+        .replace("__TERMINOLOGY_DB_JSON__", json.dumps(filtered))
+        .replace("__TOPOLOGY_JSON__", topology_json)
     )
     return css_and_html + js_filled
 
