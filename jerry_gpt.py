@@ -2236,7 +2236,19 @@ def _submit_message(
     max_tokens = length_cfg["max_tokens"]
     hint = length_cfg["hint"]
 
-    client = Anthropic(api_key=api_key)
+    # Streaming-aware timeout so a stalled connection (common on the
+    # Shenzhen↔Anthropic link) FAILS and retries instead of hanging the whole
+    # page forever. read=90s is the inter-chunk timeout: a healthy stream sends
+    # tokens far more often, so 90s of silence means the socket stalled. We do
+    # our own retry loop below, so disable the SDK's built-in retries.
+    try:
+        import httpx
+        _client_timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
+        client = Anthropic(api_key=api_key, timeout=_client_timeout, max_retries=0)
+    except Exception:
+        # httpx import / kwarg mismatch — fall back to a plain client rather
+        # than break the turn.
+        client = Anthropic(api_key=api_key)
     # Prior turns come from stored history (text); the CURRENT turn uses the
     # multimodal content (so attachments are sent). The length hint is appended
     # to the current turn — as a text block when content is a block list, else
@@ -2349,20 +2361,35 @@ def _submit_message(
                         break  # success — exit retry loop
                     except Exception as stream_exc:
                         status_code = getattr(stream_exc, "status_code", None)
+                        # Timeouts / connection stalls carry no status_code but
+                        # are exactly what we want to retry (a hung socket is the
+                        # "frozen page" failure mode). Match by class name so we
+                        # don't need to import every exception type.
+                        _exc_name = type(stream_exc).__name__
+                        is_conn_stall = _exc_name in (
+                            "APITimeoutError", "APIConnectionError",
+                            "ReadTimeout", "ConnectTimeout", "ConnectError",
+                            "ReadError", "RemoteProtocolError",
+                        )
                         if (
-                            status_code in _RETRYABLE_STATUS_CODES
+                            (status_code in _RETRYABLE_STATUS_CODES or is_conn_stall)
                             and retry_attempt < _MAX_OVERLOAD_RETRIES
                         ):
                             delay = _RETRY_BACKOFF_SECONDS[retry_attempt]
+                            reason = (
+                                f"overloaded (HTTP {status_code})"
+                                if status_code else
+                                "connection stalled/timed out"
+                            )
                             placeholder.markdown(
                                 _md_safe(full_text) +
-                                f"\n\n*⏳ Anthropic API is overloaded "
-                                f"(HTTP {status_code}). Retrying in "
+                                f"\n\n*⏳ Anthropic API {reason}. Retrying in "
                                 f"{delay:.0f}s "
                                 f"({retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES})…*"
                             )
                             print(
                                 f"[JERRY_GPT_RETRY] status={status_code} "
+                                f"exc={_exc_name} "
                                 f"attempt={retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES} "
                                 f"backoff={delay}s",
                                 file=sys.stderr, flush=True,
