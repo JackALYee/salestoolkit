@@ -73,23 +73,54 @@ import re as _re  # for the ecosystem-map marker
 
 KNOWLEDGE_DIR = Path(__file__).parent / "jerry_gpt_knowledge"
 ASSETS_DIR = Path(__file__).parent / "assets"
-DEFAULT_MODEL = "claude-opus-4-8"
+# DeepSeek — OpenAI-compatible provider. Model id is configurable via the
+# JERRY_DEEPSEEK_MODEL secret (default below); the API is reached through the
+# OpenAI SDK pointed at DeepSeek's base URL (DeepSeek's own documented path).
+DEEPSEEK_DEFAULT_MODEL = "deepseek-v4-pro"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-# --- Model catalog (display label -> Anthropic model id) ---
-# Labels intentionally short — selectbox lives in a narrow sidebar column;
-# longer labels get truncated to "Opus 4.8 — ..." which hides the qualifier.
+
+def _deepseek_model() -> str:
+    """The DeepSeek model id, overridable via secret/env (the exact public name
+    must match DeepSeek's catalog — see the manual-setup notes)."""
+    try:
+        m = st.secrets.get("JERRY_DEEPSEEK_MODEL")
+        if m:
+            return m
+    except Exception:
+        pass
+    return os.environ.get("JERRY_DEEPSEEK_MODEL", DEEPSEEK_DEFAULT_MODEL)
+
+
+def _provider_for(model_id: str) -> str:
+    """Map a model id to its provider. DeepSeek ids start with 'deepseek';
+    everything else is treated as Anthropic/Claude."""
+    return "deepseek" if str(model_id or "").lower().startswith("deepseek") else "anthropic"
+
+
+# Default model differs by clearance: leadership lands on Claude Opus, everyone
+# else on DeepSeek (the only org-key model non-leadership may use).
+DEFAULT_MODEL = "claude-opus-4-8"            # leadership default
+NON_LEADERSHIP_DEFAULT = _deepseek_model()   # everyone-else default
+
+# --- Model catalog (display label -> model id) ---
+# Labels intentionally short — selectbox lives in a narrow sidebar column.
+# DeepSeek leads the list because it is the universally-available option.
 MODEL_OPTIONS = {
+    "DeepSeek V4 Pro": _deepseek_model(),
     "Opus 4.8": "claude-opus-4-8",
     "Sonnet 4.6": "claude-sonnet-4-6",
     "Haiku 4.5": "claude-haiku-4-5-20251001",
 }
 MODEL_ID_TO_LABEL = {v: k for k, v in MODEL_OPTIONS.items()}
 
-# VIP-only model ids — non-VIP users have these filtered out of the selector
-# AND are auto-downgraded to NON_VIP_FALLBACK if they have one cached from a
-# previous (former-VIP) session.
-VIP_ONLY_MODELS = frozenset({"claude-opus-4-8"})
-NON_VIP_FALLBACK = "claude-sonnet-4-6"
+# Models that require Anthropic credentials. With the ORG key these are
+# LEADERSHIP-ONLY; a non-leadership user can still pick them IF they supply
+# their own Anthropic key in Settings (billed to that key). DeepSeek is
+# available to everyone via the org DeepSeek key.
+ANTHROPIC_MODELS = frozenset(
+    v for v in MODEL_OPTIONS.values() if _provider_for(v) == "anthropic"
+)
 
 # --- Response length presets ---
 # max_tokens caps the response; hint is appended to the user message so Jerry
@@ -418,7 +449,8 @@ def _load_system_blocks() -> list[dict]:
 
 
 def _get_api_key() -> str | None:
-    """Look up the Anthropic API key in st.secrets, then env vars."""
+    """Look up the ORG Anthropic API key in st.secrets, then env vars.
+    This is the leadership/Claude key — non-leadership users never use it."""
     try:
         key = st.secrets.get("ANTHROPIC_API_KEY")
         if key:
@@ -426,6 +458,64 @@ def _get_api_key() -> str | None:
     except Exception:
         pass
     return os.environ.get("ANTHROPIC_API_KEY")
+
+
+def _get_deepseek_org_key() -> str | None:
+    """Look up the ORG DeepSeek API key (available to all users)."""
+    try:
+        key = st.secrets.get("DEEPSEEK_API_KEY")
+        if key:
+            return key
+    except Exception:
+        pass
+    return os.environ.get("DEEPSEEK_API_KEY")
+
+
+# Session-state keys for a user's own (bring-your-own) API keys. Stored in
+# session_state ONLY — never persisted to DB/Sheets and never logged.
+_BYO_ANTHROPIC = "jerry_byo_anthropic_key"
+_BYO_DEEPSEEK = "jerry_byo_deepseek_key"
+
+
+def _resolve_provider_key(provider: str, is_leadership: bool) -> tuple[str | None, str]:
+    """Return (api_key, source) for the given provider under the access rules.
+
+    source ∈ "byo" | "org" | "" (no key / not permitted).
+      - DeepSeek: the user's own key if set, else the org DeepSeek key (everyone).
+      - Anthropic/Claude: the user's own key if set; otherwise the org key
+        ONLY for leadership. Non-leadership without a BYO key → not permitted.
+    """
+    if provider == "deepseek":
+        byo = (st.session_state.get(_BYO_DEEPSEEK) or "").strip()
+        if byo:
+            return byo, "byo"
+        org = _get_deepseek_org_key()
+        return (org, "org") if org else (None, "")
+    # anthropic
+    byo = (st.session_state.get(_BYO_ANTHROPIC) or "").strip()
+    if byo:
+        return byo, "byo"
+    if is_leadership:
+        org = _get_api_key()
+        return (org, "org") if org else (None, "")
+    return None, ""
+
+
+def _allowed_models(is_leadership: bool) -> dict:
+    """The label->id model map this user may select, given clearance + any
+    bring-your-own keys. DeepSeek always available; Claude models available to
+    leadership, or to anyone who supplied their own Anthropic key."""
+    byo_anthropic = bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())
+    allowed = {}
+    for label, mid in MODEL_OPTIONS.items():
+        if _provider_for(mid) == "deepseek":
+            allowed[label] = mid
+        elif is_leadership or byo_anthropic:
+            allowed[label] = mid
+    # Always keep at least DeepSeek present even if catalog changes.
+    if not allowed:
+        allowed = {"DeepSeek V4 Pro": _deepseek_model()}
+    return allowed
 
 
 def _get_model() -> str:
@@ -1291,7 +1381,12 @@ def _init_session_state() -> None:
     if "jerry_gpt_history" not in st.session_state:
         st.session_state["jerry_gpt_history"] = []
     if "jerry_gpt_model" not in st.session_state:
-        st.session_state["jerry_gpt_model"] = _get_model()
+        # Leadership defaults to Claude Opus; everyone else to DeepSeek (the
+        # only org-key model non-leadership may use).
+        if bool(st.session_state.get("is_leadership", False)):
+            st.session_state["jerry_gpt_model"] = _get_model()
+        else:
+            st.session_state["jerry_gpt_model"] = NON_LEADERSHIP_DEFAULT
     if "jerry_gpt_length" not in st.session_state:
         st.session_state["jerry_gpt_length"] = "Medium"
     if "jerry_gpt_usage" not in st.session_state:
@@ -1529,33 +1624,26 @@ def _render_settings_panel() -> None:
     """Sidebar settings: model selector + response length. GPT-like — lives
     in a collapsible expander so it's available but out of the way."""
     with st.expander("Settings", expanded=False):
-        # --- VIP gating ----------------------------------------------------
-        # VIP users see all models. Non-VIP users have Opus 4.8 hidden from
-        # the selector AND are silently downgraded if they have a stale Opus
-        # selection in session_state (e.g., logged in as VIP earlier, then
-        # logged out and back in as non-VIP).
-        is_vip = bool(st.session_state.get("is_vip", False))
-        if is_vip:
-            available_options = MODEL_OPTIONS
-        else:
-            available_options = {
-                k: v for k, v in MODEL_OPTIONS.items() if v not in VIP_ONLY_MODELS
-            }
+        # --- Model access gating -------------------------------------------
+        # Leadership sees all models (org keys). Non-leadership sees DeepSeek
+        # only — unless they supply their own Anthropic key below, which
+        # unlocks the Claude models (billed to their key). A stale Claude
+        # selection from a prior leadership session is silently downgraded.
+        is_leadership = bool(st.session_state.get("is_leadership", False))
+        available_options = _allowed_models(is_leadership)
 
-        current_model = st.session_state.get("jerry_gpt_model", DEFAULT_MODEL)
-        if not is_vip and current_model in VIP_ONLY_MODELS:
-            current_model = NON_VIP_FALLBACK
+        current_model = st.session_state.get("jerry_gpt_model", NON_LEADERSHIP_DEFAULT)
+        if current_model not in available_options.values():
+            current_model = _deepseek_model()
             st.session_state["jerry_gpt_model"] = current_model
-            # Also clear the selectbox widget key — Streamlit re-reads it on
-            # next render and would otherwise re-apply the old VIP selection.
+            # Clear the selectbox widget key so Streamlit doesn't re-apply the
+            # old (now-disallowed) selection on the next render.
             st.session_state.pop("jerry_model_selectbox", None)
 
         current_label = MODEL_ID_TO_LABEL.get(
             current_model, list(available_options.keys())[0]
         )
         model_labels = list(available_options.keys())
-        # Defensive: if current_label somehow isn't in the filtered list,
-        # fall back to the first available option.
         index = model_labels.index(current_label) if current_label in model_labels else 0
 
         selected_label = st.selectbox(
@@ -1566,15 +1654,55 @@ def _render_settings_panel() -> None:
         )
         st.session_state["jerry_gpt_model"] = available_options[selected_label]
 
-        if not is_vip:
+        if not is_leadership and not bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip()):
             st.markdown(
                 '<div style="font-size: 0.7rem; color: #6b7689; '
                 'margin-top: 4px; line-height: 1.4;">'
                 '<i class="fa-solid fa-lock" style="margin-right: 4px;"></i>'
-                'Opus 4.8 needs supervisor permission.'
+                'Claude models need leadership access — or add your own API key below.'
                 '</div>',
                 unsafe_allow_html=True,
             )
+
+        # --- Bring your own API key ----------------------------------------
+        # Lets any user run Jerry on their own Anthropic (Claude) or DeepSeek
+        # key. SESSION-ONLY: stored in session_state, never persisted to the
+        # DB/Sheets and never written to the audit log.
+        with st.expander("Bring your own API key", expanded=False):
+            st.caption(
+                "Optional. Your key is kept only for this browser session — "
+                "never saved to a database or the usage log. Adding an Anthropic "
+                "key unlocks the Claude models for you."
+            )
+            byo_provider = st.radio(
+                "Provider",
+                ["Anthropic (Claude)", "DeepSeek"],
+                key="jerry_byo_provider",
+                horizontal=True,
+            )
+            _slot = _BYO_ANTHROPIC if byo_provider.startswith("Anthropic") else _BYO_DEEPSEEK
+            _have = bool((st.session_state.get(_slot) or "").strip())
+            st.markdown(
+                f'<div style="font-size:0.72rem;color:{"#2AF598" if _have else "#6b7689"};'
+                f'margin-bottom:4px;">{"✓ A key is set for this provider (session only)." if _have else "No key set for this provider."}</div>',
+                unsafe_allow_html=True,
+            )
+            byo_input = st.text_input(
+                "API key",
+                value="",
+                type="password",
+                key="jerry_byo_input",
+                placeholder="sk-ant-…  or  sk-…",
+            )
+            c1, c2 = st.columns(2)
+            if c1.button("Save key", use_container_width=True, key="byo_save"):
+                if byo_input.strip():
+                    st.session_state[_slot] = byo_input.strip()
+                    st.rerun()
+            if c2.button("Clear key", use_container_width=True, key="byo_clear"):
+                st.session_state.pop(_slot, None)
+                st.session_state.pop("jerry_model_selectbox", None)
+                st.rerun()
 
         # Length selector
         length_keys = list(LENGTH_OPTIONS.keys())
@@ -1665,19 +1793,21 @@ def render() -> None:
         # it to a non-VIP user.
         st.session_state["is_vip"] = False
 
-    api_key = _get_api_key()
+    api_key = _get_api_key()  # org Anthropic key (leadership/Claude)
 
-    # --- API key check (fail early, before initing state we don't need) ---
-    if not api_key:
+    # --- Provider key check — need at least ONE org key (Anthropic OR DeepSeek).
+    # DeepSeek alone is enough for non-leadership users; Anthropic alone still
+    # works for leadership. Only error when neither is configured.
+    if not api_key and not _get_deepseek_org_key():
         st.markdown(
             """
             <div class="jerry-error">
-                <strong>Anthropic API key missing.</strong><br><br>
-                Add <code>ANTHROPIC_API_KEY</code> to <code>.streamlit/secrets.toml</code>
-                (locally) or to your Streamlit Cloud app secrets:
+                <strong>No API key configured.</strong><br><br>
+                Set at least one provider key in <code>.streamlit/secrets.toml</code>
+                (locally) or Streamlit Cloud app secrets:
                 <pre style="background:rgba(0,0,0,0.4); padding:12px; border-radius:6px; margin-top:10px;">
-ANTHROPIC_API_KEY = "sk-ant-..."
-JERRY_MODEL = "claude-opus-4-8"</pre>
+DEEPSEEK_API_KEY = "sk-..."          # everyone (default model)
+ANTHROPIC_API_KEY = "sk-ant-..."     # leadership / Claude models</pre>
                 Then refresh this page.
             </div>
             """,
@@ -1719,15 +1849,18 @@ JERRY_MODEL = "claude-opus-4-8"</pre>
 
     model = st.session_state["jerry_gpt_model"]
 
-    # Final VIP gate — defense in depth. If a non-VIP user somehow ends up
-    # with a VIP-only model (env override, secrets injection, race condition,
-    # cookie restore before _render_settings_panel runs), downgrade before
-    # sending to the API.
+    # Final access gate — defense in depth. Non-leadership users with no
+    # bring-your-own Anthropic key may only use DeepSeek; if a Claude model
+    # is somehow selected (stale session, cookie restore, env override),
+    # downgrade to DeepSeek before any request is built.
+    _is_leadership = bool(st.session_state.get("is_leadership", False))
+    _byo_anthropic = bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())
     if (
-        not bool(st.session_state.get("is_vip", False))
-        and model in VIP_ONLY_MODELS
+        _provider_for(model) == "anthropic"
+        and not _is_leadership
+        and not _byo_anthropic
     ):
-        model = NON_VIP_FALLBACK
+        model = _deepseek_model()
         st.session_state["jerry_gpt_model"] = model
     length = st.session_state["jerry_gpt_length"]
 
@@ -2186,6 +2319,293 @@ def _build_clearance_block(
     return {"type": "text", "text": text}
 
 
+# ---------------------------------------------------------------------------
+# DeepSeek (OpenAI-compatible) streaming
+# ---------------------------------------------------------------------------
+
+def _anthropic_content_to_text(content) -> str:
+    """Flatten an Anthropic-style message content (string or list of blocks)
+    into plain text for the OpenAI-compatible DeepSeek chat API. Office files
+    arrive already extracted as text blocks; images/PDFs are noted, not sent
+    (DeepSeek chat is text-only here)."""
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return str(content or "")
+    parts = []
+    for block in content:
+        if not isinstance(block, dict):
+            parts.append(str(block))
+            continue
+        btype = block.get("type")
+        if btype == "text":
+            parts.append(block.get("text", ""))
+        elif btype == "image":
+            parts.append("[image attachment omitted — not supported on DeepSeek]")
+        elif btype == "document":
+            parts.append("[document attachment omitted — not supported on DeepSeek]")
+    return "\n".join(p for p in parts if p)
+
+
+def _build_deepseek_messages(system_blocks: list, api_messages: list) -> list:
+    """Convert the Anthropic-style system blocks + message list into the
+    OpenAI chat-completions shape DeepSeek expects: one system message
+    (concatenated) followed by flattened user/assistant turns."""
+    system_text = "\n\n".join(
+        b.get("text", "") for b in system_blocks if isinstance(b, dict) and b.get("text")
+    ).strip()
+    out = []
+    if system_text:
+        out.append({"role": "system", "content": system_text})
+    for m in api_messages:
+        role = m.get("role", "user")
+        out.append({"role": role, "content": _anthropic_content_to_text(m.get("content"))})
+    return out
+
+
+class _DeepSeekUsage:
+    """Adapts DeepSeek usage to the attribute names _update_usage expects.
+    DeepSeek reports prompt_cache_hit_tokens / prompt_cache_miss_tokens; we
+    map cache hits to cache_read and leave cache_creation at 0."""
+    def __init__(self, usage_obj):
+        hit = getattr(usage_obj, "prompt_cache_hit_tokens", 0) or 0
+        prompt = getattr(usage_obj, "prompt_tokens", 0) or 0
+        self.cache_read_input_tokens = hit
+        # input_tokens here = non-cached prompt tokens (mirror Anthropic, where
+        # input_tokens is the uncached remainder)
+        self.input_tokens = max(prompt - hit, 0)
+        self.output_tokens = getattr(usage_obj, "completion_tokens", 0) or 0
+        self.cache_creation_input_tokens = 0
+
+
+def _run_deepseek_stream(
+    api_key: str,
+    model: str,
+    system_blocks: list,
+    api_messages: list,
+    max_tokens: int,
+    placeholder,
+    history: list,
+) -> dict | None:
+    """Stream a DeepSeek completion into `placeholder`. Mirrors the Anthropic
+    path's retry-on-transient-error behaviour. Returns a dict with text + token
+    counts on success; on fatal error pops the user turn, shows an error, and
+    returns None."""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        history.pop()
+        placeholder.markdown(
+            "<div class='jerry-error'><strong>The <code>openai</code> package "
+            "isn't installed.</strong><br>DeepSeek uses the OpenAI-compatible "
+            "client. Add <code>openai</code> to requirements.txt and redeploy."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        return None
+
+    try:
+        import httpx
+        _timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
+        client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL,
+                        timeout=_timeout, max_retries=0)
+    except Exception:
+        client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+
+    ds_messages = _build_deepseek_messages(system_blocks, api_messages)
+
+    retry_attempt = 0
+    while True:
+        full_text = ""
+        usage_obj = None
+        try:
+            stream = client.chat.completions.create(
+                model=model,
+                messages=ds_messages,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            for chunk in stream:
+                if getattr(chunk, "usage", None):
+                    usage_obj = chunk.usage
+                choices = getattr(chunk, "choices", None) or []
+                if not choices:
+                    continue
+                delta = getattr(choices[0], "delta", None)
+                piece = getattr(delta, "content", None) if delta else None
+                if piece:
+                    full_text += piece
+                    placeholder.markdown(_md_safe(full_text) + "▊")
+            break  # success
+        except Exception as exc:
+            status_code = getattr(exc, "status_code", None)
+            exc_name = type(exc).__name__
+            is_conn_stall = exc_name in (
+                "APITimeoutError", "APIConnectionError", "ReadTimeout",
+                "ConnectTimeout", "ConnectError", "ReadError",
+                "RemoteProtocolError", "InternalServerError",
+            )
+            if (
+                (status_code in _RETRYABLE_STATUS_CODES or is_conn_stall)
+                and retry_attempt < _MAX_OVERLOAD_RETRIES
+            ):
+                delay = _RETRY_BACKOFF_SECONDS[retry_attempt]
+                placeholder.markdown(
+                    f"*⏳ DeepSeek API busy ({status_code or exc_name}). Retrying "
+                    f"in {delay:.0f}s ({retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES})…*"
+                )
+                print(f"[JERRY_GPT_RETRY] provider=deepseek status={status_code} "
+                      f"exc={exc_name} attempt={retry_attempt + 1}",
+                      file=sys.stderr, flush=True)
+                time.sleep(delay)
+                retry_attempt += 1
+                continue
+            # fatal
+            history.pop()
+            placeholder.markdown(
+                f"<div class='jerry-error'><strong>DeepSeek API error.</strong>"
+                f"<br>{exc_name}: {exc}</div>",
+                unsafe_allow_html=True,
+            )
+            return None
+
+    placeholder.markdown(_md_safe(_clean_display(full_text)))
+    u = _DeepSeekUsage(usage_obj) if usage_obj is not None else None
+    return {
+        "text": full_text,
+        "input": getattr(u, "input_tokens", 0) if u else 0,
+        "output": getattr(u, "output_tokens", 0) if u else 0,
+        "cache_read": getattr(u, "cache_read_input_tokens", 0) if u else 0,
+        "cache_creation": 0,
+    }
+
+
+def _run_anthropic_stream(
+    api_key, model, system_for_request, api_messages, max_tokens,
+    request_tools, placeholder, history,
+):
+    """Stream a Claude completion into `placeholder`, with the pause_turn
+    continuation loop and transient-error retry. Returns a dict with text +
+    token counts on success; on fatal error pops the user turn, shows an error,
+    and returns None. Mirrors _run_deepseek_stream's contract."""
+    try:
+        from anthropic import Anthropic
+    except ImportError:
+        history.pop()
+        placeholder.markdown(
+            "<div class='jerry-error'><strong>The <code>anthropic</code> package "
+            "isn't installed.</strong> Add it to requirements.txt and redeploy.</div>",
+            unsafe_allow_html=True,
+        )
+        return None
+
+    # Streaming-aware timeout so a stalled connection FAILS and retries instead
+    # of hanging the page forever (read=90s inter-chunk). Own retry loop below.
+    try:
+        import httpx
+        _ct = httpx.Timeout(600.0, connect=15.0, read=90.0)
+        client = Anthropic(api_key=api_key, timeout=_ct, max_retries=0)
+    except Exception:
+        client = Anthropic(api_key=api_key)
+
+    full_text = ""
+    total_input = total_output = total_cache_read = total_cache_creation = 0
+    continuations = 0
+    try:
+        current_messages = api_messages
+        while True:
+            segment_text = ""
+            final_message = None
+            retry_attempt = 0
+            while True:
+                segment_text = ""
+                try:
+                    with client.messages.stream(
+                        model=model,
+                        max_tokens=max_tokens,
+                        system=system_for_request,
+                        messages=current_messages,
+                        tools=request_tools,
+                    ) as stream:
+                        for chunk in stream.text_stream:
+                            segment_text += chunk
+                            placeholder.markdown(_md_safe(full_text + segment_text) + "▊")
+                        final_message = stream.get_final_message()
+                    break
+                except Exception as stream_exc:
+                    status_code = getattr(stream_exc, "status_code", None)
+                    _exc_name = type(stream_exc).__name__
+                    is_conn_stall = _exc_name in (
+                        "APITimeoutError", "APIConnectionError", "ReadTimeout",
+                        "ConnectTimeout", "ConnectError", "ReadError",
+                        "RemoteProtocolError",
+                    )
+                    if (
+                        (status_code in _RETRYABLE_STATUS_CODES or is_conn_stall)
+                        and retry_attempt < _MAX_OVERLOAD_RETRIES
+                    ):
+                        delay = _RETRY_BACKOFF_SECONDS[retry_attempt]
+                        reason = (f"overloaded (HTTP {status_code})" if status_code
+                                  else "connection stalled/timed out")
+                        placeholder.markdown(
+                            _md_safe(full_text) +
+                            f"\n\n*⏳ Anthropic API {reason}. Retrying in "
+                            f"{delay:.0f}s ({retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES})…*"
+                        )
+                        print(f"[JERRY_GPT_RETRY] status={status_code} exc={_exc_name} "
+                              f"attempt={retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES} "
+                              f"backoff={delay}s", file=sys.stderr, flush=True)
+                        time.sleep(delay)
+                        retry_attempt += 1
+                        continue
+                    raise
+
+            full_text += segment_text
+            u = final_message.usage
+            total_input += getattr(u, "input_tokens", 0) or 0
+            total_output += getattr(u, "output_tokens", 0) or 0
+            total_cache_read += getattr(u, "cache_read_input_tokens", 0) or 0
+            total_cache_creation += getattr(u, "cache_creation_input_tokens", 0) or 0
+
+            stop_reason = getattr(final_message, "stop_reason", None)
+            if stop_reason == "pause_turn" and continuations < _MAX_CONTINUATIONS:
+                continuations += 1
+                current_messages = current_messages + [
+                    {"role": "assistant", "content": final_message.content}
+                ]
+                continue
+            break
+
+        placeholder.markdown(_md_safe(_clean_display(full_text)))
+    except Exception as exc:
+        history.pop()
+        status_code = getattr(exc, "status_code", None)
+        if status_code in _RETRYABLE_STATUS_CODES:
+            placeholder.markdown(
+                f"<div class='jerry-error'><strong>Anthropic API is overloaded.</strong>"
+                f"<br>Tried {_MAX_OVERLOAD_RETRIES} retries and all came back HTTP "
+                f"{status_code} (Overloaded). Wait ~30s and ask again, or pick a "
+                f"different model from the Settings panel.</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            placeholder.markdown(
+                f"<div class='jerry-error'><strong>API error.</strong>"
+                f"<br>{type(exc).__name__}: {exc}</div>",
+                unsafe_allow_html=True,
+            )
+        return None
+
+    return {
+        "text": full_text,
+        "input": total_input,
+        "output": total_output,
+        "cache_read": total_cache_read,
+        "cache_creation": total_cache_creation,
+    }
+
+
 def _submit_message(
     text: str,
     system_blocks: list[dict],
@@ -2222,33 +2642,10 @@ def _submit_message(
     with st.chat_message("user", avatar=USER_AVATAR):
         st.markdown(_md_safe(display_text))
 
-    try:
-        from anthropic import Anthropic
-    except ImportError:
-        history.pop()  # roll back user turn
-        st.error(
-            "The `anthropic` package isn't installed. Run `pip install anthropic` "
-            "(or update requirements.txt and redeploy)."
-        )
-        return
-
     length_cfg = LENGTH_OPTIONS.get(length, LENGTH_OPTIONS["Medium"])
     max_tokens = length_cfg["max_tokens"]
     hint = length_cfg["hint"]
 
-    # Streaming-aware timeout so a stalled connection (common on the
-    # Shenzhen↔Anthropic link) FAILS and retries instead of hanging the whole
-    # page forever. read=90s is the inter-chunk timeout: a healthy stream sends
-    # tokens far more often, so 90s of silence means the socket stalled. We do
-    # our own retry loop below, so disable the SDK's built-in retries.
-    try:
-        import httpx
-        _client_timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
-        client = Anthropic(api_key=api_key, timeout=_client_timeout, max_retries=0)
-    except Exception:
-        # httpx import / kwarg mismatch — fall back to a plain client rather
-        # than break the turn.
-        client = Anthropic(api_key=api_key)
     # Prior turns come from stored history (text); the CURRENT turn uses the
     # multimodal content (so attachments are sent). The length hint is appended
     # to the current turn — as a text block when content is a block list, else
@@ -2267,6 +2664,32 @@ def _submit_message(
     user_email = st.session_state.get("user_email", "") or ""
     user_name = st.session_state.get("user_name", "") or ""
     is_leadership = bool(st.session_state.get("is_leadership", False))
+
+    # Provider routing: derive the provider from the model id and resolve the
+    # right key. BYO key wins; else org DeepSeek (everyone) / org Anthropic
+    # (leadership only). No permitted key → tell the user how to get access.
+    provider = _provider_for(model)
+    resolved_key, key_source = _resolve_provider_key(provider, is_leadership)
+    if not resolved_key:
+        history.pop()  # roll back the user turn
+        with st.chat_message("assistant", avatar=JERRY_AVATAR):
+            if provider == "anthropic":
+                st.markdown(
+                    "<div class='jerry-error'><strong>Claude models need leadership "
+                    "access or your own API key.</strong><br>Pick <em>DeepSeek V4 "
+                    "Pro</em> in Settings, or add your own Anthropic API key under "
+                    "<em>Settings → Bring your own API key</em>.</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    "<div class='jerry-error'><strong>DeepSeek isn't configured.</strong>"
+                    "<br>Ask an admin to set <code>DEEPSEEK_API_KEY</code>, or add your "
+                    "own DeepSeek key under <em>Settings → Bring your own API key</em>."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+        return
 
     # First-turn detection: history was just appended-to, so length == 1
     # means this is the very first user message of the session. Gates the
@@ -2297,7 +2720,8 @@ def _submit_message(
 
     # Internet browsing is user-toggled (Settings, off by default). Tell Jerry
     # the current ON/OFF state per turn, and only attach the web tools when on.
-    web_enabled = bool(st.session_state.get("jerry_web_enabled", False))
+    # Web tools are an Anthropic server-side feature — unavailable on DeepSeek.
+    web_enabled = bool(st.session_state.get("jerry_web_enabled", False)) and provider == "anthropic"
     web_status_text = (
         "### INTERNET BROWSING STATUS\n"
         "Internet browsing is currently **ON** for this turn — you may use "
@@ -2319,142 +2743,25 @@ def _submit_message(
 
     with st.chat_message("assistant", avatar=JERRY_AVATAR):
         placeholder = st.empty()
-        full_text = ""
 
-        # Accumulate token usage across the initial response and any
-        # auto-continuation rounds, so the side-panel stats and the audit log
-        # reflect the TOTAL cost of producing the complete answer.
-        total_input = 0
-        total_output = 0
-        total_cache_read = 0
-        total_cache_creation = 0
-        continuations = 0
+        if provider == "deepseek":
+            result = _run_deepseek_stream(
+                resolved_key, model, system_for_request, api_messages,
+                max_tokens, placeholder, history,
+            )
+        else:
+            result = _run_anthropic_stream(
+                resolved_key, model, system_for_request, api_messages,
+                max_tokens, _request_tools, placeholder, history,
+            )
+        if result is None:
+            return  # error already shown + user turn rolled back
 
-        try:
-            current_messages = api_messages
-            while True:
-                # ── Retry loop for transient Anthropic API errors (529
-                # Overloaded etc.). segment_text holds ONLY this attempt's
-                # output and resets on retry, so a partial failed stream
-                # doesn't double-write when the fresh attempt re-streams
-                # from the start.
-                segment_text = ""
-                final_message = None
-                retry_attempt = 0
-
-                while True:
-                    segment_text = ""  # fresh attempt
-                    try:
-                        with client.messages.stream(
-                            model=model,
-                            max_tokens=max_tokens,
-                            system=system_for_request,
-                            messages=current_messages,
-                            tools=_request_tools,
-                        ) as stream:
-                            for chunk in stream.text_stream:
-                                segment_text += chunk
-                                placeholder.markdown(
-                                    _md_safe(full_text + segment_text) + "▊"
-                                )
-                            final_message = stream.get_final_message()
-                        break  # success — exit retry loop
-                    except Exception as stream_exc:
-                        status_code = getattr(stream_exc, "status_code", None)
-                        # Timeouts / connection stalls carry no status_code but
-                        # are exactly what we want to retry (a hung socket is the
-                        # "frozen page" failure mode). Match by class name so we
-                        # don't need to import every exception type.
-                        _exc_name = type(stream_exc).__name__
-                        is_conn_stall = _exc_name in (
-                            "APITimeoutError", "APIConnectionError",
-                            "ReadTimeout", "ConnectTimeout", "ConnectError",
-                            "ReadError", "RemoteProtocolError",
-                        )
-                        if (
-                            (status_code in _RETRYABLE_STATUS_CODES or is_conn_stall)
-                            and retry_attempt < _MAX_OVERLOAD_RETRIES
-                        ):
-                            delay = _RETRY_BACKOFF_SECONDS[retry_attempt]
-                            reason = (
-                                f"overloaded (HTTP {status_code})"
-                                if status_code else
-                                "connection stalled/timed out"
-                            )
-                            placeholder.markdown(
-                                _md_safe(full_text) +
-                                f"\n\n*⏳ Anthropic API {reason}. Retrying in "
-                                f"{delay:.0f}s "
-                                f"({retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES})…*"
-                            )
-                            print(
-                                f"[JERRY_GPT_RETRY] status={status_code} "
-                                f"exc={_exc_name} "
-                                f"attempt={retry_attempt + 1}/{_MAX_OVERLOAD_RETRIES} "
-                                f"backoff={delay}s",
-                                file=sys.stderr, flush=True,
-                            )
-                            time.sleep(delay)
-                            retry_attempt += 1
-                            continue
-                        # Not retryable, or retries exhausted — propagate
-                        raise
-
-                # Commit this segment's text to the running total
-                full_text += segment_text
-
-                u = final_message.usage
-                total_input += getattr(u, "input_tokens", 0) or 0
-                total_output += getattr(u, "output_tokens", 0) or 0
-                total_cache_read += getattr(u, "cache_read_input_tokens", 0) or 0
-                total_cache_creation += getattr(u, "cache_creation_input_tokens", 0) or 0
-
-                # `pause_turn` means the server-side web-tool loop hit its
-                # iteration cap mid-answer — resume by echoing the assistant's
-                # full content blocks (the trailing server_tool_use block tells
-                # the API to continue automatically). This is the supported
-                # resume path; do NOT add a "continue" user message.
-                #
-                # NOTE: we deliberately do NOT resume on `max_tokens`. The old
-                # assistant-text-prefill continuation returns a 400 on Opus 4.8
-                # (last-assistant-turn prefills are rejected). On a max_tokens
-                # stop we keep the partial answer rather than erroring; the user
-                # can ask Jerry to continue or pick a longer response length.
-                stop_reason = getattr(final_message, "stop_reason", None)
-                if stop_reason == "pause_turn" and continuations < _MAX_CONTINUATIONS:
-                    continuations += 1
-                    current_messages = current_messages + [
-                        {"role": "assistant", "content": final_message.content}
-                    ]
-                    continue
-                break
-
-            # Final render: hide any ```artifact``` JSON (the download button
-            # replaces it). The raw block was visible while streaming — that's
-            # fine; this cleans it up once the answer completes.
-            _final_display = _clean_display(full_text)
-            placeholder.markdown(_md_safe(_final_display))
-        except Exception as exc:
-            # Streaming itself failed — roll back the user turn so the
-            # retry works, surface the error in the chat bubble.
-            history.pop()
-            status_code = getattr(exc, "status_code", None)
-            if status_code in _RETRYABLE_STATUS_CODES:
-                placeholder.markdown(
-                    f"<div class='jerry-error'><strong>Anthropic API is overloaded.</strong>"
-                    f"<br>Tried {_MAX_OVERLOAD_RETRIES} retries and all came back HTTP "
-                    f"{status_code} (Overloaded). Wait ~30s and ask again, or pick a "
-                    f"different model from the Settings panel — Sonnet endpoints are "
-                    f"typically less congested during Opus peak hours.</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                placeholder.markdown(
-                    f"<div class='jerry-error'><strong>API error.</strong>"
-                    f"<br>{type(exc).__name__}: {exc}</div>",
-                    unsafe_allow_html=True,
-                )
-            return
+        full_text = result["text"]
+        total_input = result["input"]
+        total_output = result["output"]
+        total_cache_read = result["cache_read"]
+        total_cache_creation = result["cache_creation"]
 
         # ── STREAMING SUCCEEDED ─────────────────────────────────────────────
         # PERSIST FIRST. Everything below this point is non-critical

@@ -1,6 +1,8 @@
 streamlit
 pandas
 anthropic>=0.40.0
+# DeepSeek is OpenAI-compatible — reached via the OpenAI SDK + base_url override
+openai>=1.40.0
 extra-streamlit-components>=0.1.70
 gspread>=6.0.0
 google-auth>=2.20.0

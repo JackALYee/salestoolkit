@@ -63,6 +63,9 @@ PRICING = {
     "claude-opus-4-8":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
     "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
     "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
+    # DeepSeek — ESTIMATE. Verify against current DeepSeek pricing and adjust;
+    # cache_creation is unused for DeepSeek (we only get cache-hit counts).
+    "deepseek-v4-pro":           {"input":  0.56, "output":  1.68, "cache_read": 0.07,  "cache_creation":  0.56},
 }
 # Fallback for any model not listed above — uses Sonnet rates as a middle-of-
 # the-road estimate so the column is never blank.
