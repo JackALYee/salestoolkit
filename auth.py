@@ -25,10 +25,12 @@ secrets.toml for any non-trivial deployment.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from datetime import datetime, timedelta
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     import extra_streamlit_components as stx
@@ -196,64 +198,102 @@ def restore_session() -> None:
             st.session_state["is_vip"] = False
 
 
-def persist_login(user_name: str) -> None:
-    """Called from login.py after credentials are validated.
+# Session keys cleared on logout.
+_AUTH_KEYS = (
+    "authenticated", "user_name", "user_email",
+    "is_leadership", "is_vip", "user_password",
+    "_stmx_cookie_synced",
+)
 
-    Writes the signed token to a browser cookie so the next refresh
-    or tab navigation stays authenticated. Also clears the logout flag
-    set by a previous Sign Out — a fresh authentication overrides the
-    "don't auto-restore" guard.
+
+def _nav_top_search(view: str) -> None:
+    """Navigate the TOP window to the same path with query = ?view=<view> (or
+    no query when view is empty). Writing location.search is allowed even when
+    the component iframe is cross-origin to the top window (unlike reading
+    location, or touching document.cookie), so this is the safe way to redirect
+    + drop the ?logout param while preserving the view."""
+    search = json.dumps(f"?view={view}" if view else "")
+    components.html(
+        f"""
+        <script>
+          setTimeout(function() {{
+            try {{ window.top.location.search = {search}; }}
+            catch (e) {{ window.location.search = {search}; }}
+          }}, 300);
+        </script>
+        """,
+        height=0,
+    )
+
+
+def persist_login(user_name: str) -> None:
+    """Write the signed token to the auth cookie via CookieManager.
+
+    IMPORTANT — call this on a run that COMMITS (i.e. is NOT followed by
+    st.rerun() in the same run). CookieManager.set sends the write as part of
+    the run's frontend delta; an st.rerun() right after discards that delta and
+    the cookie is never written. app.py calls this once per connection from the
+    authenticated render path (a committed run), which is what makes the
+    CURRENT identity reach the cookie and survive the ?view=jerry_gpt
+    cross-navigation. Also clears the post-logout guard.
     """
     cm = _cm()
-    if cm is None:
-        return
-    expires_at = datetime.now() + timedelta(days=COOKIE_EXPIRY_DAYS)
-    try:
-        cm.set(COOKIE_NAME, _make_token(user_name), expires_at=expires_at)
-    except Exception:
-        # Cookie write failed (unusual) — session still works for this tab
-        pass
-    # Clear the post-logout block so subsequent reloads / tabs auto-restore
+    if cm is not None:
+        expires_at = datetime.now() + timedelta(days=COOKIE_EXPIRY_DAYS)
+        try:
+            cm.set(COOKIE_NAME, _make_token(user_name), expires_at=expires_at)
+        except Exception:
+            pass
     st.session_state.pop(LOGOUT_FLAG_KEY, None)
 
 
 def logout() -> None:
-    """Clear session state and the auth cookie.
+    """Clear session state and the auth cookie + set the sticky logout guard.
 
-    Three-layer defense to make Sign Out actually stick:
-      1. Force-overwrite the cookie with an empty value and an expiry in
-         the past. Browsers honor this immediately by dropping the cookie,
-         which is more reliable than CookieManager.delete() (whose JS
-         side-effect doesn't always propagate before the next rerun).
-      2. Also call CookieManager.delete() as belt-and-suspenders.
-      3. Set a sticky session_state flag (LOGOUT_FLAG_KEY) that
-         restore_session() checks first — survives Streamlit's reruns
-         within the same tab even if the cookie write loses the race.
+    Prefer logout_and_redirect() from the app's logout handler — it navigates
+    via st.stop() so the cookie delete is actually committed. This bare
+    logout() stays for callers that handle navigation themselves.
     """
     cm = _cm()
     if cm is not None:
         try:
-            # Layer 1: overwrite cookie with an expiry in the past so the
-            # browser drops it on receipt, regardless of CookieManager
-            # async behavior.
-            cm.set(
-                COOKIE_NAME,
-                "",
-                expires_at=datetime.now() - timedelta(days=1),
-            )
+            cm.set(COOKIE_NAME, "", expires_at=datetime.now() - timedelta(days=1))
         except Exception:
             pass
         try:
-            # Layer 2: explicit delete (no-op if layer 1 already worked).
             cm.delete(COOKIE_NAME)
         except Exception:
             pass
-    for key in ("authenticated", "user_name", "user_email", "is_leadership", "is_vip"):
+    for key in _AUTH_KEYS:
         st.session_state.pop(key, None)
-    # Layer 3: sticky flag. Survives reruns within this tab and blocks
-    # restore_session() from re-hydrating from any cookie value that the
-    # browser-side delete didn't manage to clear in time.
     st.session_state[LOGOUT_FLAG_KEY] = True
+
+
+def logout_and_redirect(view: str = "") -> None:
+    """Clear session + cookie and navigate to the (view-preserving) URL, then
+    st.stop().
+
+    st.stop() (unlike st.rerun) COMMITS the run's delta, so the CookieManager
+    delete actually reaches the browser. The JS then navigates the top window
+    to ?view=<view> (dropping ?logout). `view` ("jerry_gpt" / "jack_gpt" / "")
+    is preserved so signing out of Jerry GPT and signing back in returns to
+    Jerry GPT, not the toolkit.
+    """
+    cm = _cm()
+    if cm is not None:
+        try:
+            cm.set(COOKIE_NAME, "", expires_at=datetime.now() - timedelta(days=1))
+        except Exception:
+            pass
+        try:
+            cm.delete(COOKIE_NAME)
+        except Exception:
+            pass
+    for key in _AUTH_KEYS:
+        st.session_state.pop(key, None)
+    st.session_state[LOGOUT_FLAG_KEY] = True
+    _nav_top_search(view)
+    st.stop()
 
 
 def current_user() -> str | None:
