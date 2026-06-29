@@ -54,6 +54,13 @@ try:
 except Exception:
     _pm_skills = None
 
+# Sales & Marketing skills catalog — optional sibling module, same mechanism as
+# pm_skills (catalog + hint injected into the cached system block). Never raises.
+try:
+    import marketing_skills as _marketing_skills
+except Exception:
+    _marketing_skills = None
+
 # File I/O — optional sibling module. Lets users upload files (image/PDF/Office)
 # and lets Jerry emit downloadable docs (docx/pptx/xlsx/pdf). Never raises.
 try:
@@ -436,6 +443,17 @@ def _load_system_blocks() -> list[dict]:
             "## Catalog\n"
             f"{_pm_skills.CATALOG_TEXT}\n"
             "</pm_skills_library>"
+        )
+
+    # Sales & Marketing skills catalog: same mechanism as PM skills. Static →
+    # cache-stable. Sits alongside the PM library; Jerry picks whichever fits.
+    if _marketing_skills is not None and _marketing_skills.CATALOG_TEXT:
+        sections.append(
+            "<marketing_skills_library>\n"
+            f"{_marketing_skills.SKILLS_HINT}\n\n"
+            "## Catalog\n"
+            f"{_marketing_skills.CATALOG_TEXT}\n"
+            "</marketing_skills_library>"
         )
 
     combined = "\n\n".join(sections)
