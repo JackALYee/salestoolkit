@@ -139,24 +139,48 @@ if 'authenticated' not in st.session_state:
 # --- COOKIE-BASED SESSION RESTORE ---
 # Re-hydrate session_state['authenticated'] from the signed auth cookie if the
 # tab was reloaded, the user landed on ?view=jerry_gpt directly, or a new tab
-# was opened. No-op when already authenticated, or when auth module / cookie
-# library isn't available.
-if _auth is not None and not st.session_state['authenticated']:
+# was opened. Called on EVERY run: restore_session() re-instantiates the
+# CookieManager widget fresh for this run (Streamlit requires re-registration
+# each run) and then no-ops the cookie READ when already authenticated — so the
+# later persist_login() on the authenticated render has a live cookie manager
+# to WRITE through.
+if _auth is not None and (
+    not st.session_state['authenticated']
+    or not st.session_state.get('_stmx_cookie_synced')
+):
     _auth.restore_session()
 
-# --- ?logout=1 — clear auth and bounce to /
+# --- ?logout=1 — clear auth and bounce back, PRESERVING the view so signing
+# out of Jerry GPT (or Jack GPT) returns you there after re-login, not to the
+# toolkit. logout_and_redirect() also makes the cookie deletion actually stick
+# (a plain st.rerun would discard the cookie write).
 if st.query_params.get("logout") == "1":
+    _view_keep = st.query_params.get("view", "")
     if _auth is not None:
-        _auth.logout()
+        _auth.logout_and_redirect(_view_keep)   # clears cookie, navigates, st.stop()
     else:
         st.session_state['authenticated'] = False
-    st.query_params.clear()
-    st.rerun()
+        st.query_params.clear()
+        if _view_keep:
+            st.query_params["view"] = _view_keep
+        st.rerun()
 
 # --- RENDER LOGIN OR TOOLKIT ---
 if not st.session_state['authenticated']:
     render_login()
 else:
+    # Write the auth cookie ONCE per connection, here on the authenticated
+    # render — a COMMITTED run (no st.rerun right after), so CookieManager.set
+    # actually reaches the browser. Persisting at login time (login.py) failed
+    # because the st.rerun() there discarded the cookie write, leaving the next
+    # ?view=jerry_gpt cross-navigation to restore a STALE previous user. The
+    # _stmx_cookie_synced guard avoids re-running the cookie write every rerun.
+    if _auth is not None and not st.session_state.get("_stmx_cookie_synced"):
+        try:
+            _auth.persist_login(st.session_state.get("user_name", "") or "")
+            st.session_state["_stmx_cookie_synced"] = True
+        except Exception:
+            pass
     # --- Per-user context ---
     # user_email drives jhsun-only customizations: the "Global Trucking"
     # header swap, Emily's terminology entry, and the Jack GPT route. We
@@ -1133,7 +1157,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 5.4.12 • 货运产品线 Trucking BU • June 2026</div>
+            <div class="header-meta fade-up">Version 5.5.13 • 货运产品线 Trucking BU • June 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

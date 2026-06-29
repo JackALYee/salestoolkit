@@ -1901,7 +1901,7 @@ ANTHROPIC_API_KEY = "sk-ant-..."     # leadership / Claude models</pre>
                 <a href="/" target="_self" class="jerry-back-link">
                     <i class="fa-solid fa-arrow-left"></i> Toolkit
                 </a>
-                <a href="/?logout=1" target="_self" class="jerry-back-link jerry-signout-link">
+                <a href="/?view=jerry_gpt&logout=1" target="_self" class="jerry-back-link jerry-signout-link">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out
                 </a>
             </div>
