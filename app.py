@@ -75,6 +75,107 @@ email_tool_content = r"""
                 <p>The Drip Mailer has been upgraded to a dedicated, standalone application to ensure maximum performance and deliverability.</p>
             </div>
 
+            <!-- BUSINESS DEVELOPMENT PROMPTER (Solution Selling cold outreach) -->
+            <div class="card fade-up">
+                <h3 style="color: var(--primary-green); margin-bottom: 6px;"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right:8px;"></i> Business Development Prompter</h3>
+                <p style="color: var(--text-grey); font-size: 0.9rem; margin-bottom: 18px;">Generate a pain-based cold email in the Solution Selling format &mdash; its job is to create <strong>curiosity</strong> ("tell me more"), not to pitch product. Pick the buyer's title, add your name, and paste the result into the Drip Mailer. The greeting uses the <code>{first_name}</code> and <code>{company}</code> merge variables so it drops straight into a campaign.</p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div>
+                        <label style="display:block; font-size:0.72rem; color:var(--text-grey); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Buyer title</label>
+                        <select id="bd-title" onchange="genBDPrompter()" class="w-full rounded-lg py-2.5 px-3" style="background: rgba(20,25,40,0.85); color:#E6EAF0; border:1px solid rgba(255,255,255,0.12);">
+                            <option value="safety">Safety Director / Safety Manager (fleet)</option>
+                            <option value="cfo">CFO / Finance (fleet)</option>
+                            <option value="ops">VP Fleet / Operations (fleet)</option>
+                            <option value="tsp">TSP / Partner Owner</option>
+                            <option value="schoolbus">School Bus / Student Transport Director</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.72rem; color:var(--text-grey); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Your name (signature)</label>
+                        <input type="text" id="bd-sender" value="" placeholder="e.g. Jack Yi" oninput="genBDPrompter()" class="w-full rounded-lg py-2.5 px-3">
+                    </div>
+                </div>
+                <label style="display:block; font-size:0.72rem; color:var(--text-grey); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Generated email (editable)</label>
+                <textarea id="bd-output" rows="16" class="w-full rounded-lg py-3 px-3" style="background: rgba(20,25,40,0.85); color:#E6EAF0; border:1px solid rgba(255,255,255,0.12); font-family:inherit; line-height:1.5; font-size:0.9rem;"></textarea>
+                <button onclick="copyBD()" class="mt-3" style="background:var(--secondary-blue); color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-copy"></i> Copy email</button>
+                <script>
+                    var BD_PLAYBOOK = {
+                        safety: {
+                            title: "safety leaders",
+                            pains: [
+                                "catching driver fatigue and distraction before they become accidents — not after",
+                                "reviewing 500 nuisance alerts a day just to find the 10 that actually matter",
+                                "proving a driver wasn't at fault fast enough to win the claim"
+                            ],
+                            ref: "A safety director at a 400-truck carrier was missing their accident-rate target; with our behavioral AI (SafeGPT) they cut at-fault accidents ~30% and false alerts ~90% in a year."
+                        },
+                        cfo: {
+                            title: "finance leaders",
+                            pains: [
+                                "insurance premiums climbing every renewal",
+                                "false-claim payouts you can't dispute without video evidence",
+                                "paying for a separate GPS tracker and a camera on every vehicle"
+                            ],
+                            ref: "A CFO at a mid-size fleet cut insurance premiums ~15% and retired their standalone trackers by moving to one Streamax device that reads the vehicle bus natively — one device, one subscription."
+                        },
+                        ops: {
+                            title: "fleet operations leaders",
+                            pains: [
+                                "at-fault accidents and downtime dragging your cost-per-mile the wrong way",
+                                "disputed claims that take weeks because evidence is slow to find",
+                                "coaching that's inconsistent from terminal to terminal"
+                            ],
+                            ref: "A VP of Fleet at a regional carrier turned one camera into their vehicle's central data hub (fuel, CAN, sensors), cut evidence-retrieval time from hours to seconds, and reduced repeat incidents through consistent coaching."
+                        },
+                        tsp: {
+                            title: "telematics service providers",
+                            pains: [
+                                "Samsara and Motive poaching your tracking accounts with camera + telematics bundles you can't match",
+                                "earning $0 in video revenue on a customer base that's ready for it",
+                                "no way to defend an account when the fleet wants video"
+                            ],
+                            ref: "A TSP added our full white-label video stack (hardware + AI + platform) under their own brand at 25–37% below Samsara, and doubled recurring revenue per vehicle on their existing base with zero new-customer cost."
+                        },
+                        schoolbus: {
+                            title: "student-transport leaders",
+                            pains: [
+                                "proving what happened on the bus when a parent or district calls",
+                                "child-check and stop-arm violations you can't reliably capture as court-grade evidence",
+                                "manual attendance and incident review eating your team's time"
+                            ],
+                            ref: "A student-transport director gained instant, court-grade evidence for stop-arm violations and automated child-check, cutting incident review time and parent disputes dramatically."
+                        }
+                    };
+                    function genBDPrompter() {
+                        var t = (document.getElementById('bd-title') || {}).value || 'safety';
+                        var p = BD_PLAYBOOK[t] || BD_PLAYBOOK.safety;
+                        var sender = (document.getElementById('bd-sender') || {}).value || '[Your name]';
+                        var lines = [];
+                        lines.push('Hi {first_name},');
+                        lines.push('');
+                        lines.push("You and I haven't spoken before — I work with " + p.title + " at Streamax, the world's #1 video telematics provider (5M+ vehicles across 100+ countries).");
+                        lines.push('');
+                        lines.push('Working with ' + p.title + ' at operations like {company}, the three issues I hear most are:');
+                        p.pains.forEach(function(x){ lines.push('  • ' + x); });
+                        lines.push('');
+                        lines.push('One example: ' + p.ref);
+                        lines.push('');
+                        lines.push('Would you be interested in how we helped them? A quick note back is all I need.');
+                        lines.push('');
+                        lines.push('Best,');
+                        lines.push(sender);
+                        var out = document.getElementById('bd-output');
+                        if (out) out.value = lines.join('\n');
+                    }
+                    function copyBD() {
+                        var out = document.getElementById('bd-output');
+                        if (!out) return;
+                        try { navigator.clipboard.writeText(out.value); } catch (e) {}
+                    }
+                    (function(){ try { genBDPrompter(); } catch(e){} })();
+                </script>
+            </div>
+
             <div class="card fade-up" style="text-align: center; padding: 60px 20px;">
                 <i class="fa-solid fa-envelope-open-text" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(42, 245, 152, 0.3));"></i>
                 <h3 style="font-size: 2rem; margin-bottom: 15px; color: var(--text-white);">Launch the Drip Mailer</h3>
@@ -1157,7 +1258,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 5.6.14 • 货运产品线 Trucking BU • June 2026</div>
+            <div class="header-meta fade-up">Version 5.7.14 • 货运产品线 Trucking BU • June 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
@@ -1606,6 +1707,52 @@ else:
             if(outSafety) outSafety.textContent = formatCurrency(safetySavings);
             if(outInsurance) outInsurance.textContent = formatCurrency(insuranceSavings);
             if(outTotal) outTotal.textContent = formatCurrency(totalSavings);
+
+            // --- Solution Selling: Value Proposition & Justification ---
+            const vpStmt = document.getElementById('vp-statement');
+            const vpJust = document.getElementById('vp-justification');
+            if (vpStmt && vpJust) {
+                const vpCompanyEl = document.getElementById('vpCompany');
+                const vpMonthlyEl = document.getElementById('vpMonthly');
+                const rawName = (vpCompanyEl && vpCompanyEl.value.trim()) ? vpCompanyEl.value.trim() : 'your fleet';
+                const company = rawName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const monthly = vpMonthlyEl ? Math.max(0, parseFloat(vpMonthlyEl.value) || 0) : 0;
+                const annualInvest = fleetSize * monthly * 12;
+                const netValue = totalSavings - annualInvest;
+                const monthlyBenefit = totalSavings / 12;
+                const payback = monthlyBenefit > 0 ? (annualInvest / monthlyBenefit) : 0;
+                const paybackStr = annualInvest > 0
+                    ? (payback < 1 ? 'under a month' : payback.toFixed(1) + ' months')
+                    : '— (enter a price)';
+
+                let stmt = '<strong>We believe ' + company + '</strong> should be able to save approximately <strong>'
+                    + formatCurrency(totalSavings) + '/year</strong> across your ' + fleetSize
+                    + '-vehicle fleet — cutting at-fault accidents ~' + Math.round(accReductionPct*100)
+                    + '%, insurance premiums ~' + Math.round(insuranceRedPct*100)
+                    + '%, and improving fuel efficiency ~' + Math.round(fuelGainPct*100)
+                    + '% — through <strong>SafeGPT behavioral AI + Streamax AI dashcams</strong>, for an investment of ~'
+                    + formatCurrency(annualInvest) + '/year (' + formatCurrency(monthly) + '/vehicle/mo).';
+                if (annualInvest > 0) {
+                    stmt += ' <strong>Net annual value: ' + formatCurrency(netValue)
+                        + '</strong>; it pays for itself in ' + paybackStr + ' of value.';
+                }
+                vpStmt.innerHTML = stmt;
+
+                vpJust.innerHTML =
+                    '<strong>Value Justification (buyer’s numbers):</strong><br>'
+                    + '• <strong>Avoided cost</strong> (accidents + insurance): ' + formatCurrency(safetySavings + insuranceSavings) + '/yr<br>'
+                    + '• <strong>Efficiency gain</strong> (fuel): ' + formatCurrency(fuelSavings) + '/yr<br>'
+                    + '• <strong>Displaced cost</strong>: native CAN/OBD removes the separate GPS tracker — one device, one subscription.<br>'
+                    + '• <strong>Payback</strong>: ' + paybackStr;
+            }
+        }
+
+        function copyVP() {
+            const s = document.getElementById('vp-statement');
+            const j = document.getElementById('vp-justification');
+            if (!s) return;
+            const txt = (s.innerText || '') + '\n\n' + (j ? (j.innerText || '') : '');
+            try { navigator.clipboard.writeText(txt); } catch (e) {}
         }
 
         // --- VISUAL LOOP LOGIC ---

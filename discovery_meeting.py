@@ -12,6 +12,9 @@ content = r"""        <!-- SECTION: DISCOVERY MEETING -->
                 <button class="sub-nav-btn" onclick="switchSubTab('discovery-enduser', this)">
                     <i data-lucide="truck"></i> End Users (Fleets)
                 </button>
+                <button class="sub-nav-btn" onclick="switchSubTab('discovery-9block', this)">
+                    <i data-lucide="grid-3x3"></i> 9-Block &amp; Pain Sheet
+                </button>
             </div>
 
             <!-- TSP DISCOVERY SUB-SECTION -->
@@ -353,6 +356,92 @@ content = r"""        <!-- SECTION: DISCOVERY MEETING -->
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <!-- 9-BLOCK & PAIN SHEET SUB-SECTION (Solution Selling) -->
+            <div id="discovery-9block" class="sub-content">
+                <h3 class="section-header fade-up">9-Block Vision Processing &amp; Pain Sheets</h3>
+
+                <div class="card fade-up">
+                    <h4 style="color: var(--primary-green);">How to use this</h4>
+                    <p>Run this <strong>after</strong> the buyer admits a pain. Move left-to-right (Open &rarr; Control &rarr; Confirm) and top-to-bottom (Reasons &rarr; Impact &rarr; Capabilities). Aim for roughly <strong>3 control questions to every open question</strong> &mdash; the control questions are where you quantify the pain and set up value. End with a buyer-owned vision. Below the model are ready-made <strong>Pain Sheets</strong> (pain &rarr; reasons &rarr; impact &rarr; Streamax capability) for the key fleet titles &mdash; use them to build your control questions. Want it run on your actual deal? Open <strong>Jerry GPT</strong> and use the "Diagnose my deal (9-Block)" prompt.</p>
+                </div>
+
+                <div class="flow-container">
+                    <!-- Row 1: Diagnose Reasons -->
+                    <div class="flow-step-block fade-up">
+                        <div class="flow-marker">1</div>
+                        <div class="flow-title">Diagnose Reasons</div>
+                        <span class="flow-subtitle">Why does the pain exist? Put a number on it.</span>
+                        <div class="card" style="margin-left: 0; padding: 20px;">
+                            <ul class="discovery-question-list">
+                                <li><strong>Open:</strong> "Tell me &mdash; what's causing you to keep missing your safety-incident targets?"</li>
+                                <li><strong>Control:</strong> "Is it because the AI can't catch fatigue before an event? How often does that happen? What does one at-fault accident cost you all-in &mdash; claim + downtime + premium impact?"</li>
+                                <li><strong>Confirm:</strong> "So the reasons are X and Y, costing roughly $N a year &mdash; did I get that right?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Row 2: Explore Impact -->
+                    <div class="flow-step-block fade-up">
+                        <div class="flow-marker blue">2</div>
+                        <div class="flow-title">Explore Impact</div>
+                        <span class="flow-subtitle">Who else is hit? (This is the Pain Chain &mdash; and where the budget is.)</span>
+                        <div class="card" style="margin-left: 0; padding: 20px;">
+                            <ul class="discovery-question-list">
+                                <li><strong>Open:</strong> "Besides you, who else in the business feels this &mdash; and how?"</li>
+                                <li><strong>Control:</strong> "If incidents stay high, does that hit the CFO's insurance line? Does the safety record threaten the contracts your CEO is chasing?"</li>
+                                <li><strong>Confirm:</strong> "So this isn't just a safety problem &mdash; it's a company-wide margin and growth problem. Fair?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Row 3: Visualize Capabilities -->
+                    <div class="flow-step-block fade-up" style="margin-bottom: 0;">
+                        <div class="flow-marker">3</div>
+                        <div class="flow-title">Visualize Capabilities</div>
+                        <span class="flow-subtitle">Get THEM to describe the fix &mdash; in capabilities, not product names &mdash; and own it.</span>
+                        <div class="card" style="margin-left: 0; padding: 20px;">
+                            <ul class="discovery-question-list">
+                                <li><strong>Open:</strong> "What would it take for you to hit your safety targets this year?"</li>
+                                <li><strong>Control:</strong> "What if the AI flagged fatigue 15 minutes before eyes close and cut false alerts ~90%, so your team acts on 10 real events instead of 500 &mdash; by how much would incidents drop?"</li>
+                                <li><strong>Confirm (the buying vision):</strong> "So if you had the ability to (A) catch fatigue pre-event and (B) prove not-at-fault instantly, you could cut at-fault accidents ~30% and premiums ~15%. Is that the outcome you want?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="section-header fade-up" style="margin-top: 40px;">Pain Sheets by Title</h3>
+
+                <div class="card fade-up">
+                    <h4 style="color: var(--primary-green);"><i data-lucide="shield" style="width:18px;height:18px;vertical-align:-3px;"></i> Safety Director / Safety Manager</h4>
+                    <p><strong>Pain:</strong> Missing safety-incident / accident-rate targets.</p>
+                    <p><strong>Reasons:</strong> Can't catch fatigue &amp; distraction before an event; drowning in nuisance alerts (reviewing 500 to find 10 real ones); no way to coach consistently across terminals; can't prove not-at-fault fast.</p>
+                    <p><strong>Impact:</strong> Ops sees more at-fault accidents &amp; downtime &rarr; CFO's insurance/claims line rises &rarr; CEO's safety record threatens contracts.</p>
+                    <p><strong>Streamax capability:</strong> SafeGPT behavioral AI (pre-event fatigue, ~90% fewer false alerts), driver coaching workflow, instant evidence retrieval.</p>
+                </div>
+
+                <div class="card fade-up">
+                    <h4 style="color: var(--secondary-blue);"><i data-lucide="dollar-sign" style="width:18px;height:18px;vertical-align:-3px;"></i> CFO / Finance</h4>
+                    <p><strong>Pain:</strong> Margin pressure from rising insurance and claims cost.</p>
+                    <p><strong>Reasons:</strong> Climbing premiums; false-claim payouts with no video to dispute them; self-insured retention hits; paying for a separate GPS tracker <em>and</em> a camera.</p>
+                    <p><strong>Impact:</strong> Erodes profit per mile &rarr; constrains the CEO's growth/valuation story.</p>
+                    <p><strong>Streamax capability:</strong> Accident/premium reduction (quantified in the Value Calculator), exonerating video, and native CAN/OBD that <em>displaces</em> the tracker (one device, one subscription).</p>
+                </div>
+
+                <div class="card fade-up">
+                    <h4 style="color: var(--primary-green);"><i data-lucide="truck" style="width:18px;height:18px;vertical-align:-3px;"></i> VP Fleet / Operations</h4>
+                    <p><strong>Pain:</strong> Can't hit uptime and cost-per-mile targets.</p>
+                    <p><strong>Reasons:</strong> At-fault accidents &amp; downtime; disputed claims dragging on; driver churn; slow evidence retrieval when an incident happens.</p>
+                    <p><strong>Impact:</strong> Safety KPIs missed above; CFO cost line hit below.</p>
+                    <p><strong>Streamax capability:</strong> One central data hub (CAN/OBD sensors), 15-minute installs, fast evidence workflow, coaching to cut repeat incidents.</p>
+                </div>
+
+                <div class="card fade-up" style="margin-bottom: 0;">
+                    <h4 style="color: var(--secondary-blue);"><i data-lucide="network" style="width:18px;height:18px;vertical-align:-3px;"></i> TSP / Partner Owner</h4>
+                    <p><strong>Pain:</strong> Losing tracking accounts and revenue to Samsara/Motive selling direct.</p>
+                    <p><strong>Reasons:</strong> No video telematics to defend accounts; $0 video revenue on the base; can't match camera + telematics bundles.</p>
+                    <p><strong>Impact:</strong> Churn on both video <em>and</em> tracking; ARPU stalls; RFP losses.</p>
+                    <p><strong>Streamax capability:</strong> Full white-label video stack (hardware + AI + platform) under their brand, 25&ndash;37% below Samsara, doubling recurring revenue per vehicle with zero new-customer cost.</p>
                 </div>
             </div>
         </div>"""

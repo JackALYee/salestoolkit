@@ -242,6 +242,27 @@ part1 = r"""        <!-- SECTION: VALUE CALCULATOR -->
                         </div>
                     </div>
                 </div>
+
+                <!-- VALUE PROPOSITION & JUSTIFICATION (Solution Selling) -->
+                <div class="card fade-up" style="margin-top: 24px;">
+                    <h2 class="text-xl font-semibold mb-2 flex items-center text-white">
+                        <i class="fas fa-file-signature text-[var(--primary-green)] mr-3"></i> Value Proposition &amp; Justification
+                    </h2>
+                    <p style="color: var(--text-grey); font-size: 0.9rem; margin-bottom: 18px;">Turns the numbers above into a Solution Selling value proposition your buyer can own. Enter the fleet name and your Streamax price to compute payback. <em>The buyer must be able to say &ldquo;yes, those are my numbers.&rdquo;</em></p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:18px;">
+                        <div>
+                            <label style="display:block; font-size:0.72rem; color:var(--text-grey); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Fleet / company name</label>
+                            <input type="text" id="vpCompany" value="your fleet" class="w-full rounded-lg py-2.5 px-3" oninput="calculateROI()">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.72rem; color:var(--text-grey); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Streamax price ($ / vehicle / mo)</label>
+                            <input type="number" id="vpMonthly" value="35" min="0" step="1" class="w-full rounded-lg py-2.5 px-3" oninput="calculateROI()">
+                        </div>
+                    </div>
+                    <div id="vp-statement" style="background: rgba(42,245,152,0.05); border:1px solid rgba(42,245,152,0.3); border-left:4px solid var(--primary-green); border-radius:10px; padding:18px 20px; color:#E6EAF0; line-height:1.6; font-size:0.95rem;">Adjust the calculator above to generate the value proposition.</div>
+                    <div id="vp-justification" style="margin-top:16px; color:var(--text-grey); font-size:0.88rem; line-height:1.6;"></div>
+                    <button onclick="copyVP()" class="mt-4" style="background:var(--secondary-blue); color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-copy"></i> Copy value proposition</button>
+                </div>
 """
 
 part2 = r"""
