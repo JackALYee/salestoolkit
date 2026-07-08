@@ -61,6 +61,14 @@ try:
 except Exception:
     _marketing_skills = None
 
+# Solution Selling process plays — Streamax's core sales methodology as
+# apply-on-demand plays (9-Block, Pain Chain, Value Prop, competitive strategy,
+# etc.). Same catalog mechanism. Never raises.
+try:
+    import sales_process_skills as _sales_process_skills
+except Exception:
+    _sales_process_skills = None
+
 # File I/O — optional sibling module. Lets users upload files (image/PDF/Office)
 # and lets Jerry emit downloadable docs (docx/pptx/xlsx/pdf). Never raises.
 try:
@@ -454,6 +462,17 @@ def _load_system_blocks() -> list[dict]:
             "## Catalog\n"
             f"{_marketing_skills.CATALOG_TEXT}\n"
             "</marketing_skills_library>"
+        )
+
+    # Solution Selling process plays: the apply-on-demand toolkit backing the
+    # methodology in 16_solution_selling_method. Static → cache-stable.
+    if _sales_process_skills is not None and _sales_process_skills.CATALOG_TEXT:
+        sections.append(
+            "<sales_process_skills>\n"
+            f"{_sales_process_skills.SKILLS_HINT}\n\n"
+            "## Catalog\n"
+            f"{_sales_process_skills.CATALOG_TEXT}\n"
+            "</sales_process_skills>"
         )
 
     combined = "\n\n".join(sections)
@@ -1075,6 +1094,9 @@ QUICK_PROMPTS = [
     ("Drivers won't accept", "A fleet manager says drivers won't accept cameras. How do I respond?"),
     ("DSC vs DMS", "Walk me through the DSC vs DMS argument for fatigue detection."),
     ("Quiz me product (Sales Onboarding)", "Quiz me on the Streamax product portfolio, like the Sales Onboarding Phase 1 check. Ask me 8 questions one at a time, wait for my answer each time, tell me right or wrong with a one-line why, then give a final score out of 8. Start with the first question."),
+    ("Diagnose my deal (9-Block)", "Coach me through the 9-Block Vision Processing Model on a real deal. Ask me for the fleet/TSP, the admitted pain, and who I'm talking to, then walk me through diagnosing reasons, exploring impact, and building a buyer-owned vision — one step at a time."),
+    ("Pain-based cold email", "Help me write a pain-based cold outreach in the Business Development Prompter format (curiosity, not a pitch). Ask me the prospect's title and vertical first, then draft it with a menu of pains for that title plus a short reference story."),
+    ("Qualify this opportunity", "Qualify a deal for me using Pain x Power x Vision x Value x Control. Ask me about the deal, score each factor, tell me which factor is the zero, and give me the next action to fix it or advise whether to qualify out."),
     ("Data flywheel", "Explain the data flywheel and why it matters."),
 ]
 

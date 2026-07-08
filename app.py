@@ -1157,7 +1157,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 5.6.13 • 货运产品线 Trucking BU • June 2026</div>
+            <div class="header-meta fade-up">Version 5.6.14 • 货运产品线 Trucking BU • June 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
