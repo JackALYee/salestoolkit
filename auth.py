@@ -275,9 +275,9 @@ def logout_and_redirect(view: str = "") -> None:
 
     st.stop() (unlike st.rerun) COMMITS the run's delta, so the CookieManager
     delete actually reaches the browser. The JS then navigates the top window
-    to ?view=<view> (dropping ?logout). `view` ("jerry_gpt" / "jack_gpt" / "")
-    is preserved so signing out of Jerry GPT and signing back in returns to
-    Jerry GPT, not the toolkit.
+    to ?view=<view> (dropping ?logout). `view` ("jerry_gpt" / "") is preserved
+    so signing out of Jerry GPT and signing back in returns to Jerry GPT, not
+    the toolkit.
     """
     cm = _cm()
     if cm is not None:

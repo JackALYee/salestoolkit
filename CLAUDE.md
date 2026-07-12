@@ -13,7 +13,7 @@ The main header (`app.py`, the `header-meta` div — search `Version `) shows `V
 **Version scheme `X.Y.Z`:**
 - **X** — major version. Bump only on a big milestone, and only when the user explicitly asks. Otherwise leave it.
 - **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `sales_onboarding.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
-- **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`. (Jack GPT changes — `jack_gpt.py` etc. — also bump **Z**, since it's an AI chat surface.)
+- **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`, plus the sales-method modules (`marketing_skills.py`/`marketing_skills/`, `sales_process_skills.py`/`sales_process_skills/`, `topology.py`).
 
 Rules of thumb:
 - A change that spans both surfaces bumps **both** Y and Z (+1 each).
@@ -127,24 +127,12 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 - `DEEPSEEK_API_KEY` — org DeepSeek key, available to **all** Jerry users; the only org-key model non-leadership may use. Jerry needs at least one of `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY`.
 - `JERRY_MODEL` — optional, leadership default, defaults to `claude-opus-4-8`
 - `JERRY_DEEPSEEK_MODEL` — optional, defaults to `deepseek-v4-pro` (set this to DeepSeek's exact public model name if it differs)
-- `JACK_GPT_ANTHROPIC_API_KEY` — required for Jack GPT (Emily-only private workspace). **Intentionally a different key from Jerry's** so the two surfaces are isolated for cost / quota / abuse. `jack_gpt._get_api_key()` does NOT fall back to `ANTHROPIC_API_KEY` — a missing Jack key produces a clean configuration error rather than silently routing Jack's traffic through Jerry's account.
-- `JACK_GPT_MODEL` — optional, defaults to `claude-opus-4-8`
 - `AUTH_SECRET` — required for session cookie signing (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`)
 - `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging for Jerry GPT
 - `JERRY_GPT_DB_URL` — optional, enables cross-session chat history for Jerry GPT via Supabase Postgres
-- `JACK_GPT_SHEET_ID` (+ optional `[jack_gpt_service_account]` table — falls back to the shared `[gcp_service_account]`) — optional, enables Google Sheets logging for Jack GPT. **Separate Sheet** from Jerry's audit log.
-- `JACK_GPT_DB_URL` — optional, enables cross-session chat history for Jack GPT via Postgres. **Separate Postgres URL** and **separate table** (`jack_gpt_chats`) from Jerry's. No fallback to `JERRY_GPT_DB_URL`.
 
 If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
 
-## Jack GPT — Emily's private workspace
+## Jack GPT — removed
 
-`jack_gpt.py` is structurally similar to `jerry_gpt.py` but with a tighter access model:
-
-- **Whitelist**: `JACK_GPT_WHITELIST = frozenset({"jhsun@streamax.com", "jcyi@streamax.com"})`. Two users only — Emily (jhsun) and Jack himself (jcyi, owner/admin). Even other authenticated Streamax employees who guess the URL get the access-denied screen — this is not a team tool.
-- **Routing**: launched from Emily's terminology card in Streamaxpedia (gated to jhsun via `streamaxpedia_app.build_content(user_email)`). The card's "Special Feature → Jack GPT" button opens `?view=jack_gpt`, which `app.py` routes to `jack_gpt.render()`.
-- **Knowledge bundle**: lives at `salestoolkit/jack_gpt_knowledge/` (committed to git, ~190KB). Contains `personas/emily.md`, `boundaries/emily.md`, `memory/*.md` (excluding `raw_chats/`), `sources/*.md`, plus `external_skills/streamax-knowledge.md` and `external_skills/sales-automator.md` (the two skill files Jack normally reads from outside the toolkit repo). `jack_gpt._find_jack_gpt_root()` tries the bundled location first, falls back to the canonical `~/Documents/我的档案/jack_gpt/` for local dev.
-- **Runtime contract from upstream README**: only the Emily channel files are loaded — `philosophy/`, `internal/`, `personas/jack_self.md`, `boundaries/jack_self.md`, `memory/raw_chats/` are explicitly excluded and **not bundled**. When the upstream `jack_gpt/` content updates, re-run the bundling step (`cp` the same file list from `~/Documents/我的档案/jack_gpt/`); do not add files that aren't on the Emily-channel allowlist.
-- **Model + sampling**: `claude-opus-4-8`, `max_tokens=1500`, `temperature=1.0` (Jack needs lexical variety — deterministic sampling produces same-opener responses).
-- **Logging + persistence**: mirrors Jerry's pattern but with dedicated side-car modules. `jack_usage_logger.py` writes to Google Sheets (`JACK_GPT_SHEET_ID`); `jack_chat_history.py` persists to Postgres (`JACK_GPT_DB_URL`) using a separate `jack_gpt_chats` table. Both modules are imported with graceful failure — if secrets are missing or the underlying packages aren't installed, Jack still works (just without audit log / cross-session restore). Token usage is accumulated across max-tokens auto-continuations so the logged row reflects the full reply, not just the first segment.
-- **⚠️ Plaintext password logging**: `jack_usage_logger.HEADERS` includes a `user_password` column written in plaintext to Google Sheets and to stdout. This was an explicit product-owner decision for the Emily-only workspace and is NOT a bug. Do **not** propagate this column into `usage_logger.py` (Jerry's, which serves the whole team) without an explicit, repeated decision — the risk model is different there. If the decision ever gets revoked, removing the column from `HEADERS` will auto-rewrite the sheet header on the next write; do a manual cleanup of existing rows below it at that point.
+Jack GPT (the Emily-only private workspace: `jack_gpt.py`, `jack_chat_history.py`, `jack_usage_logger.py`, the `?view=jack_gpt` route, the Emily-card launch button, and the jhsun login easter egg / VIP grant) was **removed** in v5.8.14. Jerry GPT is the only AI chat surface now. The Emily terminology row (`jhsun_only`) and the jhsun-gated "Global Trucking" header rename still exist but no longer have a Jack GPT target — remove them too if jhsun-specific behavior is no longer wanted.

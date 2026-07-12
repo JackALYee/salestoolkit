@@ -42,7 +42,6 @@ LEADERSHIP_EMAILS = frozenset({
 # EXTRA_VIP_EMAILS to grant Opus access without giving them full leadership
 # pricing clearance. Edit this set to grow the VIP roster.
 EXTRA_VIP_EMAILS = frozenset({
-    "jhsun@streamax.com",      # Emily — 西南欧客户经理
     "caojun@streamax.com",     # Cao Jun
     "wangrui@streamax.com",    # Wang Rui — Jerry's real-life good friend (SPECIAL)
 })
@@ -57,7 +56,6 @@ _EASTER_EGG_TO_EMAIL = {
     "jerry": "jerry@streamax.com",
     "hekun": "hekun@streamax.com",
     "zntang": "zntang@streamax.com",
-    "jhsun": "jhsun@streamax.com",
 }
 
 
@@ -93,13 +91,12 @@ def resolve_user_email(name_or_email: str) -> str:
 
     Handles three cases:
     - The input is already an email (contains '@') → returned lowercased.
-    - The input is a known easter-egg display name (Jerry/Hekun/ZNTang/JHSun)
+    - The input is a known easter-egg display name (Jerry/Hekun/ZNTang)
       → mapped via _EASTER_EGG_TO_EMAIL.
     - Anything else → empty string (caller should treat as "unknown").
 
     Used by auth.restore_session() so a cookie-restored user_name can
-    re-derive user_email after a page reload — without that, jhsun-only
-    customizations vanish whenever the tab is refreshed.
+    re-derive user_email after a page reload.
     """
     if not name_or_email:
         return ""
@@ -159,8 +156,6 @@ def verify_streamax_credentials(email, password):
         return True, "Hekun"
     if email_lower == "zntang_test" and password == "testme":
         return True, "ZNTang"
-    if email_lower == "jhsun_test" and password == "testme":
-        return True, "JHSun"
     if email_lower == "test_account" and password == "testme":
         return True, "Success"
         
@@ -184,9 +179,7 @@ def verify_streamax_credentials(email, password):
             return True, "Hekun"
         elif email_lower == "zntang@streamax.com":
             return True, "ZNTang"
-        elif email_lower == "jhsun@streamax.com":
-            return True, "JHSun"
-            
+
         return True, "Success"
     except smtplib.SMTPAuthenticationError:
         return False, "Email or password incorrect."
@@ -379,33 +372,6 @@ def render_login():
         _persist('ZNTang')
         st.rerun()
 
-    # 4. JHSun Animation (Easter Egg)
-    elif st.session_state.get('show_jhsun_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=1MbhoRTe86qcO9Q0GNeJ9DPPYeuYLn4DG&sz=w800"
-            
-        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
-                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3); text-align: center; max-width: 700px; line-height: 1.4;'>Congratulations to your new position! 🎉<br><span style='font-size: 1.1rem; font-weight: 500; color: #E0E6ED;'>As promised, no matter which sales market you are fighting for, we will support and empower you.</span></h2>
-                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(12)
-        st.session_state['show_jhsun_anim'] = False
-        st.session_state['authenticated'] = True
-        st.session_state['user_name'] = 'JHSun'
-        # Normalize user_email so downstream jhsun-only customizations
-        # (Global Trucking title, Emily entry, Jack GPT route) work even
-        # when the user authenticated via the jhsun_test shortcut.
-        st.session_state['user_email'] = 'jhsun@streamax.com'
-        _grant_leadership('JHSun')
-        _grant_vip('JHSun')
-        _persist('JHSun')
-        st.rerun()
-
     # Show Standard Form View
     else:
         st.write("<br><br>", unsafe_allow_html=True) # Vertical spacing
@@ -449,9 +415,6 @@ def render_login():
                             st.rerun()
                         elif message == "ZNTang":
                             st.session_state['show_zntang_anim'] = True
-                            st.rerun()
-                        elif message == "JHSun":
-                            st.session_state['show_jhsun_anim'] = True
                             st.rerun()
                         else:
                             st.session_state['authenticated'] = True

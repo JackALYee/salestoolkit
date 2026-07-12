@@ -17,16 +17,6 @@ except Exception as _jerry_import_err:  # noqa: BLE001
     render_jerry_gpt = None
     _JERRY_IMPORT_ERR = _jerry_import_err
 
-# Jack GPT — Emily's private workspace, rendered when ?view=jack_gpt is in
-# the URL. Whitelist (jhsun@streamax.com only) is enforced INSIDE
-# jack_gpt.render() so the access-denied screen still gets the proper
-# Sales Toolkit theme.
-try:
-    from jack_gpt import render as render_jack_gpt
-except Exception as _jack_import_err:  # noqa: BLE001
-    render_jack_gpt = None
-    _JACK_IMPORT_ERR = _jack_import_err
-
 try:
     # build_content(user_email) lets us filter user-gated terminology rows
     # (e.g. Emily, visible only to jhsun@streamax.com). Older deployments
@@ -290,28 +280,16 @@ else:
     _user_email = (st.session_state.get("user_email", "") or "").strip().lower()
     _is_jhsun = (_user_email == "jhsun@streamax.com")
 
-    # --- QUERY-PARAM ROUTER: Jerry GPT + Jack GPT sub-pages ---
-    # Streamaxpedia's launch buttons navigate to ?view=jerry_gpt /
-    # ?view=jack_gpt. We detect that here and render the Streamlit-native
-    # module instead of the toolkit HTML.
+    # --- QUERY-PARAM ROUTER: Jerry GPT sub-page ---
+    # Streamaxpedia's launch button navigates to ?view=jerry_gpt. We detect
+    # that here and render the Streamlit-native module instead of the toolkit
+    # HTML.
     _view = st.query_params.get("view", "")
     if _view == "jerry_gpt":
         if render_jerry_gpt is None:
             st.error(f"Could not load Jerry GPT module: {_JERRY_IMPORT_ERR}")
             st.stop()
         render_jerry_gpt()
-        st.stop()
-
-    if _view == "jack_gpt":
-        # Jack GPT — Emily's private workspace. Whitelist
-        # (jhsun@streamax.com only) is enforced inside render_jack_gpt()
-        # so the access-denied screen carries the proper Sales Toolkit
-        # theme. If the module failed to import (anthropic SDK missing,
-        # etc.), show a clean error.
-        if render_jack_gpt is None:
-            st.error(f"Could not load Jack GPT module: {_JACK_IMPORT_ERR}")
-            st.stop()
-        render_jack_gpt()
         st.stop()
 
     # Build the per-user Streamaxpedia bundle (filters Emily out for
@@ -1258,7 +1236,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 5.7.14 • 货运产品线 Trucking BU • June 2026</div>
+            <div class="header-meta fade-up">Version 5.8.14 • 货运产品线 Trucking BU • June 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

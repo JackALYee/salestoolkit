@@ -398,12 +398,6 @@ TERMINOLOGY_DB = [
         "related": [],
         "exact": True,
         "jhsun_only": True,
-        "special": {
-            "label": "Talk to Jack GPT",
-            "view": "jack_gpt",
-            "blurb": "Your private workspace — sales coaching, Streamax knowledge, anything.",
-            "icon": "fa-solid fa-robot",
-        },
     }
 ]
 

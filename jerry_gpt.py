@@ -177,7 +177,7 @@ WEB_TOOLS = [
 # Transient Anthropic API errors that should trigger a retry rather than
 # bubbling up to the user. 529 = Overloaded (the common one during peak hours
 # on Opus 4.8), 502/503/504 = transient gateway issues. Exponential-ish
-# backoff: 3s, 8s, 15s. Matches the values in jack_gpt.py.
+# backoff: 3s, 8s, 15s.
 _RETRYABLE_STATUS_CODES = (529, 503, 502, 504)
 _RETRY_BACKOFF_SECONDS = (3.0, 8.0, 15.0)
 _MAX_OVERLOAD_RETRIES = len(_RETRY_BACKOFF_SECONDS)
