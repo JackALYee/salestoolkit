@@ -1,6 +1,7 @@
 import streamlit as st
 import smtplib
 import ssl
+import sys
 import time
 
 # Cookie-based session persistence — keeps the user signed in across page
@@ -144,11 +145,69 @@ def _grant_vip(name_or_email: str) -> None:
     """
     st.session_state["is_vip"] = resolve_vip(name_or_email)
 
+# --- Mail backends used to verify @streamax.com credentials ------------------
+# Streamax runs BOTH Coremail and Microsoft (Outlook / Exchange Online). A given
+# mailbox lives on exactly one system, so we try each backend in turn and accept
+# the login if EITHER authenticates. Both checks are just an SMTP AUTH login —
+# the same trick the original Coremail-only check used.
+#   Coremail:   SMTP over implicit SSL on 465 (mail.streamax.com)
+#   Microsoft:  SMTP with STARTTLS on 587 (smtp.office365.com — the Microsoft 365
+#               client-submission endpoint; works for any @streamax.com mailbox
+#               homed in M365 / Exchange Online).
+#
+# ⚠️ Microsoft caveat: the Outlook path only succeeds if that mailbox still
+# allows SMTP AUTH (basic auth) AND no MFA / Conditional Access blocks it.
+# Microsoft disables SMTP AUTH by default on modern M365 tenants; if Streamax's
+# tenant has it off, this check will reject real Outlook users (look for
+# "disabled=True" / 5.7.139 in the [LOGIN] stderr lines) and the proper fix is
+# OAuth2 "Sign in with Microsoft", which is a larger change than this SMTP check.
+_MAIL_SERVERS = (
+    {"label": "coremail",  "host": "mail.streamax.com",  "port": 465, "mode": "ssl"},
+    {"label": "microsoft", "host": "smtp.office365.com", "port": 587, "mode": "starttls"},
+)
+
+
+def _smtp_auth(host, port, mode, email, password, timeout=10):
+    """Attempt one SMTP AUTH login. Returns (ok, disabled, error):
+      ok       — server accepted email + password.
+      disabled — server refused because SMTP/basic auth is turned OFF (a config
+                 block, e.g. Microsoft 365 default), NOT a wrong password.
+      error    — raw error string (for logs).
+    """
+    context = ssl.create_default_context()
+    server = None
+    try:
+        if mode == "ssl":
+            server = smtplib.SMTP_SSL(host, port, timeout=timeout, context=context)
+        else:
+            server = smtplib.SMTP(host, port, timeout=timeout)
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+        server.login(email, password)
+        return True, False, ""
+    except smtplib.SMTPAuthenticationError as e:
+        msg = str(e).lower()
+        # Microsoft returns e.g. "535 5.7.139 ... SmtpClientAuthentication is
+        # disabled for the Tenant" / "basic authentication is disabled" when SMTP
+        # AUTH is off — treat that as a config block, not a wrong password.
+        disabled = ("5.7.139" in msg) or ("disabled" in msg and ("auth" in msg or "tenant" in msg))
+        return False, disabled, str(e)
+    except Exception as e:
+        return False, False, str(e)
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+
 def verify_streamax_credentials(email, password):
     # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
     clean_email = email.strip()
     email_lower = clean_email.lower()
-    
+
     # Test Easter Egg Overrides and Bypass
     if email_lower == "jerry_test" and password == "testme":
         return True, "Jerry"
@@ -158,20 +217,35 @@ def verify_streamax_credentials(email, password):
         return True, "ZNTang"
     if email_lower == "test_account" and password == "testme":
         return True, "Success"
-        
+
     # 2. 使用全小写的 email_lower 来做后缀检查，避免大小写导致报错
     if not email_lower.endswith("@streamax.com"):
         return False, "Please provide a valid @streamax.com email address."
     if not password:
         return False, "Password cannot be empty."
-    
-    try:
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL("mail.streamax.com", 465, timeout=10, context=context)
-        # 3. 使用清除过空格的 clean_email 发送给服务器进行验证
-        server.login(clean_email, password)
-        server.quit()
-        
+
+    # 3. Verify the password by attempting an SMTP AUTH login against each mail
+    # backend (Coremail first, then Microsoft/Outlook). Whichever server accepts
+    # the credentials authenticates the user — covering mailboxes on either
+    # system. clean_email (whitespace-stripped) is sent to the server.
+    authenticated = False
+    smtp_auth_disabled = False
+    conn_error = ""
+    for srv in _MAIL_SERVERS:
+        ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"], clean_email, password)
+        if disabled:
+            smtp_auth_disabled = True
+        # Remember a connection-level failure (server unreachable) as distinct
+        # from an auth rejection, so we can surface it if nothing authenticates.
+        if not ok and not disabled and err and "535" not in err and "auth" not in err.lower():
+            conn_error = err
+        print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} disabled={disabled} "
+              f"err={err[:140]}", file=sys.stderr, flush=True)
+        if ok:
+            authenticated = True
+            break
+
+    if authenticated:
         # Special Easter Egg Logins (Must pass real SMTP Auth first!)
         if email_lower == "jerry@streamax.com":
             return True, "Jerry"
@@ -179,15 +253,19 @@ def verify_streamax_credentials(email, password):
             return True, "Hekun"
         elif email_lower == "zntang@streamax.com":
             return True, "ZNTang"
-
         return True, "Success"
-    except smtplib.SMTPAuthenticationError:
-        return False, "Email or password incorrect."
-    except Exception as e:
-        if '535' in str(e) or 'authentication failed' in str(e).lower():
-            return False, "Email or password incorrect."
-        else:
-            return False, f"Could not connect to the mail server: {str(e)}"
+
+    # Not accepted by any backend.
+    if conn_error:
+        return False, f"Could not connect to the mail server: {conn_error}"
+    if smtp_auth_disabled:
+        # An Outlook mailbox rejected us because SMTP AUTH is off. A Coremail
+        # user with a typo can also reach here (Coremail rejects, then Microsoft
+        # reports disabled), so keep it soft and actionable.
+        return False, ("Email or password incorrect. (If your mailbox is on "
+                       "Outlook and the password is right, SMTP sign-in may be "
+                       "disabled for your account — ask IT to enable SMTP AUTH.)")
+    return False, "Email or password incorrect."
 
 def render_login():
     # Inject Login Screen Specific CSS
