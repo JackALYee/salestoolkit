@@ -125,7 +125,7 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 - `ANTHROPIC_API_KEY` — org Claude key for Jerry GPT. With Jerry's multi-provider routing this is the **leadership-only** key (Claude models). Optional if `DEEPSEEK_API_KEY` is set (non-leadership users can run on DeepSeek alone).
 - `DEEPSEEK_API_KEY` — org DeepSeek key, available to **all** Jerry users; the only org-key model non-leadership may use. Jerry needs at least one of `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY`.
-- `JERRY_MODEL` — optional, leadership default, defaults to `claude-opus-4-8`
+- `JERRY_MODEL` — optional, leadership default, defaults to `claude-opus-5`. Retired Opus ids (`claude-opus-4-8/4-7/4-6/4-5`) set here are auto-upgraded to Opus 5 via `_LEGACY_MODEL_ALIASES` (logged to stderr) — otherwise a stale secret would name a model missing from `MODEL_OPTIONS` and the settings panel would silently downgrade leadership to DeepSeek. Update the secret to clear the warning.
 - `JERRY_DEEPSEEK_MODEL` — optional, defaults to `deepseek-v4-pro` (set this to DeepSeek's exact public model name if it differs)
 - `AUTH_SECRET` — required for session cookie signing (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`)
 - `JERRY_GPT_SHEET_ID` + `[gcp_service_account]` table — optional, enables Google Sheets logging for Jerry GPT

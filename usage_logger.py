@@ -60,9 +60,13 @@ HEADERS = [
 # can sum and pivot. Cache-read pricing is roughly 10% of fresh input pricing
 # (the cache-hit discount). Cache-creation is roughly 1.25x fresh input.
 PRICING = {
-    "claude-opus-4-8":           {"input": 15.00, "output": 75.00, "cache_read": 1.50,  "cache_creation": 18.75},
+    "claude-opus-5":             {"input":  5.00, "output": 25.00, "cache_read": 0.50,  "cache_creation":  6.25},
+    # NOTE: Opus 4.8 is $5/$25 (kept for historical rows / bring-your-own-key
+    # users). It was previously listed here at $15/$75 — those are Opus 4.1-era
+    # rates, which overstated logged leadership cost by ~3x.
+    "claude-opus-4-8":           {"input":  5.00, "output": 25.00, "cache_read": 0.50,  "cache_creation":  6.25},
     "claude-sonnet-4-6":         {"input":  3.00, "output": 15.00, "cache_read": 0.30,  "cache_creation":  3.75},
-    "claude-haiku-4-5-20251001": {"input":  0.80, "output":  4.00, "cache_read": 0.08,  "cache_creation":  1.00},
+    "claude-haiku-4-5-20251001": {"input":  1.00, "output":  5.00, "cache_read": 0.10,  "cache_creation":  1.25},
     # DeepSeek — ESTIMATE. Verify against current DeepSeek pricing and adjust;
     # cache_creation is unused for DeepSeek (we only get cache-hit counts).
     "deepseek-v4-pro":           {"input":  0.56, "output":  1.68, "cache_read": 0.07,  "cache_creation":  0.56},

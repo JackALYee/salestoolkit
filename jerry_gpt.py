@@ -115,7 +115,7 @@ def _provider_for(model_id: str) -> str:
 
 # Default model differs by clearance: leadership lands on Claude Opus, everyone
 # else on DeepSeek (the only org-key model non-leadership may use).
-DEFAULT_MODEL = "claude-opus-4-8"            # leadership default
+DEFAULT_MODEL = "claude-opus-5"              # leadership default
 NON_LEADERSHIP_DEFAULT = _deepseek_model()   # everyone-else default
 
 # --- Model catalog (display label -> model id) ---
@@ -123,7 +123,7 @@ NON_LEADERSHIP_DEFAULT = _deepseek_model()   # everyone-else default
 # DeepSeek leads the list because it is the universally-available option.
 MODEL_OPTIONS = {
     "DeepSeek V4 Pro": _deepseek_model(),
-    "Opus 4.8": "claude-opus-4-8",
+    "Opus 5": "claude-opus-5",
     "Sonnet 4.6": "claude-sonnet-4-6",
     "Haiku 4.5": "claude-haiku-4-5-20251001",
 }
@@ -555,14 +555,34 @@ def _allowed_models(is_leadership: bool) -> dict:
     return allowed
 
 
+# Retired Claude ids → their current replacement. A stale `JERRY_MODEL` secret
+# (e.g. left at claude-opus-4-8 after the Opus 5 upgrade) would otherwise name a
+# model that is no longer in MODEL_OPTIONS — and _render_settings_panel treats
+# an unknown id as "not allowed" and silently downgrades the user to DeepSeek.
+# Mapping here keeps leadership on Opus without needing a secrets edit first.
+_LEGACY_MODEL_ALIASES = {
+    "claude-opus-4-8": "claude-opus-5",
+    "claude-opus-4-7": "claude-opus-5",
+    "claude-opus-4-6": "claude-opus-5",
+    "claude-opus-4-5": "claude-opus-5",
+}
+
+
 def _get_model() -> str:
+    """Leadership's Claude model id: the JERRY_MODEL secret/env if set, else
+    DEFAULT_MODEL. Retired ids are transparently upgraded (see aliases above)."""
+    m = None
     try:
         m = st.secrets.get("JERRY_MODEL")
-        if m:
-            return m
     except Exception:
         pass
-    return os.environ.get("JERRY_MODEL", DEFAULT_MODEL)
+    if not m:
+        m = os.environ.get("JERRY_MODEL", DEFAULT_MODEL)
+    resolved = _LEGACY_MODEL_ALIASES.get(str(m).strip(), str(m).strip())
+    if resolved != str(m).strip():
+        print(f"[JERRY_GPT] JERRY_MODEL='{m}' is retired — using '{resolved}'. "
+              f"Update the secret to silence this.", file=sys.stderr, flush=True)
+    return resolved or DEFAULT_MODEL
 
 
 # ---------------------------------------------------------------------------
