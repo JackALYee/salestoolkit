@@ -1,0 +1,25 @@
+# Streamlit server config. Safe on Streamlit Community Cloud AND in a container
+# behind a reverse proxy (Cloudflare -> Cloud Run / Render / Fly / nginx).
+[server]
+headless = true          # never try to open a browser / prompt for an email
+address = "0.0.0.0"      # listen on all interfaces so the container is reachable
+enableCORS = false       # required when a proxy terminates TLS on another host
+
+# ⚠️ If Jerry GPT's paperclip file-upload fails after going behind the proxy
+# ("AxiosError 403" / upload just spins), uncomment the line below. Streamlit's
+# XSRF check compares the origin it thinks it has against the proxied one and
+# can reject uploads. Turning it off is a real (small) security tradeoff — the
+# app is login-gated, so prefer fixing it with a Cloudflare Access policy first.
+# enableXsrfProtection = false
+
+maxUploadSize = 25       # MB — matches the file-upload feature in Jerry GPT
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#2AF598"
+backgroundColor = "#050810"
+secondaryBackgroundColor = "#0B1221"
+textColor = "#E6EAF0"

@@ -255,7 +255,18 @@ def _get_gspread_client():
     if not _GSPREAD_AVAILABLE:
         return None
     try:
-        sa_info = st.secrets.get("gcp_service_account")
+        # st.secrets holds this as a TOML table on Streamlit Cloud. Off-Cloud
+        # (Docker / Cloud Run / Render) there is no secrets.toml, so also accept
+        # the whole service-account JSON in a GCP_SERVICE_ACCOUNT_JSON env var.
+        sa_info = None
+        try:
+            sa_info = st.secrets.get("gcp_service_account")
+        except Exception:
+            pass
+        if not sa_info:
+            raw = os.environ.get("GCP_SERVICE_ACCOUNT_JSON", "").strip()
+            if raw:
+                sa_info = json.loads(raw)
         if not sa_info:
             return None
         scopes = [

@@ -1,0 +1,16 @@
+.git
+.gitignore
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+env.txt
+# NEVER bake local secrets into the image — provide them as env vars instead.
+.streamlit/secrets.toml
+.streamlit/secrets.toml.example
+_scrape_dump/
+*.bundle
+.DS_Store
