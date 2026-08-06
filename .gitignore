@@ -21,3 +21,6 @@ venv/
 _scrape_dump/
 .scrape_venv/
 scrape_log.txt
+
+# Generated static build (build_static.py) - regenerate, do not commit
+site/
