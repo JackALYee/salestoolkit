@@ -73,7 +73,7 @@
 - **Limitation (disclose honestly):** does NOT support refrigerated/reefer trailers
 - Proven verticals (anonymise externally): last-mile parcel (FedEx POC), trailer leasing, trailer OEMs (Krone POC), semiconductor (TSMC confirmed — unsecured wafer cart detection), high-value goods (Maotai confirmed — cargo switching prevention)
 
-**Sentinel exterior camera** (NEW — June 2026) — standalone exterior-mounted, first-of-its-kind:
+**Sentinel exterior camera** (model **S5**; NEW — June 2026) — standalone exterior-mounted, first-of-its-kind. *Full spec, the public microsite at https://streamax-sentinel.com, downloadable docs and the named field cases are in `18_sentinel_s5.md`.*
 - Built-in cellular, GPS, storage — no cable to cab
 - **Blacklight Ultra (0.02 LUX)** — clear colour video in near-pitch-black
 - **Always-on Video (500mW)** — keeps recording after ignition off

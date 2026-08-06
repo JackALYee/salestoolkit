@@ -129,7 +129,9 @@ Samsara and Motive provide dashcams and basic video. They do **NOT** provide:
 
 ### Sentinel — the wedge product (June 2026)
 
-Standalone exterior camera. Four advantages no one else can match:
+Standalone exterior camera, model **S5**. Four advantages no one else can match
+(spec, install reality, the customer-shareable microsite at
+https://streamax-sentinel.com and the Tanzania/Kenya field cases: `18_sentinel_s5.md`):
 
 1. **Blacklight Ultra (0.02 LUX):** Clear colour video in near pitch-black. Most theft is at night — Sentinel identifies the thief, not just detects movement.
 2. **Door opener:** Even when the cab has Samsara or Lytx, Sentinel deploys independently. Gets Streamax onto the vehicle. Video merges on FT Cloud — no additional sub if already on Pro.
