@@ -76,6 +76,22 @@ from fastapi.staticfiles import StaticFiles                              # noqa:
 import login as _login                                                   # noqa: E402
 import jerry_gpt as _jerry                                               # noqa: E402
 
+# Optional side-cars — same graceful-degradation contract as the Streamlit app:
+# if a dependency or secret is missing, Jerry still works, just without that
+# feature. Never let an import here take the server down.
+try:
+    import chat_history as _history
+except Exception:                                                        # noqa: BLE001
+    _history = None
+try:
+    import file_io as _file_io
+except Exception:                                                        # noqa: BLE001
+    _file_io = None
+try:
+    import usage_logger as _usage
+except Exception:                                                        # noqa: BLE001
+    _usage = None
+
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
 TEMPLATES = ROOT / "templates"
@@ -228,6 +244,78 @@ def api_me(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Chat history (Postgres via chat_history.py — optional)
+# ---------------------------------------------------------------------------
+
+def _history_on() -> bool:
+    try:
+        return _history is not None and _history.is_configured()
+    except Exception:
+        return False
+
+
+@app.get("/api/history")
+def api_history(request: Request):
+    """Most recent conversation for this user, so a reload resumes it."""
+    user = require_user(request)
+    if not _history_on():
+        return {"enabled": False, "messages": [], "session_id": None}
+    try:
+        messages, session_id = _history.load_recent_session(user)
+    except Exception as exc:
+        print(f"[history] load failed: {exc}", file=sys.stderr, flush=True)
+        messages, session_id = [], None
+    return {
+        "enabled": True,
+        "messages": messages or [],
+        "session_id": session_id or _history.new_session_id(),
+    }
+
+
+@app.get("/api/sessions")
+def api_sessions(request: Request):
+    user = require_user(request)
+    if not _history_on():
+        return {"enabled": False, "sessions": []}
+    try:
+        return {"enabled": True, "sessions": _history.list_past_sessions(user, limit=20)}
+    except Exception as exc:
+        print(f"[history] list failed: {exc}", file=sys.stderr, flush=True)
+        return {"enabled": True, "sessions": []}
+
+
+@app.get("/api/session/{session_id}")
+def api_session(session_id: str, request: Request):
+    user = require_user(request)
+    if not _history_on():
+        return {"messages": []}
+    try:
+        return {"messages": _history.load_session_by_id(user, session_id) or []}
+    except Exception as exc:
+        print(f"[history] load_by_id failed: {exc}", file=sys.stderr, flush=True)
+        return {"messages": []}
+
+
+@app.post("/api/session/new")
+def api_session_new(request: Request):
+    require_user(request)
+    sid = _history.new_session_id() if _history is not None else str(int(time.time()))
+    return {"session_id": sid}
+
+
+@app.delete("/api/session/{session_id}")
+def api_session_delete(session_id: str, request: Request):
+    user = require_user(request)
+    if not _history_on():
+        return {"ok": False}
+    try:
+        return {"ok": bool(_history.delete_session(user, session_id))}
+    except Exception as exc:
+        print(f"[history] delete failed: {exc}", file=sys.stderr, flush=True)
+        return {"ok": False}
+
+
+# ---------------------------------------------------------------------------
 # Jerry chat — keys stay server-side; response streams back as SSE
 # ---------------------------------------------------------------------------
 
@@ -236,6 +324,36 @@ MAX_TOKENS = {"Short": 1024, "Medium": 4096, "Long": 8192}
 
 def _sse(obj: dict) -> str:
     return f"data: {json.dumps(obj)}\n\n"
+
+
+def _attach_files(text: str, files: list) -> tuple:
+    """Turn browser-uploaded files into Anthropic content blocks.
+
+    `files` is [{name, mime, data}] where data is base64 (from FileReader).
+    Reuses file_io.file_to_block so images/PDFs go native and Office files are
+    text-extracted — exactly as the Streamlit uploader did. Returns
+    (api_content, note) where note summarises attachments for the transcript.
+    """
+    if not files or _file_io is None:
+        return (text or ""), ""
+    blocks, names = [], []
+    if text:
+        blocks.append({"type": "text", "text": text})
+    for f in files:
+        name = (f.get("name") or "file").strip()
+        try:
+            raw = base64.b64decode((f.get("data") or "").split(",")[-1])
+        except Exception:
+            continue
+        try:
+            blocks.append(_file_io.file_to_block(name, f.get("mime") or "", raw))
+            names.append(name)
+        except Exception as exc:
+            print(f"[upload] {name}: {exc}", file=sys.stderr, flush=True)
+    if not blocks:
+        return (text or ""), ""
+    note = ("\n\n*attached: " + ", ".join(names) + "*") if names else ""
+    return blocks, note
 
 
 @app.post("/api/chat")
@@ -260,7 +378,20 @@ async def api_chat(request: Request):
     if not key:
         raise HTTPException(503, f"no API key configured for provider '{provider}'")
 
-    max_tokens = MAX_TOKENS.get(body.get("length") or "Medium", 4096)
+    length = body.get("length") or "Medium"
+    max_tokens = MAX_TOKENS.get(length, 4096)
+    session_id = body.get("session_id") or ""
+
+    # Attachments ride on the CURRENT turn only — stored history keeps a
+    # text-only note, so binaries aren't re-sent on every later turn.
+    files = body.get("files") or []
+    question_text = ""
+    if messages and messages[-1].get("role") == "user":
+        question_text = messages[-1].get("content") or ""
+        if files:
+            content, note = _attach_files(question_text, files)
+            messages = messages[:-1] + [{"role": "user", "content": content}]
+            question_text = question_text + note
 
     system_blocks = list(_jerry._load_system_blocks())
     try:
@@ -272,6 +403,8 @@ async def api_chat(request: Request):
         print(f"[chat] clearance block failed: {exc}", file=sys.stderr, flush=True)
 
     def stream():
+        answer = ""
+        usage = {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}
         try:
             if provider == "deepseek":
                 from openai import OpenAI
@@ -284,13 +417,21 @@ async def api_chat(request: Request):
                 ]
                 resp = client.chat.completions.create(
                     model=model, messages=msgs, max_tokens=max_tokens, stream=True,
+                    stream_options={"include_usage": True},
                 )
                 for chunk in resp:
+                    u = getattr(chunk, "usage", None)
+                    if u:
+                        hit = getattr(u, "prompt_cache_hit_tokens", 0) or 0
+                        usage["cache_read"] = hit
+                        usage["input"] = max((getattr(u, "prompt_tokens", 0) or 0) - hit, 0)
+                        usage["output"] = getattr(u, "completion_tokens", 0) or 0
                     choices = getattr(chunk, "choices", None) or []
                     if not choices:
                         continue
                     piece = getattr(choices[0].delta, "content", None)
                     if piece:
+                        answer += piece
                         yield _sse({"delta": piece})
             else:
                 import httpx
@@ -304,11 +445,59 @@ async def api_chat(request: Request):
                     system=system_blocks, messages=messages,
                 ) as s:
                     for piece in s.text_stream:
+                        answer += piece
                         yield _sse({"delta": piece})
-            yield _sse({"done": True, "model": model})
+                    try:
+                        u = s.get_final_message().usage
+                        usage = {
+                            "input": getattr(u, "input_tokens", 0) or 0,
+                            "output": getattr(u, "output_tokens", 0) or 0,
+                            "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+                            "cache_creation": getattr(u, "cache_creation_input_tokens", 0) or 0,
+                        }
+                    except Exception:
+                        pass
+            yield _sse({"done": True, "model": model, "session_id": session_id,
+                        "usage": usage})
         except Exception as exc:
             print(f"[chat] {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
             yield _sse({"error": f"{type(exc).__name__}: {exc}"})
+        finally:
+            # Post-work is best-effort and must never break the response the
+            # user already received — each sink is isolated.
+            if answer:
+                cost = 0.0
+                if _usage is not None:
+                    try:
+                        cost = _usage._estimate_cost_usd(
+                            model, usage["input"], usage["output"],
+                            usage["cache_read"], usage["cache_creation"])
+                    except Exception:
+                        pass
+                if _history_on() and session_id:
+                    try:
+                        _history.save_turn(
+                            user_email=user, user_name=user, session_id=session_id,
+                            user_message=question_text, assistant_message=answer,
+                            model=model, length=length,
+                            input_tokens=usage["input"], output_tokens=usage["output"],
+                            cache_read_tokens=usage["cache_read"],
+                            cache_creation_tokens=usage["cache_creation"],
+                            cost_usd=cost,
+                        )
+                    except Exception as exc:
+                        print(f"[history] save failed: {exc}", file=sys.stderr, flush=True)
+                if _usage is not None:
+                    try:
+                        _usage.log_query(
+                            question=question_text, model=model, length=length,
+                            answer=answer, is_leadership=is_leadership,
+                            input_tokens=usage["input"], output_tokens=usage["output"],
+                            cache_read_tokens=usage["cache_read"],
+                            cache_creation_tokens=usage["cache_creation"],
+                        )
+                    except Exception as exc:
+                        print(f"[usage] log failed: {exc}", file=sys.stderr, flush=True)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
