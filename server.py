@@ -116,6 +116,14 @@ app = FastAPI(title="Streamax Sales Toolkit", docs_url=None, redoc_url=None)
 if (ROOT / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=str(ROOT / "assets")), name="assets")
 
+# Streamax Sales Configurator — a separate project by Kevin Wang, vendored into
+# ./configurator by sync_configurator.sh so it deploys alongside the toolkit.
+# Served as-is (html=True makes /configurator/ resolve to its index.html).
+if (ROOT / "configurator").is_dir():
+    app.mount("/configurator",
+              StaticFiles(directory=str(ROOT / "configurator"), html=True),
+              name="configurator")
+
 
 # ---------------------------------------------------------------------------
 # Session cookie — HMAC-signed "user|expiry", same trust model as the old

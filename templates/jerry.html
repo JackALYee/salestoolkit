@@ -75,7 +75,9 @@
   .welcome{text-align:center;color:var(--grey);padding:40px 12px}
   .welcome img{width:68px;height:68px;border-radius:50%;object-fit:cover;margin-bottom:14px;
                border:2px solid rgba(42,245,152,.45)}
-  .welcome h2{color:var(--white);font-size:1.55rem;margin:0 0 10px}
+  .welcome h2{color:var(--white);font-size:1.55rem;margin:0 0 12px}
+  .welcome .intro{max-width:610px;margin:0 auto 11px;line-height:1.65;font-size:.9rem;text-align:left}
+  .welcome .intro.dim{color:#7d8798;font-size:.85rem}
   .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
   .chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;
         padding:9px 14px;font-size:.83rem;color:var(--white);cursor:pointer}
@@ -335,8 +337,18 @@
     $('thread').innerHTML =
       '<div class="welcome" id="welcome"><img src="' + AVATAR + '" alt="Jerry">' +
       '<h2>What would Jerry say?</h2>' +
-      '<p>Ask about positioning, the competitive landscape, product portfolio,<br>' +
-      'objection handling, or any deal you\'re prepping for.</p><div class="chips">' +
+      '<p class="intro">Jerry is Streamax\'s Product Marketing Director — the one who has sat ' +
+      'through the TSP negotiations, the fleet pilots that nearly died on driver pushback, and ' +
+      'the RFPs written around somebody else\'s spec sheet. This is him, on call.</p>' +
+      '<p class="intro">He thinks in outcomes, not feature lists: what the customer\'s pain ' +
+      'actually costs them, which competitor claim is bluster, who in the org can really sign, ' +
+      'and what you should say next. He knows the whole portfolio, the competitive landscape ' +
+      'down to pricing posture, and the Solution Selling playbook — and he will tell you plainly ' +
+      'when you are walking into a Column B deal you cannot win.</p>' +
+      '<p class="intro dim">Bring him a real deal. Attach an RFP, a spec sheet or a photo of an ' +
+      'install and he will read it. Ask him to draft the email, build the business case, or ' +
+      'quiz you before a customer call.</p>' +
+      '<div class="chips">' +
       '<div class="chip">Give me the 60-second TSP pitch.</div>' +
       '<div class="chip">How do I position Streamax against Motive in North America?</div>' +
       '<div class="chip">Diagnose my deal with the 9-Block model.</div>' +

@@ -31,6 +31,11 @@ except ImportError:
         _STREAMAXPEDIA_FALLBACK = "<div id='streamaxpedia' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ streamaxpedia_app.py not found</h2></div>"
 
 try:
+    from configurator_tab import content as configurator_content
+except ImportError:
+    configurator_content = "<div id='configurator' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ configurator_tab.py not found</h2></div>"
+
+try:
     from prospecting_flow import content as prospecting_flow_content
 except ImportError:
     prospecting_flow_content = "<div id='prospecting-flow' class='content-section'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ prospecting_flow.py not found</h2></div>"
@@ -1231,12 +1236,18 @@ else:
 
     <header>
         <div class="container">
-            <div class="header-subtitle fade-up">Streamax Sales Toolkit</div>
+            <div class="fade-up" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
+                <img src="/assets/streamax%20logo.png" alt="Streamax"
+                     style="height:34px; width:auto; object-fit:contain;"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='none';">
+                <span style="width:1px; height:26px; background:rgba(255,255,255,0.16);"></span>
+                <div class="header-subtitle" style="margin:0;">Streamax Sales Toolkit</div>
+            </div>
             <h1 class="fade-up" style="font-size: 3rem; line-height: 1.1;">
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 5.13.19 • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.14.20 • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
@@ -1432,6 +1443,9 @@ else:
             </button>
             <button class="nav-btn" onclick="switchTab('onboarding', this)">
                 <i data-lucide="graduation-cap"></i> Sales Onboarding
+            </button>
+            <button class="nav-btn" onclick="switchTab('configurator', this)">
+                <i data-lucide="settings-2"></i> Sales Configurator
             </button>
         </nav>
 """
@@ -1872,6 +1886,7 @@ else:
         presentation_content + "\n" +
         value_calculator_content + "\n" +
         email_tool_content + "\n" +
+        configurator_content + "\n" +
         html_tail
     )
 

@@ -1,0 +1,4 @@
+{
+  "_说明": "手动补图通道2：把 SKU 映射到项目内任意已有图片路径（可多张）。适合复用别的产品线已有的图。通道1更简单：直接把照片命名为 <SKU>.png 放进 assets/products/，无需改本文件。改完跑 node scripts/build_product_db.js。",
+  "_示例": { "5152119100007": ["North America Sales List-FILE/AD Plus 2_0/Image/33-C29N-image.png"] }
+}

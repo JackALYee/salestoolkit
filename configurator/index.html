@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Streamax Sales Configurator</title>
+    <script>document.documentElement.classList.add("app-loading");</script>
+    <link rel="stylesheet" href="./styles.css?v=20260715-7" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-main">
+          <div class="topbar">
+            <div class="topbar-brand">
+              <a class="brand-logo" href="./index.html" aria-label="Streamax Sales Configurator home">
+                <img src="./assets/brand/streamax-logo-white.png" alt="Streamax" />
+              </a>
+              <p id="hero-eyebrow" class="eyebrow">AD Plus 2.0</p>
+            </div>
+            <div class="topbar-actions">
+              <button id="app-version" class="version-badge version-button" type="button" aria-haspopup="dialog">Beta B1.0.1</button>
+              <button id="annotation-button" class="feedback-button" type="button" aria-pressed="false">Annotate</button>
+              <button id="feedback-button" class="feedback-button" type="button">Send feedback</button>
+            </div>
+          </div>
+          <div class="hero-body">
+            <h1 id="hero-title">一步一步生成 AD Plus 2.0 方案</h1>
+            <p id="hero-intro" class="intro">
+              只聚焦一个产品，让销售或客户按步骤完成选型，自动生成完整清单。
+            </p>
+            <div class="hero-highlights">
+              <div class="highlight-pill" id="highlight-1">只展示当前需要决策的内容</div>
+              <div class="highlight-pill" id="highlight-2">自动带出必选线材与关联件</div>
+              <div class="highlight-pill" id="highlight-3">最终可直接导出给销售或技术支持</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-note">
+          <span id="hero-note-label" class="step">What This Does</span>
+          <strong id="hero-note-title">面向客户的 AD Plus 2.0 选型向导</strong>
+          <p id="hero-note-body">
+            这不是内部物料表视图，而是把复杂的产品清单拆成可以一步一步完成的选择流程。
+          </p>
+        </div>
+      </header>
+
+      <main class="wizard-shell">
+        <section class="wizard-main panel">
+          <div class="wizard-top">
+            <div id="step-pills" class="step-pills"></div>
+            <div id="step-copy" class="step-copy"></div>
+          </div>
+
+          <section id="wizard-stage" class="wizard-stage"></section>
+
+          <footer class="wizard-actions">
+            <button id="prev-step" class="secondary" type="button">上一步</button>
+            <button id="next-step" class="primary" type="button">下一步</button>
+          </footer>
+        </section>
+
+        <aside class="summary panel">
+          <div class="panel-head">
+            <span id="summary-step" class="step">Summary</span>
+            <h2 id="summary-title">当前方案清单</h2>
+          </div>
+          <div id="summary-meta" class="summary-meta"></div>
+          <div id="cart-list" class="cart-list"></div>
+          <div class="cart-actions">
+            <button id="export-excel" class="primary" type="button">Export Excel</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <dialog id="release-dialog" class="release-dialog" aria-labelledby="release-title">
+      <div class="release-dialog-head">
+        <div>
+          <p class="step">Release notes</p>
+          <h2 id="release-title">What changed</h2>
+        </div>
+        <button class="dialog-close" type="button" data-release-close aria-label="Close release notes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" /></svg></button>
+      </div>
+      <div id="release-content" class="release-content"></div>
+      <p class="release-contact">Questions or feedback? Contact <a href="mailto:kevinwang@Streamax.com">kevinwang@Streamax.com</a>.</p>
+      <div class="feedback-actions"><button class="secondary" type="button" data-release-close>Close</button></div>
+    </dialog>
+
+    <dialog id="feedback-dialog" class="feedback-dialog" aria-labelledby="feedback-title">
+      <form id="feedback-form" method="dialog">
+        <div class="feedback-dialog-head">
+          <div>
+            <p class="step">Beta feedback</p>
+            <h2 id="feedback-title">Comment on this page</h2>
+          </div>
+          <button class="dialog-close" type="button" data-feedback-close aria-label="Close feedback form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" /></svg></button>
+        </div>
+        <p class="feedback-help">Tell us what is unclear, incorrect, or missing. The active product and selected items will be attached automatically.</p>
+        <label for="feedback-message">Your comment</label>
+        <textarea id="feedback-message" name="message" maxlength="2000" required placeholder="For example: this cable should be included automatically."></textarea>
+        <label for="feedback-contact">Email or name (optional)</label>
+        <input id="feedback-contact" name="contact" maxlength="200" autocomplete="email" placeholder="So we can follow up" />
+        <p id="feedback-status" class="feedback-status" aria-live="polite"></p>
+        <div class="feedback-actions">
+          <button class="secondary" type="button" data-feedback-close>Cancel</button>
+          <button class="primary" type="submit">Send feedback</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="annotation-dialog" class="feedback-dialog" aria-labelledby="annotation-title">
+      <form id="annotation-form" method="dialog">
+        <div class="feedback-dialog-head">
+          <div>
+            <p class="step">Element annotation</p>
+            <h2 id="annotation-title">Comment on this element</h2>
+          </div>
+          <button class="dialog-close" type="button" data-annotation-close aria-label="Close annotation form"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18" /></svg></button>
+        </div>
+        <div id="annotation-target" class="annotation-target"></div>
+        <label for="annotation-message">Your comment</label>
+        <textarea id="annotation-message" name="message" maxlength="2000" required placeholder="Explain what should change on this element."></textarea>
+        <label for="annotation-contact">Email or name (optional)</label>
+        <input id="annotation-contact" name="contact" maxlength="200" autocomplete="email" placeholder="So we can follow up" />
+        <p id="annotation-status" class="feedback-status" aria-live="polite"></p>
+        <div class="feedback-actions">
+          <button class="secondary" type="button" data-annotation-close>Cancel</button>
+          <button class="primary" type="submit">Send annotation</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./catalog-data.js?v=20260710-2"></script>
+    <!-- 按编号顺序加载，共享全局作用域，顺序不可调换 -->
+    <script src="./js/01-bootstrap-i18n.js?v=20260715-6"></script>
+    <script src="./js/02-dom-state.js?v=20260714-5"></script>
+    <script src="./js/03-data-adplus.js?v=20260710-1"></script>
+    <script src="./js/04-product-meta.js?v=20260714-4"></script>
+    <script src="./js/05-selection-logic.js?v=20260714-2"></script>
+    <script src="./js/06-cart.js?v=20260714-2"></script>
+    <script src="./js/07-render-common.js?v=20260714-6"></script>
+    <script src="./js/08-logic-mseries.js?v=20260710-1"></script>
+    <script src="./js/09-render-avm-c6.js?v=20260712-7"></script>
+    <script src="./js/10-render-mseries.js?v=20260710-1"></script>
+    <script src="./js/11-render-adplus.js?v=20260710-1"></script>
+    <script src="./js/12-main.js?v=20260715-9"></script>
+  </body>
+</html>

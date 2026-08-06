@@ -36,6 +36,7 @@ SECTION_MODULES = [
     ("discovery_meeting", "content"),
     ("presentation", "content"),
     ("value_calculator", "content"),
+    ("configurator_tab", "content"),
 ]
 
 
