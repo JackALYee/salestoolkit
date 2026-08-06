@@ -17,7 +17,12 @@
 # js/02-dom-state.js and js/04-product-meta.js reference ~246 files inside it by
 # relative path, so leaving it out renders every product card with a broken
 # image. It was excluded on the first vendoring pass and that is exactly what
-# went wrong. Verify after syncing with ./sync_configurator.sh --check.
+# went wrong.
+#
+# After copying, product images are downscaled + re-encoded by
+# scripts/optimize_configurator_images.py (source exports run to 8192px for a
+# 240px slot). That has to happen HERE rather than as a one-off edit of
+# configurator/, because this script overwrites that tree every time it runs.
 set -euo pipefail
 
 SRC="${1:-$HOME/Desktop/Streamax/Product-sales-kit}"
@@ -41,6 +46,21 @@ for item in index.html styles.css catalog-data.js js data vendor assets \
   fi
 done
 
+# Shrink the freshly-copied product images. Fails loudly rather than silently
+# re-committing ~35 MB of oversized PNGs; pass --skip-optimize to bypass.
+if [ "${SKIP_OPTIMIZE:-0}" = "1" ] || [ "${2:-}" = "--skip-optimize" ]; then
+  echo "  SKIPPING image optimisation (--skip-optimize)"
+else
+  echo ""
+  echo "optimising product images..."
+  "${PYTHON:-python3}" "$(dirname "$0")/scripts/optimize_configurator_images.py" || {
+    echo "" >&2
+    echo "ERROR: image optimisation failed. Fix it, or re-run with --skip-optimize" >&2
+    echo "       if you deliberately want the full-size source images." >&2
+    exit 1
+  }
+fi
+
 REV="$(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DATE="$(date +%Y-%m-%d)"
 cat > "$DEST/VENDORED.md" <<EOF
@@ -60,6 +80,10 @@ on the next sync.
 The bulky \`North America Sales List-FILE/\` folder is the product **image
 library**, not source material — ~246 files are referenced by relative path from
 \`catalog-data.js\` and \`js/\`. It must ship, or every product card renders broken.
+Those images are downscaled to a 1200px long edge and re-encoded on every sync
+(\`scripts/optimize_configurator_images.py\`) — the source exports are up to
+8192px for a slot the CSS renders at 240px. Fix the export upstream and this
+step becomes a no-op.
 
 Note: the configurator's beta **Annotate / Send feedback** features call
 \`/api/annotations\`, \`/api/feedback\` and \`/api/solutions\`, which are served by

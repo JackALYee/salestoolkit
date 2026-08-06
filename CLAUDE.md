@@ -11,12 +11,13 @@ A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Str
 The main header (`app.py`, the `header-meta` div — search `Version `) shows `Version X.Y.Z • 货运产品线 Trucking BU • <Month Year>`. **Every time you make a change to this repo, before finishing, update that line in the same edit batch.** This is a hard, standing rule — never skip it, never ask whether to do it.
 
 **Version scheme `X.Y.Z`:**
-- **X** — the **current month number** (January = 1 … August = 8 … December = 12). Set it to the month the change is made, so the version reads as a date stamp alongside the trailing `<Month Year>`. It is NOT a semantic major version — don't reserve it for milestones. When the month rolls over, the next change bumps X to the new month (e.g. August `8.14.20` → the first September change becomes `9.15.20`) and Y/Z keep counting up as normal.
+- **X** — the **current month number** (January = 1 … August = 8 … December = 12). Set it to the month the change is made, so the version reads as a date stamp alongside the trailing `<Month Year>`. It is NOT a semantic major version — don't reserve it for milestones.
+- **On a month rollover, X becomes the new month and Y and Z BOTH RESET TO 0**, then start counting again from there. Y and Z are per-month change counters, not running totals. So August `8.17.22` → the first September change is `9.1.0` if it touches only the toolkit, `9.0.1` if only Jerry, `9.1.1` if both. Check the current date before bumping — if the last version's X is not this month, reset rather than increment.
 - **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `sales_onboarding.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
 - **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`, plus the sales-method modules (`marketing_skills.py`/`marketing_skills/`, `sales_process_skills.py`/`sales_process_skills/`, `topology.py`).
 
 Rules of thumb:
-- A change that spans both surfaces bumps **both** Y and Z (+1 each).
+- A change that spans both surfaces bumps **both** Y and Z (+1 each) — after any month reset.
 - A change to neither (docs-only, CLAUDE.md, requirements housekeeping) needs no bump — but if in doubt, bump the surface most affected.
 - One logical change = +1 (not +1 per file touched).
 - **Always** update the trailing `<Month Year>` to the current month/year of the change (e.g. `June 2026`).
@@ -127,7 +128,7 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 **It is a separate project owned by Kevin Wang (kevinwang@streamax.com) — credit him wherever it is surfaced, and send product-rule/SKU issues to him, not into this repo.** Source lives at `~/Desktop/Streamax/Product-sales-kit`.
 
-Its runtime files are vendored into `./configurator` (≈80 MB) — Render builds from *this* repo and can't see the other checkout: `index.html`, `styles.css`, `catalog-data.js`, `js/`, `data/`, `vendor/`, `assets/`, **and `North America Sales List-FILE/`**. `server/`, `scripts/`, `docs/` and the 13 MB source `.xlsx` are excluded.
+Its runtime files are vendored into `./configurator` (≈45 MB after image optimisation) — Render builds from *this* repo and can't see the other checkout: `index.html`, `styles.css`, `catalog-data.js`, `js/`, `data/`, `vendor/`, `assets/`, **and `North America Sales List-FILE/`**. `server/`, `scripts/`, `docs/` and the 13 MB source `.xlsx` are excluded.
 
 ⚠️ **`North America Sales List-FILE/` is required, despite the name and the ~72 MB.** It is not a source folder — it is the product image library. `catalog-data.js`, `js/02-dom-state.js` and `js/04-product-meta.js` reference **246 files** inside it by *relative* path (many with spaces and CJK segments like `图片/`, which is fine — StaticFiles URL-decodes them). Omitting it renders every product card with a broken image, which is exactly what happened on the first vendoring pass. `sync_configurator.sh` now resolves every referenced path after copying and exits non-zero if any is missing — that check is the guard against repeating it.
 

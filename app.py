@@ -312,6 +312,8 @@ else:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streamax Sales Toolkit</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" href="/assets/favicon.png">
     
     <!-- Tailwind CSS (for Layouts) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1247,7 +1249,7 @@ else:
                 <span class="gradient-text">North America</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.16.21 • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.17.22 • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
