@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 import smtplib
 import ssl
 import sys
@@ -159,12 +160,26 @@ def _grant_vip(name_or_email: str) -> None:
 # allows SMTP AUTH (basic auth) AND no MFA / Conditional Access blocks it.
 # Microsoft disables SMTP AUTH by default on modern M365 tenants; if Streamax's
 # tenant has it off, this check will reject real Outlook users (look for
-# "disabled=True" / 5.7.139 in the [LOGIN] stderr lines) and the proper fix is
-# OAuth2 "Sign in with Microsoft", which is a larger change than this SMTP check.
+# "disabled=True" / 5.7.139 in the [LOGIN] stderr lines).
+#
+# ➜ The supported route for those users is "Sign in with Microsoft" — the OIDC
+#   flow in `ms_auth.py`, wired into the HTML server (`server.py`). It needs an
+#   Entra app registration; see the "Microsoft sign-in" section of CLAUDE.md.
+#   This SMTP attempt is kept as a harmless fallback for any mailbox where basic
+#   auth does still work, and is skipped entirely when MS_SMTP_AUTH=0.
 _MAIL_SERVERS = (
     {"label": "coremail",  "host": "mail.streamax.com",  "port": 465, "mode": "ssl"},
     {"label": "microsoft", "host": "smtp.office365.com", "port": 587, "mode": "starttls"},
 )
+
+
+def _mail_servers():
+    """Backends to try, in order. Set MS_SMTP_AUTH=0 to stop probing Microsoft
+    once "Sign in with Microsoft" is live — the probe is dead weight (and ~5s of
+    latency on every failed sign-in) on a tenant that blocks basic auth."""
+    if (os.environ.get("MS_SMTP_AUTH", "1").strip().lower() in ("0", "false", "no", "off")):
+        return tuple(s for s in _MAIL_SERVERS if s["label"] != "microsoft")
+    return _MAIL_SERVERS
 
 
 def _smtp_auth(host, port, mode, email, password, timeout=10):
@@ -231,7 +246,7 @@ def verify_streamax_credentials(email, password):
     authenticated = False
     smtp_auth_disabled = False
     conn_error = ""
-    for srv in _MAIL_SERVERS:
+    for srv in _mail_servers():
         ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"], clean_email, password)
         if disabled:
             smtp_auth_disabled = True

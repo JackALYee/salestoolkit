@@ -43,6 +43,17 @@
        background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.35);color:#ff8b95}
   .err.show{display:block}
   .foot{text-align:center;color:#5c6880;font-size:.75rem;margin-top:22px}
+  .or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;
+      color:#5c6880;font-size:.72rem;text-transform:uppercase;letter-spacing:1px}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.1)}
+  .msbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+         padding:11px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.92rem;
+         color:var(--white);background:rgba(255,255,255,.05);
+         border:1px solid rgba(255,255,255,.14);transition:.25s}
+  .msbtn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.28);
+               transform:translateY(-2px)}
+  .msbtn svg{flex:none}
+  .hint{text-align:center;color:#5c6880;font-size:.72rem;margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -63,11 +74,31 @@
       <input id="password" name="password" type="password" placeholder="••••••••" required>
       <button id="btn" type="submit">Authenticate</button>
       <div class="err" id="err"></div>
+      <!--MS_SIGNIN-->
     </form>
     <p class="foot">Verified against the Streamax mail server. Credentials are never stored.</p>
   </div>
 <script>
   var f = document.getElementById('f'), btn = document.getElementById('btn'), err = document.getElementById('err');
+
+  // Where to land after signing in (/login?next=/jerry). Captured before the
+  // error handler below rewrites the URL. Must stay a same-site absolute path:
+  // "//evil.com" is protocol-relative and would leave the site.
+  var NEXT = (function () {
+    var m = /[?&]next=([^&]*)/.exec(window.location.search);
+    var p = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '/';
+    return (p.charAt(0) === '/' && p.charAt(1) !== '/' && p.charAt(1) !== '\\') ? p : '/';
+  })();
+
+  // Surface an error handed back by the Microsoft sign-in redirect (/login?err=…)
+  (function () {
+    var m = /[?&]err=([^&]*)/.exec(window.location.search);
+    if (!m) return;
+    err.textContent = decodeURIComponent(m[1].replace(/\+/g, ' '));
+    err.classList.add('show');
+    history.replaceState(null, '', window.location.pathname);
+  })();
+
   f.addEventListener('submit', function (e) {
     e.preventDefault();
     err.classList.remove('show');
@@ -83,7 +114,7 @@
     })
     .then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
     .then(function (res) {
-      if (res.ok && res.d.ok) { window.location.href = '/'; return; }
+      if (res.ok && res.d.ok) { window.location.href = NEXT; return; }
       err.textContent = (res.d && res.d.error) || 'Sign-in failed.';
       err.classList.add('show');
       btn.disabled = false; btn.textContent = 'Authenticate';

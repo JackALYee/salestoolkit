@@ -11,7 +11,7 @@ A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Str
 The main header (`app.py`, the `header-meta` div — search `Version `) shows `Version X.Y.Z • 货运产品线 Trucking BU • <Month Year>`. **Every time you make a change to this repo, before finishing, update that line in the same edit batch.** This is a hard, standing rule — never skip it, never ask whether to do it.
 
 **Version scheme `X.Y.Z`:**
-- **X** — major version. Bump only on a big milestone, and only when the user explicitly asks. Otherwise leave it.
+- **X** — the **current month number** (January = 1 … August = 8 … December = 12). Set it to the month the change is made, so the version reads as a date stamp alongside the trailing `<Month Year>`. It is NOT a semantic major version — don't reserve it for milestones. When the month rolls over, the next change bumps X to the new month (e.g. August `8.14.20` → the first September change becomes `9.15.20`) and Y/Z keep counting up as normal.
 - **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `sales_onboarding.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
 - **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`, plus the sales-method modules (`marketing_skills.py`/`marketing_skills/`, `sales_process_skills.py`/`sales_process_skills/`, `topology.py`).
 
@@ -58,7 +58,9 @@ The launch button inside Streamaxpedia uses `<a target="_top" href="?view=jerry_
 
 ### Authentication and clearance — three layers
 
-1. **SMTP credential check** (`login.py`): user types `@streamax.com` email + password; `verify_streamax_credentials()` verifies by attempting an SMTP AUTH login against **two backends** (`_MAIL_SERVERS`) — Coremail (`mail.streamax.com:465`, implicit SSL) then Microsoft/Outlook (`smtp.office365.com:587`, STARTTLS) — accepting the login if **either** authenticates, since Streamax mailboxes live on one system or the other. Per-server outcome is logged to stderr as `[LOGIN] …`. ⚠️ The Outlook path only works if that M365 tenant/mailbox still allows **SMTP AUTH (basic auth)** with no MFA/Conditional Access block; Microsoft disables SMTP AUTH by default on modern tenants (error `535 5.7.139` / "disabled for the Tenant", surfaced as `disabled=True`). If real Outlook users can't sign in, the durable fix is OAuth2 "Sign in with Microsoft" (a bigger change — app registration + redirect flow), not this SMTP check. Easter-egg shortcut accounts (`jerry_test`, `hekun_test`, etc.) bypass SMTP.
+1. **SMTP credential check** (`login.py`): user types `@streamax.com` email + password; `verify_streamax_credentials()` verifies by attempting an SMTP AUTH login against the backends in `_mail_servers()` — Coremail (`mail.streamax.com:465`, implicit SSL) then Microsoft/Outlook (`smtp.office365.com:587`, STARTTLS) — accepting the login if **either** authenticates, since Streamax mailboxes live on one system or the other. Per-server outcome is logged to stderr as `[LOGIN] …`. ⚠️ The Outlook path only works if that M365 tenant/mailbox still allows **SMTP AUTH (basic auth)** with no MFA/Conditional Access block; Microsoft disables SMTP AUTH by default on modern tenants (error `535 5.7.139` / "disabled for the Tenant", surfaced as `disabled=True`) — which is why **Sign in with Microsoft** (below) exists. Set `MS_SMTP_AUTH=0` to drop the Microsoft SMTP probe once OAuth is live. Easter-egg shortcut accounts (`jerry_test`, `hekun_test`, etc.) bypass SMTP.
+
+   **Sign in with Microsoft** (`ms_auth.py` + routes in `server.py`) — the supported path for M365 mailboxes, and the only one that survives MFA/Conditional Access. Standard OIDC authorization-code flow with PKCE (S256), `state` and `nonce`; all three plus the post-login destination ride in ONE short-lived HMAC-signed cookie (`stmx_oauth`, signed with the same `AUTH_SECRET`), so the flow is stateless across Render instances. Deliberately **stdlib-only** — no `msal`, no `cryptography`. The ID token arrives over the server-to-server token call, so per OIDC Core §3.1.3.7 TLS validation stands in for JWT signature verification; `iss`, `aud`, `tid`, `exp` and `nonce` are all still checked, plus a domain gate (`MS_ALLOWED_DOMAINS`, default `streamax.com`). **The button only renders once `MS_TENANT_ID` + `MS_CLIENT_ID` + `MS_CLIENT_SECRET` are all set** — deploying the code changes nothing until the tenant is configured. Entra needs the redirect URI `https://streamax-salestoolkit.com/auth/microsoft/callback` registered as a **Web** platform, byte-for-byte. HTML server only — the Streamlit path keeps password-only sign-in. Run `python3 scripts/test_ms_auth.py` (no network, no pytest) after touching any of it: 31 checks covering the happy path, cross-tenant/audience/issuer/nonce/expiry rejection, CSRF, cookie tampering and open-redirect clamping.
 
 2. **Cookie-based persistence** (`auth.py`): on successful login, `persist_login()` writes a signed cookie (`HMAC(user, expiry, AUTH_SECRET)`) via `extra-streamlit-components.CookieManager`. On every script run, `restore_session()` validates the cookie and rehydrates `st.session_state["authenticated"]`, `["user_name"]`, `["is_leadership"]`. Without this layer, every page reload or `?view=jerry_gpt` navigation forces re-login because Streamlit's session_state is per-WebSocket.
 
@@ -119,6 +121,20 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 `topology.py` is the single source of truth for the **interactive Ecosystem Map** — a curated force-directed graph (60 nodes / 125 edges) of products, cameras/sensors, capabilities, cloud platforms, solutions, and competitors and how they connect (`cat ∈ capability | device | camera | platform | solution | competitor`). It exposes `TOPOLOGY` + `topology_json` (the data) and `ecosystem_map_html(focus="")` (a self-contained D3 widget for `st.components.v1.html`). Two consumers: `streamaxpedia_app.py` embeds the data into its in-iframe "Ecosystem map" modal (per-term button → opens focused on that term, D3 loaded from cdnjs); `jerry_gpt.py` imports `ecosystem_map_html()` and pops the same map in an `st.dialog`. Jerry offers it by emitting a `[[ECOSYSTEM_MAP]]` / `[[ECOSYSTEM_MAP:Exact Node]]` marker (described in a cached `<interface_capabilities>` block) — `_ECO_RE` strips it from the displayed text via `_clean_display()` and `_render_ecosystem()` turns it into an "Open Ecosystem Map" button. **Edit the graph data only in `topology.py`** so both surfaces stay in sync. The map depends on D3 from `cdnjs.cloudflare.com`; a network that blocks cdnjs renders a blank graph (nothing else is affected).
 
+## Sales Configurator (vendored — author: Kevin Wang)
+
+`/configurator/` serves the **Streamax Sales Configurator**, a guided BOM builder for the NA sales list (pick a host/solution, answer install questions, it applies camera/interface/cable rules and exports the approved Excel material list).
+
+**It is a separate project owned by Kevin Wang (kevinwang@streamax.com) — credit him wherever it is surfaced, and send product-rule/SKU issues to him, not into this repo.** Source lives at `~/Desktop/Streamax/Product-sales-kit`.
+
+Only its runtime files (`index.html`, `styles.css`, `catalog-data.js`, `js/`, `data/`, `vendor/`, `assets/` ≈ 7 MB) are vendored into `./configurator` — Render builds from *this* repo and can't see the other checkout. The 73 MB source-file folder and 13 MB source `.xlsx` are deliberately excluded.
+
+Because it's vendored it **will drift**. Refresh with `./sync_configurator.sh` after Kevin ships changes; it rewrites `configurator/VENDORED.md` with the source revision and date. Never hand-edit files under `configurator/` — the next sync overwrites them.
+
+Its beta *Annotate / Send feedback* buttons call `/api/annotations`, `/api/feedback`, `/api/solutions`, served by the source project's own Node server (`server/server.js`), which is **not** deployed here — so those beta features are inactive in the toolkit. The configurator itself works fully.
+
+Surfaced in three places: the **Sales Configurator** tab (`configurator_tab.py`, credits Kevin on the card), the `/configurator` StaticFiles mount in `server.py`, and `jerry_gpt_knowledge/17_sales_configurator.md` so Jerry hands users over to it (naming Kevin) once a conversation turns to "what exactly do I order?".
+
 ## Required secrets
 
 `st.secrets` (or `.streamlit/secrets.toml` locally):
@@ -132,6 +148,19 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 - `JERRY_GPT_DB_URL` — optional, enables cross-session chat history for Jerry GPT via Supabase Postgres
 
 If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
+
+### Microsoft sign-in (HTML server, environment variables)
+
+Set on the Render service, not in `secrets.toml`. Sign in with Microsoft stays hidden until all three required values are present.
+
+- `MS_TENANT_ID` — **required.** Entra *Directory (tenant) ID*.
+- `MS_CLIENT_ID` — **required.** Entra *Application (client) ID*.
+- `MS_CLIENT_SECRET` — **required.** The secret **Value** (not the Secret ID). Entra secrets expire — a 24-month secret must be rotated before it lapses or every Microsoft sign-in breaks at once.
+- `MS_REDIRECT_URI` — optional. Pin this if the auto-derived value is ever wrong; otherwise it is built from `X-Forwarded-Proto`/`X-Forwarded-Host` (correct behind Cloudflare → Render). It must equal the URI registered in Entra **exactly**, or Microsoft returns `AADSTS50011`.
+- `MS_ALLOWED_DOMAINS` — optional CSV, default `streamax.com`.
+- `MS_SMTP_AUTH` — optional; set `0` to stop probing `smtp.office365.com` on the password path once OAuth is live.
+
+Entra app registration: **single tenant**, platform **Web**, redirect URI `https://streamax-salestoolkit.com/auth/microsoft/callback`, delegated permissions `openid` + `profile` + `email` (all no-admin-consent). Nothing needs `Mail.*` — the app only reads who signed in.
 
 ## Jack GPT — removed
 

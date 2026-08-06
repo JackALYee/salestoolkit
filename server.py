@@ -103,6 +103,10 @@ try:
     import topology as _topology
 except Exception:                                                        # noqa: BLE001
     _topology = None
+try:
+    import ms_auth as _ms
+except Exception:                                                        # noqa: BLE001
+    _ms = None
 
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
@@ -202,22 +206,41 @@ def toolkit(request: Request):
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
+def login_page(request: Request, next: str = "/"):
     if current_user(request):
         return RedirectResponse("/", status_code=302)
-    return HTMLResponse(_page("login.html"))
+    page = _page("login.html").replace("<!--MS_SIGNIN-->", _ms_signin_block(next))
+    return HTMLResponse(page)
 
 
 @app.get("/jerry", response_class=HTMLResponse)
 def jerry_page(request: Request):
     if not current_user(request):
-        return RedirectResponse("/login", status_code=302)
+        # Carry the destination so a cold /jerry link lands back on Jerry, not
+        # on the toolkit, once the user has signed in.
+        return RedirectResponse("/login?next=/jerry", status_code=302)
     return HTMLResponse(_page("jerry.html"))
 
 
 # ---------------------------------------------------------------------------
 # Auth API
 # ---------------------------------------------------------------------------
+
+def _is_https(request: Request) -> bool:
+    """True when the *browser* is on https. Behind Cloudflare→Render the inbound
+    hop to uvicorn is plain http, so trust X-Forwarded-Proto."""
+    fwd = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower()
+    return (fwd or request.url.scheme) == "https"
+
+
+def _set_session(resp, user: str, request: Request):
+    resp.set_cookie(
+        COOKIE_NAME, make_token(user),
+        max_age=SESSION_DAYS * 86400, httponly=True, samesite="lax",
+        secure=_is_https(request),
+    )
+    return resp
+
 
 @app.post("/api/login")
 async def api_login(request: Request):
@@ -233,19 +256,95 @@ async def api_login(request: Request):
 
     # `message` is the display name for easter-egg accounts, else "Success".
     user = email.strip().lower() if message == "Success" else message
-    resp = JSONResponse({"ok": True, "user": user})
-    resp.set_cookie(
-        COOKIE_NAME, make_token(user),
-        max_age=SESSION_DAYS * 86400, httponly=True, samesite="lax",
-        secure=request.url.scheme == "https",
-    )
-    return resp
+    return _set_session(JSONResponse({"ok": True, "user": user}), user, request)
 
 
 @app.get("/api/logout")
 def api_logout(next: str = "/login"):
     resp = RedirectResponse(next if next.startswith("/") else "/login", status_code=302)
     resp.delete_cookie(COOKIE_NAME)
+    return resp
+
+
+# ── Sign in with Microsoft (Entra ID / OIDC) ────────────────────────────────
+# Only wired up when MS_TENANT_ID / MS_CLIENT_ID / MS_CLIENT_SECRET are set;
+# until then the button is not rendered and /auth/microsoft/start bounces back.
+
+_MS_BUTTON = """
+    <div class="or"><span>or</span></div>
+    <a class="msbtn" href="/auth/microsoft/start?next=__NEXT__">
+      <svg viewBox="0 0 23 23" width="18" height="18" aria-hidden="true">
+        <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
+        <rect x="12" y="1"  width="10" height="10" fill="#7FBA00"/>
+        <rect x="1"  y="12" width="10" height="10" fill="#00A4EF"/>
+        <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+      </svg>
+      <span>Sign in with Microsoft</span>
+    </a>
+    <p class="hint">Use this if your Streamax mailbox is on Outlook / Microsoft 365.</p>
+"""
+
+
+def _ms_signin_block(next_path: str = "/") -> str:
+    if not (_ms and _ms.is_configured()):
+        return ""
+    from urllib.parse import quote
+    return _MS_BUTTON.replace("__NEXT__", quote(_ms.safe_next(next_path), safe="/"))
+
+
+def _ms_redirect_uri(request: Request) -> str:
+    """The redirect URI registered in Entra. Must match byte-for-byte on both
+    the authorize and token calls, so it is derived once, here."""
+    explicit = os.environ.get("MS_REDIRECT_URI", "").strip()
+    if explicit:
+        return explicit
+    proto = "https" if _is_https(request) else "http"
+    host = (request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or request.url.netloc)
+    return f"{proto}://{host}{_ms.CALLBACK_PATH}"
+
+
+def _login_error(message: str, next_path: str = "/"):
+    """Bounce back to the login page with a readable reason, keeping the
+    original destination so a password retry still lands where they meant."""
+    from urllib.parse import quote
+    url = f"/login?err={quote(message)}"
+    safe = _ms.safe_next(next_path) if _ms else "/"
+    if safe != "/":
+        url += f"&next={quote(safe, safe='/')}"
+    return RedirectResponse(url, status_code=302)
+
+
+@app.get("/auth/microsoft/start")
+def ms_start(request: Request, next: str = "/"):
+    if not (_ms and _ms.is_configured()):
+        return _login_error("Microsoft sign-in is not configured yet.")
+    url, state = _ms.begin(_ms_redirect_uri(request), _ms.safe_next(next))
+    resp = RedirectResponse(url, status_code=302)
+    resp.set_cookie(_ms.STATE_COOKIE, state, max_age=_ms.STATE_TTL, httponly=True,
+                    samesite="lax", secure=_is_https(request), path="/")
+    return resp
+
+
+@app.get("/auth/microsoft/callback")
+def ms_callback(request: Request, code: str = "", state: str = "",
+                error: str = "", error_description: str = ""):
+    if not (_ms and _ms.is_configured()):
+        return _login_error("Microsoft sign-in is not configured yet.")
+    if error:
+        return _login_error(error_description or error)
+
+    email, next_path, err = _ms.complete(
+        code, state, request.cookies.get(_ms.STATE_COOKIE) or "",
+        _ms_redirect_uri(request),
+    )
+    if err:
+        return _login_error(err, next_path)
+
+    resp = RedirectResponse(next_path, status_code=302)
+    _set_session(resp, email, request)
+    resp.delete_cookie(_ms.STATE_COOKIE, path="/")
     return resp
 
 
