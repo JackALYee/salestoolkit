@@ -117,6 +117,37 @@ def rewire_for_static(html: str) -> str:
     html = html.replace('?view=jerry_gpt', '/jerry')
     html = html.replace('"/jerry&logout=1"', '"/api/logout?next=/jerry"')
     html = html.replace('?logout=1', '/api/logout')
+    # Dead code path (the old special-feature CTA) — keep it from emitting a
+    # Streamlit-style ?view= URL if it is ever re-enabled.
+    html = html.replace('?view=${encodeURIComponent(sp.view)}',
+                        '/${encodeURIComponent(sp.view)}')
+
+    # Strip the iframe-escape onclick handlers.
+    #
+    # In Streamlit the toolkit ran inside components.html, so links needed JS to
+    # break out to the parent frame: read document.referrer / window.parent, then
+    # rebuild the URL. There is no iframe here, and that JS actively breaks
+    # navigation — it does `base + '/jerry'` where base already ends in '/',
+    # yielding '//jerry', which FastAPI 404s. Removing the handler lets the
+    # plain href do the right thing. Fixes the Jerry launch AND Sign out.
+    def _drop_iframe_escape(m: re.Match) -> str:
+        body = m.group(0)
+        if "document.referrer" in body or "window.parent" in body or "window.top" in body:
+            return ""
+        return body
+
+    html = re.sub(r'onclick="[^"]*"', _drop_iframe_escape, html)
+
+    # The same iframe-escape logic also lives in named <script> functions (e.g.
+    # window.obOpenJerry in the Sales Onboarding tab), which the attribute pass
+    # above cannot reach. Those build `base.split('?')[0].split('#')[0] + '/x'`
+    # — and because base ends in '/', the result is '//x' -> 404. Normalise the
+    # concatenation by stripping trailing slashes first. Generic, so it fixes
+    # every current and future occurrence of the pattern.
+    html = html.replace(
+        ".split('#')[0] + '/",
+        ".split('#')[0].replace(/\\/+$/, '') + '/",
+    )
     # Identity pill is filled client-side from the session endpoint.
     html = html.replace(
         '__USER_IDENTITY__',
