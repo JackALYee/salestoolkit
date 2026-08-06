@@ -3,14 +3,19 @@
 [server]
 headless = true          # never try to open a browser / prompt for an email
 address = "0.0.0.0"      # listen on all interfaces so the container is reachable
-enableCORS = false       # required when a proxy terminates TLS on another host
 
-# ⚠️ If Jerry GPT's paperclip file-upload fails after going behind the proxy
-# ("AxiosError 403" / upload just spins), uncomment the line below. Streamlit's
-# XSRF check compares the origin it thinks it has against the proxied one and
-# can reject uploads. Turning it off is a real (small) security tradeoff — the
-# app is login-gated, so prefer fixing it with a Cloudflare Access policy first.
-# enableXsrfProtection = false
+# CORS + XSRF are left ON (Streamlit's secure defaults). Note: setting
+# enableCORS=false while enableXsrfProtection=true does nothing — Streamlit
+# logs "not compatible" and forces enableCORS back to true. Verified in the
+# container build, so don't re-add it.
+#
+# ⚠️ If Jerry GPT's paperclip file-upload fails once it's behind Cloudflare
+# ("AxiosError 403" / the upload just spins), disable BOTH together — that is
+# the only combination Streamlit honours:
+#   enableCORS = false
+#   enableXsrfProtection = false
+# It's a small security tradeoff (the app is login-gated); prefer putting a
+# Cloudflare Access policy in front if you turn them off.
 
 maxUploadSize = 25       # MB — matches the file-upload feature in Jerry GPT
 
