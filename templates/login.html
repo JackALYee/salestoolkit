@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streamax Sales Toolkit — Sign in</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2AF598;--blue:#009EFD;--bg:#050810;--grey:#A0AEC0;--white:#E6EAF0}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;color:var(--white);
+       background:var(--bg);background-image:radial-gradient(circle at 50% -20%,#0B1221,#050810);
+       display:flex;align-items:center;justify-content:center;padding:24px}
+  .wrap{width:100%;max-width:420px}
+  h1{font-size:2.1rem;text-align:center;margin:0 0 6px;line-height:1.2}
+  h1 .g{background:linear-gradient(135deg,var(--green),var(--blue));
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{text-align:center;color:var(--grey);font-size:.95rem;margin-bottom:32px}
+  form{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+       border-radius:16px;padding:30px;backdrop-filter:blur(12px);
+       box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;
+        color:var(--grey);margin:0 0 6px}
+  input{width:100%;padding:11px 13px;margin-bottom:18px;border-radius:8px;
+        background:rgba(20,25,40,.85);border:1px solid rgba(255,255,255,.1);
+        color:var(--green);font-size:.95rem;font-family:inherit;outline:none;color-scheme:dark}
+  input:focus{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+  input::placeholder{color:rgba(160,174,192,.55)}
+  button{width:100%;padding:12px;border:none;border-radius:8px;cursor:pointer;
+         font-weight:700;font-size:1rem;font-family:inherit;color:#050810;
+         background:linear-gradient(135deg,var(--green),var(--blue));transition:.25s}
+  button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 15px rgba(42,245,152,.4)}
+  button:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .err{display:none;margin-top:16px;padding:11px 13px;border-radius:8px;font-size:.85rem;
+       background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.35);color:#ff8b95}
+  .err.show{display:block}
+  .foot{text-align:center;color:#5c6880;font-size:.75rem;margin-top:22px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1><span class="g">Streamax</span> Sales Toolkit</h1>
+    <p class="sub">Secure Access &bull; Trucking Division</p>
+    <form id="f" autocomplete="on">
+      <label for="email">Streamax email</label>
+      <input id="email" name="email" type="email" placeholder="name@streamax.com" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="••••••••" required>
+      <button id="btn" type="submit">Authenticate</button>
+      <div class="err" id="err"></div>
+    </form>
+    <p class="foot">Verified against the Streamax mail server. Credentials are never stored.</p>
+  </div>
+<script>
+  var f = document.getElementById('f'), btn = document.getElementById('btn'), err = document.getElementById('err');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    err.classList.remove('show');
+    btn.disabled = true; btn.textContent = 'Connecting to Streamax secure server…';
+    fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      })
+    })
+    .then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
+    .then(function (res) {
+      if (res.ok && res.d.ok) { window.location.href = '/'; return; }
+      err.textContent = (res.d && res.d.error) || 'Sign-in failed.';
+      err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Authenticate';
+    })
+    .catch(function () {
+      err.textContent = 'Could not reach the server. Try again.';
+      err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Authenticate';
+    });
+  });
+</script>
+</body>
+</html>

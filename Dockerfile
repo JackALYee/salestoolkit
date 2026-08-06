@@ -25,8 +25,21 @@ COPY . .
 ENV PORT=8080
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -fsS "http://localhost:${PORT}/_stcore/health" || exit 1
+# APP_MODE selects the stack at container start:
+#   streamlit (default) — the original Streamlit app, app.py
+#   html               — the plain-HTML rebuild, server.py (FastAPI + static site)
+# Defaulting to streamlit means a deploy can never silently replace a working
+# production site; flip APP_MODE=html in the host's env to switch, and flip it
+# back to roll straight back.
+ENV APP_MODE=streamlit
 
-# Shell form so ${PORT} expands at runtime.
-CMD streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT}/healthz" || curl -fsS "http://localhost:${PORT}/_stcore/health" || exit 1
+
+# Shell form so ${PORT} and ${APP_MODE} expand at runtime.
+CMD if [ "$APP_MODE" = "html" ]; then \
+      python build_static.py && \
+      exec uvicorn server:app --host 0.0.0.0 --port ${PORT}; \
+    else \
+      exec streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0; \
+    fi

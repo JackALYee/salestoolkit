@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jerry GPT — Streamax Sales Toolkit</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2AF598;--blue:#009EFD;--bg:#050810;--panel:#0B1221;--grey:#A0AEC0;--white:#E6EAF0}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--white);background:var(--bg);
+       background-image:radial-gradient(circle at 50% -20%,#0B1221,#050810);
+       display:flex;flex-direction:column}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+         padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.07);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+              box-shadow:0 0 10px var(--green)}
+  .pill{font-size:.72rem;color:var(--grey);border:1px solid rgba(255,255,255,.12);
+        border-radius:20px;padding:3px 10px}
+  .tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  select,a.btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+        color:var(--grey);border-radius:8px;padding:6px 11px;font-size:.8rem;
+        font-family:inherit;cursor:pointer;text-decoration:none;outline:none}
+  select:focus{border-color:var(--green)}
+  a.btn:hover{border-color:var(--green);color:var(--green)}
+  main{flex:1;overflow-y:auto;padding:24px 20px}
+  .thread{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .msg{display:flex;gap:12px;line-height:1.6}
+  .who{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+       justify-content:center;font-size:.72rem;font-weight:700;color:#050810}
+  .msg.user .who{background:linear-gradient(135deg,#7F77DD,#009EFD)}
+  .msg.bot .who{background:linear-gradient(135deg,var(--green),var(--blue))}
+  .body{flex:1;min-width:0;font-size:.95rem;overflow-wrap:anywhere}
+  .body h3{margin:14px 0 6px;font-size:1rem;color:var(--green)}
+  .body ul{margin:8px 0;padding-left:20px}
+  .body code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-size:.87em}
+  .body pre{background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.08);
+            padding:12px;border-radius:8px;overflow-x:auto}
+  .body a{color:var(--blue)}
+  .welcome{text-align:center;color:var(--grey);padding:48px 12px}
+  .welcome h2{color:var(--white);font-size:1.6rem;margin:0 0 10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+  .chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+        border-radius:10px;padding:9px 14px;font-size:.83rem;color:var(--white);cursor:pointer}
+  .chip:hover{border-color:var(--green);color:var(--green)}
+  footer{border-top:1px solid rgba(255,255,255,.07);padding:14px 20px}
+  .composer{max-width:820px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+  textarea{flex:1;resize:none;background:rgba(20,25,40,.85);border:1px solid rgba(255,255,255,.12);
+           border-radius:12px;color:var(--white);padding:12px 14px;font-family:inherit;
+           font-size:.95rem;line-height:1.5;max-height:180px;outline:none}
+  textarea:focus{border-color:var(--green)}
+  #send{flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
+        background:linear-gradient(135deg,var(--green),var(--blue));color:#050810;
+        font-size:1.1rem;font-weight:700}
+  #send:disabled{opacity:.5;cursor:not-allowed}
+  .err{max-width:820px;margin:10px auto 0;padding:10px 13px;border-radius:8px;font-size:.85rem;
+       background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.35);color:#ff8b95;display:none}
+  .err.show{display:block}
+  .cursor{display:inline-block;width:8px;background:var(--green);animation:b 1s steps(2) infinite}
+  @keyframes b{0%,50%{opacity:1}51%,100%{opacity:0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> Jerry GPT
+    <span class="pill" id="modelPill">…</span>
+    <span class="pill" id="userPill">…</span>
+  </div>
+  <div class="tools">
+    <select id="model" title="Model"></select>
+    <select id="length" title="Response length">
+      <option>Short</option><option selected>Medium</option><option>Long</option>
+    </select>
+    <a class="btn" href="/">← Toolkit</a>
+    <a class="btn" href="/api/logout">Sign out</a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="thread" id="thread">
+    <div class="welcome" id="welcome">
+      <h2>What would Jerry say?</h2>
+      <p>Ask about positioning, the competitive landscape, product portfolio,<br>
+         objection handling, or any deal you're prepping for.</p>
+      <div class="chips">
+        <div class="chip">Give me the 60-second TSP pitch.</div>
+        <div class="chip">How do I position Streamax against Motive in North America?</div>
+        <div class="chip">Diagnose my deal with the 9-Block model.</div>
+        <div class="chip">Qualify this opportunity (Pain × Power × Vision × Value × Control).</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="Ask Jerry anything…  (Enter to send, Shift+Enter for newline)"></textarea>
+    <button id="send" title="Send">↑</button>
+  </div>
+  <div class="err" id="err"></div>
+</footer>
+
+<script>
+(function () {
+  var history = [];
+  var busy = false;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  // Minimal, safe markdown: escape first, then re-introduce a few tags.
+  function md(t) {
+    var s = esc(t);
+    s = s.replace(/```([\s\S]*?)```/g, function (m, c) { return '<pre><code>' + c + '</code></pre>'; });
+    s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    s = s.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(/^\s*[-•]\s+(.+)$/gm, '<li>$1</li>');
+    s = s.replace(/(<li>[\s\S]*?<\/li>)(?![\s\S]*?<li>)/, '<ul>$1</ul>');
+    return s.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+  }
+
+  function bubble(role, html) {
+    var w = $('welcome'); if (w) w.remove();
+    var d = document.createElement('div');
+    d.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+    d.innerHTML = '<div class="who">' + (role === 'user' ? 'You' : 'J') + '</div>' +
+                  '<div class="body"></div>';
+    d.querySelector('.body').innerHTML = html;
+    $('thread').appendChild(d);
+    $('main').scrollTop = $('main').scrollHeight;
+    return d.querySelector('.body');
+  }
+
+  fetch('/api/me', {credentials: 'same-origin'})
+    .then(function (r) { if (!r.ok) { window.location.href = '/login'; throw 0; } return r.json(); })
+    .then(function (me) {
+      $('userPill').textContent = me.user;
+      var sel = $('model');
+      Object.keys(me.models).forEach(function (label) {
+        var o = document.createElement('option');
+        o.value = me.models[label]; o.textContent = label;
+        if (me.models[label] === me.default_model) o.selected = true;
+        sel.appendChild(o);
+      });
+      $('modelPill').textContent = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+      sel.addEventListener('change', function () {
+        $('modelPill').textContent = sel.options[sel.selectedIndex].text;
+      });
+    }).catch(function () {});
+
+  function send(text) {
+    if (busy || !text.trim()) return;
+    busy = true; $('send').disabled = true; $('err').classList.remove('show');
+    bubble('user', md(text));
+    history.push({role: 'user', content: text});
+    var out = bubble('bot', '<span class="cursor">&nbsp;</span>');
+    var acc = '';
+
+    fetch('/api/chat', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({messages: history, model: $('model').value, length: $('length').value})
+    }).then(function (r) {
+      if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
+      var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+      (function pump() {
+        return reader.read().then(function (res) {
+          if (res.done) { finish(); return; }
+          buf += dec.decode(res.value, {stream: true});
+          var parts = buf.split('\n\n'); buf = parts.pop();
+          parts.forEach(function (p) {
+            var line = p.replace(/^data:\s*/, '').trim();
+            if (!line) return;
+            var m; try { m = JSON.parse(line); } catch (e) { return; }
+            if (m.delta) { acc += m.delta; out.innerHTML = md(acc) + '<span class="cursor">&nbsp;</span>';
+                           $('main').scrollTop = $('main').scrollHeight; }
+            if (m.error) { $('err').textContent = m.error; $('err').classList.add('show'); }
+          });
+          return pump();
+        });
+      })();
+    }).catch(function (e) {
+      $('err').textContent = 'Request failed: ' + e.message;
+      $('err').classList.add('show');
+      finish();
+    });
+
+    function finish() {
+      out.innerHTML = md(acc) || '<em style="color:#A0AEC0">No response.</em>';
+      if (acc) history.push({role: 'assistant', content: acc});
+      busy = false; $('send').disabled = false; $('input').focus();
+    }
+  }
+
+  $('send').addEventListener('click', function () {
+    var v = $('input').value; $('input').value = ''; $('input').style.height = 'auto'; send(v);
+  });
+  $('input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('send').click(); }
+  });
+  $('input').addEventListener('input', function () {
+    this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('chip')) send(e.target.textContent);
+  });
+})();
+</script>
+</body>
+</html>

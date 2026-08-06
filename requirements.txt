@@ -12,3 +12,6 @@ python-docx>=1.1.0
 python-pptx>=1.0.0
 openpyxl>=3.1.0
 reportlab>=4.0.0
+# Plain-HTML rebuild (server.py) - FastAPI replaces Streamlit when APP_MODE=html
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
