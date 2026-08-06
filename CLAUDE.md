@@ -127,9 +127,11 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 **It is a separate project owned by Kevin Wang (kevinwang@streamax.com) — credit him wherever it is surfaced, and send product-rule/SKU issues to him, not into this repo.** Source lives at `~/Desktop/Streamax/Product-sales-kit`.
 
-Only its runtime files (`index.html`, `styles.css`, `catalog-data.js`, `js/`, `data/`, `vendor/`, `assets/` ≈ 7 MB) are vendored into `./configurator` — Render builds from *this* repo and can't see the other checkout. The 73 MB source-file folder and 13 MB source `.xlsx` are deliberately excluded.
+Its runtime files are vendored into `./configurator` (≈80 MB) — Render builds from *this* repo and can't see the other checkout: `index.html`, `styles.css`, `catalog-data.js`, `js/`, `data/`, `vendor/`, `assets/`, **and `North America Sales List-FILE/`**. `server/`, `scripts/`, `docs/` and the 13 MB source `.xlsx` are excluded.
 
-Because it's vendored it **will drift**. Refresh with `./sync_configurator.sh` after Kevin ships changes; it rewrites `configurator/VENDORED.md` with the source revision and date. Never hand-edit files under `configurator/` — the next sync overwrites them.
+⚠️ **`North America Sales List-FILE/` is required, despite the name and the ~72 MB.** It is not a source folder — it is the product image library. `catalog-data.js`, `js/02-dom-state.js` and `js/04-product-meta.js` reference **246 files** inside it by *relative* path (many with spaces and CJK segments like `图片/`, which is fine — StaticFiles URL-decodes them). Omitting it renders every product card with a broken image, which is exactly what happened on the first vendoring pass. `sync_configurator.sh` now resolves every referenced path after copying and exits non-zero if any is missing — that check is the guard against repeating it.
+
+Because it's vendored it **will drift**. Refresh with `./sync_configurator.sh` after Kevin ships changes; it rewrites `configurator/VENDORED.md` with the source revision and date, then verifies every referenced asset resolves. Never hand-edit files under `configurator/` — the next sync overwrites them. That includes image optimisation: several assets are far larger than they need to be (one Z5 PNG is 8192×5464 / 14.9 MB), but shrinking them here would be reverted on the next sync — raise it with Kevin so it's fixed upstream.
 
 Its beta *Annotate / Send feedback* buttons call `/api/annotations`, `/api/feedback`, `/api/solutions`, served by the source project's own Node server (`server/server.js`), which is **not** deployed here — so those beta features are inactive in the toolkit. The configurator itself works fully.
 
