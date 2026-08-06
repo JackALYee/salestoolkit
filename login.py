@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 import os
 import smtplib
 import ssl
@@ -182,6 +183,75 @@ def _mail_servers():
     return _MAIL_SERVERS
 
 
+def _is_ascii(s):
+    try:
+        s.encode("ascii")
+        return True
+    except (UnicodeEncodeError, AttributeError):
+        return False
+
+
+def _b64(s):
+    return base64.b64encode(s.encode("utf-8")).decode("ascii")
+
+
+def _auth_plain_utf8(server, email, password):
+    """SASL PLAIN (RFC 4616) with a UTF-8 credential, issued by hand."""
+    token = _b64(f"\0{email}\0{password}")
+    code, resp = server.docmd("AUTH", "PLAIN " + token)
+    if code == 235:
+        return
+    raise smtplib.SMTPAuthenticationError(code, resp)
+
+
+def _auth_login_utf8(server, email, password):
+    """The non-standard but universal AUTH LOGIN, with UTF-8 credentials.
+
+    Needed because Microsoft 365 advertises only `LOGIN XOAUTH2` — no PLAIN —
+    so Outlook mailboxes can't use the RFC 4616 path at all.
+    Exchange: `AUTH LOGIN` -> 334 (username?) -> b64 user -> 334 (password?) ->
+    b64 password -> 235.
+    """
+    code, resp = server.docmd("AUTH", "LOGIN")
+    if code != 334:
+        raise smtplib.SMTPAuthenticationError(code, resp)
+    code, resp = server.docmd(_b64(email))
+    if code != 334:
+        raise smtplib.SMTPAuthenticationError(code, resp)
+    code, resp = server.docmd(_b64(password))
+    if code == 235:
+        return
+    raise smtplib.SMTPAuthenticationError(code, resp)
+
+
+def _auth_utf8(server, email, password):
+    """Authenticate with a credential that isn't pure ASCII.
+
+    `smtplib.SMTP.login()` encodes credentials as **ASCII** and raises
+    UnicodeEncodeError before any network I/O — but RFC 4616 defines SASL
+    PLAIN's authcid/password as UTF-8, so that restriction is smtplib's, not the
+    protocol's. A password containing e.g. a full-width ！ is perfectly legal.
+
+    Issued by hand via docmd() on a FRESH connection rather than after a failed
+    login(): smtplib tries CRAM-MD5 first, which sends `AUTH CRAM-MD5` and only
+    then hits its ASCII encode, leaving the session mid-SASL-exchange where our
+    next command would be read as the challenge response.
+
+    PLAIN is preferred (one round trip, actually standardised); LOGIN is the
+    fallback for Microsoft 365, which doesn't offer PLAIN.
+    """
+    server.ehlo_or_helo_if_needed()
+    if not server.has_extn("auth"):
+        raise smtplib.SMTPNotSupportedError("Server does not advertise SMTP AUTH.")
+    mechs = (server.esmtp_features.get("auth") or "").upper()
+    if "PLAIN" in mechs:
+        return _auth_plain_utf8(server, email, password)
+    if "LOGIN" in mechs:
+        return _auth_login_utf8(server, email, password)
+    raise smtplib.SMTPNotSupportedError(
+        f"Server offers no password mechanism usable with a non-ASCII password (AUTH:{mechs.strip()}).")
+
+
 def _smtp_auth(host, port, mode, email, password, timeout=10):
     """Attempt one SMTP AUTH login. Returns (ok, disabled, error):
       ok       — server accepted email + password.
@@ -199,14 +269,21 @@ def _smtp_auth(host, port, mode, email, password, timeout=10):
             server.ehlo()
             server.starttls(context=context)
             server.ehlo()
-        server.login(email, password)
+        if _is_ascii(password):
+            server.login(email, password)
+        else:
+            _auth_utf8(server, email, password)
         return True, False, ""
     except smtplib.SMTPAuthenticationError as e:
         msg = str(e).lower()
-        # Microsoft returns e.g. "535 5.7.139 ... SmtpClientAuthentication is
-        # disabled for the Tenant" / "basic authentication is disabled" when SMTP
-        # AUTH is off — treat that as a config block, not a wrong password.
-        disabled = ("5.7.139" in msg) or ("disabled" in msg and ("auth" in msg or "tenant" in msg))
+        # Microsoft reuses 5.7.139 for BOTH "SmtpClientAuthentication is disabled
+        # for the Tenant" (a config block) and plain "the user credentials were
+        # incorrect" (an ordinary wrong password). Keying on the status code
+        # alone therefore mislabels every wrong Outlook password as a tenant
+        # policy block and shows the user the wrong advice — require the actual
+        # disabled/blocked wording instead.
+        disabled = ("disabled" in msg or "blocked" in msg) and (
+            "auth" in msg or "tenant" in msg or "basic" in msg)
         return False, disabled, str(e)
     except Exception as e:
         return False, False, str(e)
@@ -216,6 +293,48 @@ def _smtp_auth(host, port, mode, email, password, timeout=10):
                 server.quit()
             except Exception:
                 pass
+
+
+# A failure is only a *connection* problem if it actually looks like one. The
+# old test was negative ("no 535 and no 'auth' in the message"), which swept up
+# client-side errors that never touched the network — a UnicodeEncodeError from
+# a non-ASCII password was reported to the user as "Could not connect to the
+# mail server", pointing debugging in entirely the wrong direction.
+_CONNECTION_ERROR_HINTS = (
+    "timed out", "timeout", "connection refused", "connection reset",
+    "network is unreachable", "no route to host", "broken pipe",
+    "name or service not known", "nodename nor servname", "getaddrinfo",
+    "temporary failure in name resolution", "server not connected",
+    "connection unexpectedly closed", "ssl", "certificate",
+)
+
+
+def _looks_like_connection_error(err):
+    e = (err or "").lower()
+    return any(h in e for h in _CONNECTION_ERROR_HINTS)
+
+
+# Full-width forms (U+FF01–U+FF5E) are what a Chinese IME produces for ASCII
+# punctuation — ！ instead of !, ； instead of ; and so on. They are visually
+# near-identical in a masked password field, so this is a very easy way to end
+# up with a password you cannot retype.
+def _describe_non_ascii(password):
+    """Return a human hint about non-ASCII characters in the password, or ''."""
+    odd = []
+    for ch in password or "":
+        if ord(ch) < 128 or ch in odd:
+            continue
+        odd.append(ch)
+    if not odd:
+        return ""
+    parts = []
+    for ch in odd[:3]:
+        ascii_twin = chr(ord(ch) - 0xFEE0) if 0xFF01 <= ord(ch) <= 0xFF5E else ""
+        label = f"“{ch}” (U+{ord(ch):04X})"
+        if ascii_twin:
+            label += f", the full-width form of “{ascii_twin}”"
+        parts.append(label)
+    return "; ".join(parts)
 
 
 def verify_streamax_credentials(email, password):
@@ -252,7 +371,7 @@ def verify_streamax_credentials(email, password):
             smtp_auth_disabled = True
         # Remember a connection-level failure (server unreachable) as distinct
         # from an auth rejection, so we can surface it if nothing authenticates.
-        if not ok and not disabled and err and "535" not in err and "auth" not in err.lower():
+        if not ok and not disabled and _looks_like_connection_error(err):
             conn_error = err
         print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} disabled={disabled} "
               f"err={err[:140]}", file=sys.stderr, flush=True)
@@ -273,6 +392,18 @@ def verify_streamax_credentials(email, password):
     # Not accepted by any backend.
     if conn_error:
         return False, f"Could not connect to the mail server: {conn_error}"
+
+    # A non-ASCII password is legal (we send it as UTF-8 per RFC 4616), but it is
+    # also the classic Chinese-IME slip — ！ typed where ! was meant. Say so
+    # explicitly rather than leaving them retyping the same thing.
+    odd = _describe_non_ascii(password)
+    if odd:
+        return False, (
+            f"Sign-in failed, and your password contains a non-English character: {odd}. "
+            "If you meant the normal English character, switch your keyboard to English "
+            "and retype the password. If your password really does contain it, use "
+            "“Sign in with Microsoft” instead — it never sends your password to the mail server."
+        )
     if smtp_auth_disabled:
         # An Outlook mailbox rejected us because SMTP AUTH is off. A Coremail
         # user with a typo can also reach here (Coremail rejects, then Microsoft
