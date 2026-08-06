@@ -76,6 +76,43 @@
   .err.show{display:block}
   .cursor{display:inline-block;width:8px;background:var(--green);animation:b 1s steps(2) infinite}
   @keyframes b{0%,50%{opacity:1}51%,100%{opacity:0}}
+  .btn.on{border-color:var(--green);color:var(--green);background:rgba(42,245,152,.08)}
+
+  /* response extras: product photos, decks, generated docs, ecosystem map */
+  .extras{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .shots{display:flex;flex-wrap:wrap;gap:10px}
+  .shot{width:150px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+        border-radius:10px;overflow:hidden}
+  .shot img{width:100%;height:104px;object-fit:cover;display:block;background:#0B1221}
+  .shot span{display:block;padding:6px 8px;font-size:.68rem;color:var(--grey);line-height:1.35}
+  .dl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:.83rem;
+      font-weight:600;color:#050810;background:linear-gradient(135deg,var(--green),var(--blue));
+      padding:8px 15px;border-radius:8px}
+  .dl.doc{background:rgba(0,158,253,.12);color:var(--blue);border:1px solid rgba(0,158,253,.45)}
+  .dl-blurb{font-size:.73rem;color:var(--grey);margin-top:3px}
+  .mapbtn{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
+          color:var(--white);border-radius:8px;padding:8px 15px;font-size:.83rem;
+          font-family:inherit;cursor:pointer}
+  .mapbtn:hover{border-color:var(--green);color:var(--green)}
+
+  /* modals */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:80;
+           align-items:center;justify-content:center;padding:20px}
+  .overlay.show{display:flex}
+  .modal{position:relative;background:var(--panel);border:1px solid rgba(255,255,255,.12);
+         border-radius:14px;width:min(1000px,96vw);height:min(660px,88vh);padding:12px}
+  .modal.small{height:auto;width:min(430px,94vw);padding:24px}
+  .modal h3{margin:0 0 8px;font-size:1.1rem}
+  .modal p{color:var(--grey);font-size:.84rem;line-height:1.5;margin:0 0 14px}
+  .modal p.hint{margin:12px 0 0;font-size:.75rem}
+  .modal input{width:100%;padding:10px 12px;border-radius:8px;background:rgba(20,25,40,.9);
+               border:1px solid rgba(255,255,255,.12);color:var(--white);font-family:inherit;outline:none}
+  .modal input:focus{border-color:var(--green)}
+  .modal .row{display:flex;gap:8px;margin-top:12px}
+  .modal iframe{width:100%;height:100%;border:0;border-radius:10px;background:var(--bg)}
+  .modal .x{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--grey);
+            font-size:1.5rem;cursor:pointer;line-height:1;z-index:2}
+  .modal .x:hover{color:var(--white)}
 </style>
 </head>
 <body>
@@ -93,10 +130,35 @@
     <select id="length" title="Response length">
       <option>Short</option><option selected>Medium</option><option>Long</option>
     </select>
+    <button class="btn" id="webBtn" type="button" title="Let Jerry search the live web (Claude models only)">Web: off</button>
+    <button class="btn" id="keyBtn" type="button" title="Use your own API key for this session">Key</button>
     <a class="btn" href="/">← Toolkit</a>
     <a class="btn" href="/api/logout">Sign out</a>
   </div>
 </header>
+
+<div class="overlay" id="mapModal">
+  <div class="modal">
+    <button class="x" data-close="mapModal">&times;</button>
+    <iframe id="mapFrame" title="Streamax Ecosystem Map"></iframe>
+  </div>
+</div>
+
+<div class="overlay" id="keyModal">
+  <div class="modal small">
+    <button class="x" data-close="keyModal">&times;</button>
+    <h3>Bring your own API key</h3>
+    <p>Optional. Used for this browser session only &mdash; never saved to a
+       database, a cookie, or the usage log. An Anthropic key unlocks the Claude
+       models for you.</p>
+    <input type="password" id="byoKey" placeholder="sk-ant-…  or  sk-…">
+    <div class="row">
+      <button class="btn" id="keySave" type="button">Save for session</button>
+      <button class="btn" id="keyClear" type="button">Clear</button>
+    </div>
+    <p class="hint" id="keyState">No key set.</p>
+  </div>
+</div>
 
 <main id="main">
   <div class="thread" id="thread"></div>
@@ -116,9 +178,109 @@
 
 <script>
 (function () {
-  var history = [], attachments = [], sessionId = null, busy = false;
+  var history = [], attachments = [], sessionId = null, busy = false, webOn = false;
   var $ = function (id) { return document.getElementById(id); };
   var AVATAR = '/assets/jerry.png';
+
+  // --- modals -------------------------------------------------------------
+  function openModal(id) { $(id).classList.add('show'); }
+  function closeModal(id) { $(id).classList.remove('show'); }
+  document.addEventListener('click', function (e) {
+    if (e.target.dataset && e.target.dataset.close) closeModal(e.target.dataset.close);
+    if (e.target.classList.contains('overlay')) e.target.classList.remove('show');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeModal('mapModal'); closeModal('keyModal'); }
+  });
+
+  // --- web browsing toggle (Claude only; server enforces that too) ---------
+  $('webBtn').addEventListener('click', function () {
+    webOn = !webOn;
+    this.textContent = 'Web: ' + (webOn ? 'on' : 'off');
+    this.classList.toggle('on', webOn);
+  });
+
+  // --- bring your own key (session-scoped, never sent anywhere but /api/chat)
+  function byoKey() { try { return sessionStorage.getItem('stmx_byo') || ''; } catch (e) { return ''; } }
+  function paintKeyState() {
+    var k = byoKey();
+    $('keyState').textContent = k ? 'A key is set for this session.' : 'No key set.';
+    $('keyBtn').classList.toggle('on', !!k);
+  }
+  $('keyBtn').addEventListener('click', function () { openModal('keyModal'); paintKeyState(); });
+  $('keySave').addEventListener('click', function () {
+    var v = $('byoKey').value.trim();
+    if (v) { try { sessionStorage.setItem('stmx_byo', v); } catch (e) {} }
+    $('byoKey').value = ''; paintKeyState(); closeModal('keyModal');
+  });
+  $('keyClear').addEventListener('click', function () {
+    try { sessionStorage.removeItem('stmx_byo'); } catch (e) {}
+    $('byoKey').value = ''; paintKeyState();
+  });
+  paintKeyState();
+
+  // --- render the extras that hang off a finished answer -------------------
+  function renderExtras(container, x) {
+    if (!x) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'extras';
+    var html = '';
+
+    if (x.images && x.images.length) {
+      html += '<div class="shots">' + x.images.map(function (im) {
+        return '<div class="shot"><img src="' + im.url + '" alt="" loading="lazy">' +
+               '<span>' + esc(im.caption || '') + '</span></div>';
+      }).join('') + '</div>';
+    }
+    (x.downloads || []).forEach(function (d) {
+      html += '<div><a class="dl" href="' + d.url + '" download>' + esc(d.label) + '</a>' +
+              (d.blurb ? '<div class="dl-blurb">' + esc(d.blurb) + '</div>' : '') + '</div>';
+    });
+    (x.artifacts || []).forEach(function (a, i) {
+      html += '<div><button class="dl doc" data-art="' + i + '">Download &middot; ' +
+              esc(a.filename) + '</button></div>';
+    });
+    if (x.ecosystem !== null && x.ecosystem !== undefined) {
+      html += '<button class="mapbtn" data-map="' + esc(x.ecosystem) + '">Open Ecosystem Map' +
+              (x.ecosystem ? ' &middot; ' + esc(x.ecosystem) : '') + '</button>';
+    }
+    if (!html) return;
+    wrap.innerHTML = html;
+    container.appendChild(wrap);
+
+    wrap.addEventListener('click', function (e) {
+      var mapFocus = e.target.dataset ? e.target.dataset.map : null;
+      if (mapFocus !== null && mapFocus !== undefined) {
+        $('mapFrame').src = '/api/ecosystem?focus=' + encodeURIComponent(mapFocus);
+        openModal('mapModal');
+        return;
+      }
+      var ai = e.target.dataset ? e.target.dataset.art : null;
+      if (ai !== null && ai !== undefined) {
+        var spec = x.artifacts[parseInt(ai, 10)].spec;
+        e.target.disabled = true; e.target.textContent = 'Building…';
+        fetch('/api/artifact', {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({spec: spec})
+        }).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.blob().then(function (b) {
+            var u = URL.createObjectURL(b), a = document.createElement('a');
+            a.href = u; a.download = x.artifacts[parseInt(ai, 10)].filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(u);
+            e.target.disabled = false;
+            e.target.innerHTML = 'Download &middot; ' + esc(x.artifacts[parseInt(ai, 10)].filename);
+          });
+        }).catch(function (err) {
+          e.target.disabled = false; e.target.textContent = 'Failed — retry';
+          $('err').textContent = 'Document build failed: ' + err.message;
+          $('err').classList.add('show');
+        });
+      }
+    });
+  }
 
   function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function md(t) {
@@ -279,14 +441,15 @@
     attachments = []; drawAtt();
 
     var out = bubble('bot', '<span class="cursor">&nbsp;</span>');
-    var acc = '';
+    var acc = '', extras = null;
 
     fetch('/api/chat', {
       method:'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         messages: history, model: $('model').value, length: $('length').value,
-        session_id: sessionId, files: payloadFiles
+        session_id: sessionId, files: payloadFiles,
+        web: webOn, byo_key: byoKey()
       })
     }).then(function (r) {
       if (!r.ok || !r.body) throw new Error('HTTP ' + r.status);
@@ -306,6 +469,7 @@
               $('main').scrollTop = $('main').scrollHeight;
             }
             if (m.session_id) sessionId = m.session_id;
+            if (m.extras) extras = m.extras;
             if (m.error) { $('err').textContent = m.error; $('err').classList.add('show'); }
           });
           return pump();
@@ -317,9 +481,14 @@
     });
 
     function finish() {
-      out.innerHTML = md(acc) || '<em style="color:#A0AEC0">No response.</em>';
+      // Prefer the server's cleaned text: artifact JSON and the ecosystem
+      // marker are machinery, not something the reader should see.
+      var shown = (extras && extras.clean) ? extras.clean : acc;
+      out.innerHTML = md(shown) || '<em style="color:#A0AEC0">No response.</em>';
+      if (extras) renderExtras(out, extras);
       if (acc) { history.push({role:'assistant', content:acc}); loadPast(); }
       busy = false; $('send').disabled = false; ta.focus();
+      $('main').scrollTop = $('main').scrollHeight;
     }
   }
 

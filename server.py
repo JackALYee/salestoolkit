@@ -91,6 +91,18 @@ try:
     import usage_logger as _usage
 except Exception:                                                        # noqa: BLE001
     _usage = None
+try:
+    import product_images as _pimg
+except Exception:                                                        # noqa: BLE001
+    _pimg = None
+try:
+    import downloads as _downloads
+except Exception:                                                        # noqa: BLE001
+    _downloads = None
+try:
+    import topology as _topology
+except Exception:                                                        # noqa: BLE001
+    _topology = None
 
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
@@ -316,6 +328,92 @@ def api_session_delete(session_id: str, request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Rich response extras: product photos, deck downloads, generated documents,
+# the ecosystem map. In Streamlit these were widgets rendered after the reply;
+# here the server computes them once the answer is complete and pushes them to
+# the browser on the same SSE stream.
+# ---------------------------------------------------------------------------
+
+def _asset_url(path: str) -> str:
+    """Map an absolute assets/ path to the URL the /assets mount serves."""
+    p = Path(path)
+    return f"/assets/{p.parent.name}/{p.name}"
+
+
+def _response_extras(answer: str, question: str) -> dict:
+    """Everything that hangs off a finished answer."""
+    out: dict = {"images": [], "downloads": [], "artifacts": [],
+                 "ecosystem": None, "clean": answer}
+
+    if _pimg is not None:
+        try:
+            out["images"] = [
+                {"url": _asset_url(path), "caption": caption}
+                for path, caption in _pimg.find_product_images(answer)
+            ]
+        except Exception as exc:
+            print(f"[extras] images: {exc}", file=sys.stderr, flush=True)
+
+    if _downloads is not None:
+        try:
+            # Scan the question too: an eSIM ask should surface the deck even if
+            # Jerry's wording omits the keyword.
+            out["downloads"] = [
+                {"label": d["label"], "blurb": d.get("blurb", ""),
+                 "url": _asset_url(d["path"])}
+                for d in _downloads.find_downloads(f"{question}\n{answer}")
+            ]
+        except Exception as exc:
+            print(f"[extras] downloads: {exc}", file=sys.stderr, flush=True)
+
+    if _file_io is not None:
+        try:
+            specs = _file_io.extract_artifacts(answer)
+            out["artifacts"] = [
+                {"format": s.get("format", ""),
+                 "filename": _file_io._safe_filename(s), "spec": s}
+                for s in specs
+            ]
+            if specs:
+                out["clean"] = _file_io.strip_artifacts(answer)
+        except Exception as exc:
+            print(f"[extras] artifacts: {exc}", file=sys.stderr, flush=True)
+
+    if _topology is not None:
+        m = _jerry._ECO_RE.search(answer or "") if hasattr(_jerry, "_ECO_RE") else None
+        if m:
+            out["ecosystem"] = (m.group(1) or "").strip()
+            out["clean"] = _jerry._ECO_RE.sub("", out["clean"]).strip()
+
+    return out
+
+
+@app.post("/api/artifact")
+async def api_artifact(request: Request):
+    """Render a ```artifact``` spec into a real .docx/.pptx/.xlsx/.pdf."""
+    require_user(request)
+    if _file_io is None:
+        raise HTTPException(503, "document generation unavailable")
+    spec = (await request.json()).get("spec") or {}
+    try:
+        data, filename, mime = _file_io.render_artifact(spec)
+    except Exception as exc:
+        raise HTTPException(400, f"could not build the document: {exc}")
+    return Response(content=data, media_type=mime, headers={
+        "Content-Disposition": f'attachment; filename="{filename}"'
+    })
+
+
+@app.get("/api/ecosystem", response_class=HTMLResponse)
+def api_ecosystem(request: Request, focus: str = ""):
+    """Interactive D3 ecosystem map, shown in a modal iframe."""
+    require_user(request)
+    if _topology is None:
+        raise HTTPException(503, "ecosystem map unavailable")
+    return HTMLResponse(_topology.ecosystem_map_html(focus))
+
+
+# ---------------------------------------------------------------------------
 # Jerry chat — keys stay server-side; response streams back as SSE
 # ---------------------------------------------------------------------------
 
@@ -374,9 +472,22 @@ async def api_chat(request: Request):
         model = _jerry.NON_LEADERSHIP_DEFAULT
 
     provider = _jerry._provider_for(model)
-    key, _src = _jerry._resolve_provider_key(provider, is_leadership)
+
+    # Bring-your-own-key: sent per request over HTTPS and used for this call
+    # only. Never written to disk, the session cookie, or any log — same
+    # session-only contract as the Streamlit settings panel.
+    byo = (body.get("byo_key") or "").strip()
+    if byo:
+        key = byo
+    else:
+        key, _src = _jerry._resolve_provider_key(provider, is_leadership)
     if not key:
         raise HTTPException(503, f"no API key configured for provider '{provider}'")
+
+    # Web browsing is opt-in per turn and Anthropic-only (they're server-side
+    # tools); DeepSeek has no equivalent.
+    web_enabled = bool(body.get("web")) and provider == "anthropic"
+    request_tools = _jerry.WEB_TOOLS if web_enabled else []
 
     length = body.get("length") or "Medium"
     max_tokens = MAX_TOKENS.get(length, 4096)
@@ -443,6 +554,7 @@ async def api_chat(request: Request):
                 with client.messages.stream(
                     model=model, max_tokens=max_tokens,
                     system=system_blocks, messages=messages,
+                    tools=request_tools,
                 ) as s:
                     for piece in s.text_stream:
                         answer += piece
@@ -457,8 +569,13 @@ async def api_chat(request: Request):
                         }
                     except Exception:
                         pass
+            extras = {}
+            try:
+                extras = _response_extras(answer, question_text)
+            except Exception as exc:
+                print(f"[extras] {exc}", file=sys.stderr, flush=True)
             yield _sse({"done": True, "model": model, "session_id": session_id,
-                        "usage": usage})
+                        "usage": usage, "extras": extras})
         except Exception as exc:
             print(f"[chat] {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
             yield _sse({"error": f"{type(exc).__name__}: {exc}"})
