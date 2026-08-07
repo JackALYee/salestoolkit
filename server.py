@@ -256,7 +256,14 @@ async def api_login(request: Request):
 
     # `message` is the display name for easter-egg accounts, else "Success".
     user = email.strip().lower() if message == "Success" else message
-    return _set_session(JSONResponse({"ok": True, "user": user}), user, request)
+    payload = {"ok": True, "user": user}
+    # Some accounts get a full-screen transition before landing in the app —
+    # the HTML port of what the Streamlit login played. Spec comes from
+    # login.LOGIN_EASTER_EGGS so both front-ends stay identical.
+    egg = _login.resolve_easter_egg(user)
+    if egg:
+        payload["easter_egg"] = dict(egg, ms=_login.EASTER_EGG_MS)
+    return _set_session(JSONResponse(payload), user, request)
 
 
 @app.get("/api/logout")
@@ -361,9 +368,8 @@ def api_me(request: Request):
         "is_leadership": is_leadership,
         "is_vip": is_vip,
         "models": models,
-        # VIPs may pick Claude but still DEFAULT to DeepSeek — the expensive
-        # model should be a deliberate choice for anyone outside leadership.
-        "default_model": (_jerry.DEFAULT_MODEL if is_leadership
+        # VIP (⊇ LEADERSHIP) defaults to Opus 5; everyone else to DeepSeek.
+        "default_model": (_jerry.DEFAULT_MODEL if is_vip
                           else _jerry.NON_LEADERSHIP_DEFAULT),
     }
 
@@ -579,11 +585,14 @@ async def api_chat(request: Request):
     is_vip = bool(_login.resolve_vip(user))
     allowed = set(_jerry._allowed_models(is_leadership, is_vip).values())
 
-    model = body.get("model") or (_jerry.DEFAULT_MODEL if is_leadership
+    model = body.get("model") or (_jerry.DEFAULT_MODEL if is_vip
                                   else _jerry.NON_LEADERSHIP_DEFAULT)
-    # Server-side enforcement: never trust the client's model choice.
+    # Server-side enforcement: never trust the client's model choice. The
+    # fallback must itself be in `allowed`, or a VIP whose request we rejected
+    # would land on a model they are not cleared for.
     if model not in allowed:
-        model = _jerry.NON_LEADERSHIP_DEFAULT
+        model = (_jerry.DEFAULT_MODEL if _jerry.DEFAULT_MODEL in allowed
+                 else _jerry.NON_LEADERSHIP_DEFAULT)
 
     provider = _jerry._provider_for(model)
 

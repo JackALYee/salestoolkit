@@ -134,6 +134,61 @@ def resolve_special_relationship(name_or_email: str) -> dict | None:
     return SPECIAL_RELATIONSHIPS.get(val)
 
 
+_EGG_PORTRAIT_REMOTE = (
+    "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
+)
+
+# --- Login easter eggs -------------------------------------------------------
+# The Streamlit login played a full-screen transition for three accounts before
+# dropping them into the app. `render_login()` still owns the Streamlit version;
+# this table is the single source of truth so the HTML site (server.py ->
+# templates/login.html) shows exactly the same thing instead of forking the
+# content. Keyed by the display name `verify_streamax_credentials` returns.
+LOGIN_EASTER_EGGS = {
+    "Jerry": {
+        "session_key": "show_jerry_anim",
+        "image": "/assets/easter-egg-portrait.jpg",
+        "image_remote": _EGG_PORTRAIT_REMOTE,
+        "emoji": "",
+        "headline": "你的数字分身已上线！",
+        "sub": "Logging in...",
+    },
+    "Hekun": {
+        "session_key": "show_hekun_anim",
+        "image": "",
+        "image_remote": "",
+        "emoji": "💰",
+        "headline": "130,885万元，tmd干就完了",
+        "sub": "Logging in...",
+    },
+    "ZNTang": {
+        "session_key": "show_zntang_anim",
+        "image": "/assets/easter-egg-portrait.jpg",
+        "image_remote": _EGG_PORTRAIT_REMOTE,
+        "emoji": "",
+        "headline": "今年一个亿，明年三个亿，后年上市",
+        "sub": "Logging in...",
+    },
+}
+
+# How long the transition holds before landing in the app (the Streamlit
+# version used a hard time.sleep(8)).
+EASTER_EGG_MS = 8000
+
+
+def resolve_easter_egg(display_name: str) -> dict | None:
+    """Return the transition spec for a just-authenticated display name.
+
+    Only the web-facing fields — `session_key` / `image_remote` are Streamlit
+    plumbing and have no meaning to the HTML front-end.
+    """
+    egg = LOGIN_EASTER_EGGS.get((display_name or "").strip())
+    if not egg:
+        return None
+    return {k: v for k, v in egg.items()
+            if k not in ("session_key", "image_remote")}
+
+
 def _grant_leadership(name_or_email: str) -> None:
     """Set session_state['is_leadership'] for the just-authenticated user."""
     st.session_state["is_leadership"] = resolve_leadership(name_or_email)
@@ -530,70 +585,56 @@ def render_login():
         unsafe_allow_html=True
     )
         
-    # 1. Jerry Animation
-    if st.session_state.get('show_jerry_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
-            
-        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
-                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>你的数字分身已上线！</h2>
-                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(8)
-        st.session_state['show_jerry_anim'] = False
-        st.session_state['authenticated'] = True
-        st.session_state['user_name'] = 'Jerry'
-        _grant_leadership('Jerry')
-        _grant_vip('Jerry')
-        _persist('Jerry')
-        st.rerun()
+    # Easter-egg transition, driven by LOGIN_EASTER_EGGS so this and the HTML
+    # site (templates/login.html) can never show different content. Streamlit
+    # cannot serve /assets, so the portrait uses `image_remote` here.
+    _egg_name = next(
+        (name for name, spec in LOGIN_EASTER_EGGS.items()
+         if st.session_state.get(spec["session_key"], False)),
+        None,
+    )
+    if _egg_name:
+        spec = LOGIN_EASTER_EGGS[_egg_name]
+        visual = ""
+        if spec.get("image_remote"):
+            visual = (
+                f"<img src='{spec['image_remote']}' "
+                "onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\" "
+                "style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; "
+                "border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>"
+                "<div class='loading-text' style='display: none; width: 90%; max-width: 450px; "
+                "height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); "
+                "color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; "
+                "font-weight: bold; font-family: \"Inter\", sans-serif; letter-spacing: 1px;'>Drawing...</div>"
+            )
+        elif spec.get("emoji"):
+            visual = (
+                f"<div class='jumping-heart' style='font-size: 120px; line-height: 1; "
+                "filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); "
+                f"text-shadow: 0 0 10px #2AF598;'>{spec['emoji']}</div>"
+            )
 
-    # 2. Hekun Animation
-    elif st.session_state.get('show_hekun_anim', False):
         st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown("""
-            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <div class='jumping-heart' style='font-size: 120px; line-height: 1; filter: drop-shadow(0 10px 25px rgba(42, 245, 152, 0.6)); text-shadow: 0 0 10px #2AF598;'>💰</div>
-                <h2 style='color: #2AF598; margin-top: 40px; font-weight: 700; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>130,885万元，tmd干就完了</h2>
-                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(8)
-        st.session_state['show_hekun_anim'] = False
-        st.session_state['authenticated'] = True
-        st.session_state['user_name'] = 'Hekun'
-        _grant_leadership('Hekun')
-        _grant_vip('Hekun')
-        _persist('Hekun')
-        st.rerun()
+        st.markdown(
+            "<div style='display: flex; flex-direction: column; align-items: center; "
+            "justify-content: center;'>"
+            f"{visual}"
+            "<h2 style='color: #2AF598; margin-top: 34px; font-weight: 700; "
+            "font-family: \"Inter\", sans-serif; "
+            f"text-shadow: 0 2px 10px rgba(42, 245, 152, 0.4);'>{spec['headline']}</h2>"
+            "<p class='loading-text' style='color: #A0AEC0; font-size: 1rem; "
+            f"margin-top: 10px;'>{spec['sub']}</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-    # 3. ZNTang Animation (Easter Egg)
-    elif st.session_state.get('show_zntang_anim', False):
-        img_src = "https://drive.google.com/thumbnail?id=1yoXi043RnGn4ZDhtJGYXM3n2Z9tFiXMJ&sz=w800"
-            
-        st.write("<br><br><br><br><br>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center;'>
-                <img src='{img_src}' onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style='max-width: 450px; width: 90%; height: auto; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.6);'>
-                <div class='loading-text' style='display: none; width: 90%; max-width: 450px; height: 300px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); color: #2AF598; font-size: 2rem; align-items: center; justify-content: center; font-weight: bold; font-family: "Inter", sans-serif; letter-spacing: 1px;'>Drawing...</div>
-                <h2 style='color: #2AF598; margin-top: 30px; font-weight: 600; font-family: "Inter", sans-serif; text-shadow: 0 2px 10px rgba(42, 245, 152, 0.3);'>今年一个亿，明年三个亿，后年上市</h2>
-                <p class='loading-text' style='color: #A0AEC0; font-size: 1rem; margin-top: 10px;'>Logging in...</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        time.sleep(8)
-        st.session_state['show_zntang_anim'] = False
+        time.sleep(EASTER_EGG_MS / 1000)
+        st.session_state[spec["session_key"]] = False
         st.session_state['authenticated'] = True
-        st.session_state['user_name'] = 'ZNTang'
-        _grant_leadership('ZNTang')
-        _grant_vip('ZNTang')
-        _persist('ZNTang')
+        st.session_state['user_name'] = _egg_name
+        _grant_leadership(_egg_name)
+        _grant_vip(_egg_name)
+        _persist(_egg_name)
         st.rerun()
 
     # Show Standard Form View

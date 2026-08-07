@@ -1452,9 +1452,10 @@ def _init_session_state() -> None:
     if "jerry_gpt_history" not in st.session_state:
         st.session_state["jerry_gpt_history"] = []
     if "jerry_gpt_model" not in st.session_state:
-        # Leadership defaults to Claude Opus; everyone else to DeepSeek (the
-        # only org-key model non-leadership may use).
-        if bool(st.session_state.get("is_leadership", False)):
+        # VIP (⊇ LEADERSHIP) defaults to Claude Opus; everyone else to
+        # DeepSeek, the only org-key model they may use.
+        if (bool(st.session_state.get("is_leadership", False))
+                or bool(st.session_state.get("is_vip", False))):
             st.session_state["jerry_gpt_model"] = _get_model()
         else:
             st.session_state["jerry_gpt_model"] = NON_LEADERSHIP_DEFAULT

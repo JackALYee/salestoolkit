@@ -135,9 +135,21 @@ Wired today: easter-egg logins (`/api/login` → `verify_streamax_credentials`),
 
 ⚠️ `special_relationship` was pinned to `None` in `/api/chat` when the HTML site was built, which silently dropped Jerry's inner-circle behaviour — no one-time greeting for himself / Kun He / Rui Wang, and no 你 informal address-form override, so they got the default professional 您. Fixed; if you add another `_build_clearance_block` caller, pass the real value.
 
-**VIP is wired.** `VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS` grants **Claude model access without pricing clearance**. Two functions must agree or a VIP gets a model in the picker that fails at request time: `_allowed_models(is_leadership, is_vip)` decides the menu, `_resolve_provider_key(provider, is_leadership, is_vip)` hands out the org Anthropic key. Both default `is_vip=False`, so an un-updated caller under-grants rather than over-grants. Pricing clearance stays keyed on `is_leadership` alone in `_build_clearance_block`. VIPs still **default** to DeepSeek — Claude is a deliberate per-session choice for anyone outside leadership.
+**VIP is wired.** `VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS` grants **Claude model access without pricing clearance**. Two functions must agree or a VIP gets a model in the picker that fails at request time: `_allowed_models(is_leadership, is_vip)` decides the menu, `_resolve_provider_key(provider, is_leadership, is_vip)` hands out the org Anthropic key. Both default `is_vip=False`, so an un-updated caller under-grants rather than over-grants. Pricing clearance stays keyed on `is_leadership` alone in `_build_clearance_block`. VIPs **default to Opus 5**, same as leadership (`is_vip` drives the default on both the `/api/me` + `/api/chat` path and the Streamlit settings panel). The `/api/chat` fallback when a requested model is rejected picks one that is actually in `allowed`, so a VIP can't be bounced onto a model they aren't cleared for.
 
 Test: `python3 scripts/test_identity_flags.py` (no network) — easter eggs, leadership for names and emails, special relationships reaching the prompt, first-turn-only greeting, and pricing clearance.
+
+## Login easter eggs
+
+Three accounts get a full-screen transition before landing in the app: **Jerry** (portrait + 你的数字分身已上线！), **Hekun** (bouncing 💰 + 130,885万元…), **ZNTang** (portrait + 今年一个亿…). Reachable via the `*_test` shortcuts or the real mailbox.
+
+`login.LOGIN_EASTER_EGGS` is the single source of truth for the content, consumed by **both** front-ends so they cannot drift:
+- **HTML site** — `/api/login` attaches an `easter_egg` object to the JSON response (via `resolve_easter_egg()`, which strips the Streamlit-only `session_key`/`image_remote` keys); `templates/login.html` plays it, then navigates to `NEXT`.
+- **Streamlit** — `render_login()` reads the same table and uses `image_remote`, because Streamlit can't serve `/assets`.
+
+The portrait is vendored at `assets/easter-egg-portrait.jpg` rather than hot-linked from Google Drive — it's the first screen a user sees and Drive thumbnails are unreliable. The HTML version is **click-to-skip**; the Streamlit one blocks on `time.sleep(8)`, which on a plain web page would read as a hang.
+
+⚠️ These effects were silently lost in the Streamlit→HTML rebuild: `/api/login` authenticated the accounts correctly but returned no transition, so nobody noticed until someone signed in as Jerry and saw nothing.
 
 ## Language switching (`i18n.py`)
 
