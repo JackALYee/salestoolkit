@@ -613,9 +613,18 @@ async def api_chat(request: Request):
 
     system_blocks = list(_jerry._load_system_blocks())
     try:
+        # `user` is a streamax.com email for real logins, or an easter-egg
+        # display name ("Jerry", "Hekun", "ZNTang"). resolve_* handle both —
+        # they map the display names back to canonical emails first.
+        #
+        # This was previously pinned to None, which silently dropped Jerry's
+        # inner-circle behaviour on the HTML site: no one-time greeting for
+        # himself / Kun He / Rui Wang, and no 你 (informal) address-form
+        # override — they got the default professional 您 register instead.
         system_blocks.append(_jerry._build_clearance_block(
             user if "@" in user else "", user, is_leadership,
-            is_first_turn=(len(messages) <= 1), special_relationship=None,
+            is_first_turn=(len(messages) <= 1),
+            special_relationship=_login.resolve_special_relationship(user),
         ))
     except Exception as exc:  # clearance is best-effort, never fatal
         print(f"[chat] clearance block failed: {exc}", file=sys.stderr, flush=True)
