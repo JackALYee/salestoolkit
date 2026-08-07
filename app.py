@@ -1,4 +1,8 @@
 import streamlit as st
+try:
+    import i18n as _i18n
+except Exception:                                                    # noqa: BLE001
+    _i18n = None    # degrade to no language switcher, same as every other module
 import streamlit.components.v1 as components
 
 # --- GRACEFUL IMPORTS ---
@@ -56,9 +60,9 @@ except ImportError:
     value_calculator_content = "<div id='value-calculator' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ value_calculator.py not found</h2></div>"
 
 try:
-    from sales_onboarding import content as sales_onboarding_content
+    from marketing_resources import content as marketing_resources_content
 except ImportError:
-    sales_onboarding_content = "<div id='onboarding' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ sales_onboarding.py not found</h2></div>"
+    marketing_resources_content = "<div id='marketing-resources' class='content-section hidden'><h2 style='color:#ff4757; text-align:center; padding:40px;'>⚠️ marketing_resources.py not found</h2></div>"
 
 
 # --- EMAIL TOOL EXPLANATORY SECTION ---
@@ -283,7 +287,6 @@ else:
     # normalize to lowercase for comparison robustness; the cookie restore
     # in auth.py persists user_email across reloads/new tabs.
     _user_email = (st.session_state.get("user_email", "") or "").strip().lower()
-    _is_jhsun = (_user_email == "jhsun@streamax.com")
 
     # --- QUERY-PARAM ROUTER: Jerry GPT sub-page ---
     # Streamaxpedia's launch button navigates to ?view=jerry_gpt. We detect
@@ -338,6 +341,14 @@ else:
             },
             chtml: {
                 scale: 0.9
+            },
+            options: {
+                // `inlineMath: [['$','$']]` above means any "$20 ... $60" in
+                // ordinary prose gets typeset as maths and rendered twice.
+                // Opt a subtree out with class="tex2jax_ignore" (Marketing
+                // Resources does; the TCO calculator deliberately does not).
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
             }
         };
     </script>
@@ -1208,6 +1219,7 @@ else:
             .user-pill .signout-btn { padding: 3px 9px; font-size: 0.65rem; }
         }
     </style>
+__I18N_CSS__
 </head>
 <body>
 
@@ -1215,6 +1227,8 @@ else:
          parent Streamlit frame to ?logout=1 (auth.logout() clears the
          signed cookie + session_state). Same parent-window trick used by
          the Jerry GPT and Jack GPT launch buttons. -->
+    <div class="stmx-topright">
+__I18N_SWITCHER__
     <div class="user-pill">
         <i class="fa-solid fa-user-circle user-icon"></i>
         <span class="user-identity">__USER_IDENTITY__</span>
@@ -1235,6 +1249,7 @@ else:
             return false;
         "><i class="fa-solid fa-right-from-bracket"></i> Sign out</a>
     </div>
+    </div>
 
     <header>
         <div class="container">
@@ -1246,10 +1261,10 @@ else:
                 <div class="header-subtitle" style="margin:0;">Streamax Sales Toolkit</div>
             </div>
             <h1 class="fade-up" style="font-size: 3rem; line-height: 1.1;">
-                <span class="gradient-text">North America</span><br>
+                <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.18.22 • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.1.1 • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
@@ -1276,147 +1291,78 @@ else:
                 <summary class="intro-summary">
                     <div class="flex items-center justify-between w-full pr-4">
                         <span id="app-intro-title" class="flex items-center"><i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> Streamax Sales Toolkit User Guide</span>
-                        
-                        <!-- Language Toggle -->
-                        <div class="flex items-center bg-black/50 border border-white/20 rounded-full p-1 cursor-pointer ml-4" onclick="toggleAppIntroLang(event)">
-                            <div id="app-lang-en" class="px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors">EN</div>
-                            <div id="app-lang-zh" class="px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors">中文</div>
-                        </div>
                     </div>
                     <i class="fa-solid fa-chevron-down chevron"></i>
                 </summary>
-                
+
                 <div class="intro-content relative">
-                    <!-- ================= ENGLISH CONTENT ================= -->
                     <div id="app-intro-en" class="block">
                         <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
-                            A <strong>"digital Swiss Army knife"</strong> built exclusively for Streamax sales representatives. It integrates essential tools, scripts, product information, and calculators required throughout the sales process into a unified platform. The core objective is to help new reps onboard quickly, and enable all sales staff to communicate more professionally and efficiently with clients to close deals.
+                            A digital Swiss Army knife for Streamax sales. Every tool you need across the sales cycle — product knowledge, scripts, discovery questions, ROI maths, outreach and configuration — in one place. Eight sections, each usable on its own.
                         </p>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamaxpedia</h4>
-                                <p class="mb-3 text-xs text-gray-400">The "knowledge base" and "product architecture guide" for sales. Features three modes:</p>
-                                <ul class="text-sm">
-                                    <li><strong>Search Engine Mode:</strong> Type any relevant term (e.g., "ADAS", "MDVR") for quick retrieval. Click the <strong>Relevance</strong> button to open a dynamic topology graph showing product ecosystem connections.</li>
-                                    <li><strong>Product Matrix Mode:</strong> A smart hardware configurator. Select components on the left, filter solutions by function on the right. The bottom <strong>Solution Validator</strong> automatically checks if the selection is a valid official architecture and intelligently suggests missing components.</li>
-                                    <li><strong>Jerry GPT <span style="color: var(--primary-green); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; margin-left: 4px;">NEW</span>:</strong> A digital version of Jerry, Streamax's Product Marketing Director. Distilled by Jerry himself from 10 years inside Streamax — sales playbooks, white papers, global strategy, and value propositions all live in his working memory. Ask anything about positioning, the competitive landscape, regional plays, product portfolio, or how to handle a specific customer conversation. Responses come back in Jerry's voice: structured, source-backed, numbers-first — so every customer meeting lands with a sharper, more convincing pitch.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="book-open" style="width:17px;height:17px;color:var(--primary-green);"></i>
+                                    <span>1. Streamaxpedia</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">Product knowledge base with a search mode, a hardware Product Matrix with a validator that catches invalid architectures, the interactive Ecosystem Map, and Jerry GPT.</p>
                             </div>
-
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. Prospecting Flow</h4>
-                                <p class="mb-3 text-xs text-gray-400">A top-of-funnel guidance tool for the sales pipeline:</p>
-                                <ul class="text-sm">
-                                    <li>Clearly displays the <strong>7-step enterprise sales process</strong> (from initial contact to final close).</li>
-                                    <li><strong>Script Library:</strong> Differentiates between TSP channel partners and end-user fleets, providing various styles of email templates, cold call scripts, and elevator pitches ready to be copied and used.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="git-merge" style="width:17px;height:17px;color:var(--secondary-blue);"></i>
+                                    <span>2. Prospecting Flow</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">The 7-step enterprise sales process plus a script library — email templates, cold-call scripts and elevator pitches, split by TSP partner vs. end-user fleet.</p>
                             </div>
-
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-search text-purple-400"></i> 3. Discovery Meeting</h4>
-                                <p class="mb-3 text-xs text-gray-400">Helps sales reps ask the right questions after successfully booking a client:</p>
-                                <ul class="text-sm">
-                                    <li>Provides a structured <strong>"Question Bank"</strong>.</li>
-                                    <li>Differentiates between TSPs and end users, guiding sales step-by-step to uncover true needs—from business models and pain points to deployment constraints and budgets.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="search" style="width:17px;height:17px;color:#c084fc;"></i>
+                                    <span>3. Discovery Meeting</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">A structured question bank that walks you from business model to pain points, deployment constraints and budget — separate tracks for TSPs and end users.</p>
                             </div>
-
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. Presentation</h4>
-                                <p class="mb-3 text-xs text-gray-400">The core playbook for showcasing the Streamax value proposition to clients:</p>
-                                <ul class="text-sm">
-                                    <li><strong>Visualizations:</strong> Built-in dynamic CSS illustrations to vividly explain driver behavior risks, asset security risks, etc.</li>
-                                    <li><strong>Closed-Loop Journey:</strong> A lively animated demonstration showing how Streamax protects a truck across 10 critical touchpoints—from pre-departure and driving to arrival—complete with matching speaker scripts.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="monitor-play" style="width:17px;height:17px;color:#fb923c;"></i>
+                                    <span>4. Presentation</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">The customer-facing story: animated risk visualisations and the Closed-Loop Journey across 10 touchpoints, each with a matching speaker script.</p>
                             </div>
-
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. Value Calculator</h4>
-                                <p class="mb-3 text-xs text-gray-400">Use data to prove to clients that the system saves money:</p>
-                                <ul class="text-sm">
-                                    <li><strong>TCO Calculator:</strong> Input fleet size, mileage, and other data to dynamically calculate savings in fuel, safety claims, and insurance, generating the ROI.</li>
-                                    <li><strong>IFTA Optimizer:</strong> A specific tool for North American trucking. Calculates cross-state fuel taxes and smartly suggests the best states for refueling.</li>
-                                    <li><strong>Subscription Calculator:</strong> An internal tool. Calculates the profit margin and payback period based on hardware costs, platform fees, and subscription rates.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="calculator" style="width:17px;height:17px;color:#f87171;"></i>
+                                    <span>5. Value Calculator</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">Prove the money. TCO savings from fuel, claims and insurance; an IFTA optimiser for North American routes; and an internal margin and payback calculator.</p>
                             </div>
-
                             <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. Drip Mailer</h4>
-                                <p class="mb-3 text-xs text-gray-400">An automated mass email extension app for the Toolkit:</p>
-                                <ul class="text-sm">
-                                    <li><strong>Personalized Signatures:</strong> Three built-in professional layouts (minimalist, with avatar, with logo).</li>
-                                    <li><strong>Dynamic Compose & Preview:</strong> Supports variable replacement like <code>{first_name}</code> and <code>{company}</code> with WYSIWYG preview.</li>
-                                    <li><strong>Automated Sending:</strong> Upload a CSV list and set send delays. The system simulates manual sending at random times during business hours and provides detailed execution logs.</li>
-                                </ul>
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="mail" style="width:17px;height:17px;color:#facc15;"></i>
+                                    <span>6. Email Tool</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">Build a signature, compose with {first_name} / {company} variables, upload a CSV and send on a human-looking schedule with full logs.</p>
+                            </div>
+                            <div class="glass-panel p-5">
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="megaphone" style="width:17px;height:17px;color:var(--primary-green);"></i>
+                                    <span>7. Marketing Resources</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">Customer-ready collateral: the Sentinel product site to send to prospects, and the product decks you can download and forward.</p>
+                            </div>
+                            <div class="glass-panel p-5">
+                                <h4 style="display:flex;align-items:center;gap:8px;">
+                                    <i data-lucide="settings-2" style="width:17px;height:17px;color:var(--secondary-blue);"></i>
+                                    <span>8. Sales Configurator</span>
+                                </h4>
+                                <p class="text-sm" style="color:var(--text-grey);line-height:1.65;margin:0;">A guided BOM builder for the North America sales list. It applies the camera, interface and cable rules for you and exports the approved Excel material list.</p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ================= CHINESE CONTENT ================= -->
-                    <div id="app-intro-zh" class="hidden">
-                        <p style="color: var(--text-white); font-size: 0.95rem; border-left: 3px solid var(--secondary-blue); padding-left: 12px; margin-bottom: 25px; margin-top: 5px;">
-                            专为锐明销售人员打造的<strong>“数字瑞士军刀”</strong>。将销售过程中所需的工具、话术、产品信息和计算器集成到统一的平台中。核心目标是帮助新老销售快速上手，更专业、高效地与客户沟通并达成交易。
+                        <p style="color: var(--text-grey); font-size: 0.82rem; margin-top: 22px; padding-left: 12px; border-left: 3px solid rgba(255,255,255,0.14);">
+                            Tip: use the language selector at the top right to switch the interface. Product names, part numbers and technical vocabulary stay in English on purpose — that is how customers and the factory refer to them.
                         </p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-book-open text-[var(--primary-green)]"></i> 1. Streamax 百科全书 (Streamaxpedia)</h4>
-                                <p class="mb-3 text-xs text-gray-400">销售人员的"知识库"和"产品搭配指南"。包含三个模式：</p>
-                                <ul class="text-sm">
-                                    <li><strong>搜索引擎模式：</strong>输入相关术语（如 "ADAS", "MDVR"）快速检索。点击 <strong>Relevance</strong> 按钮可弹出动态拓扑图，展示产品生态关联。</li>
-                                    <li><strong>产品组合矩阵模式：</strong>智能硬件配置器。左侧选择组件，右侧按功能过滤方案。底部 <strong>方案验证器</strong> 会自动判断选择是否为官方有效架构，并智能提示缺失组件。</li>
-                                    <li><strong>Jerry GPT <span style="color: var(--primary-green); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; margin-left: 4px;">新功能</span>：</strong>Jerry 本人的 AI 数字分身——Streamax 产品市场总监。融合了他在 Streamax 十年沉淀：销售手册、白皮书、全球战略和价值主张全部纳入工作记忆。可咨询任何关于产品定位、竞争格局、区域打法、产品组合，或具体客户对话处理的问题。回复以 Jerry 本人的风格呈现——结构化、有出处、以数字开场——让每一次客户会议都打出更锐利、更有说服力的论点。</li>
-                                </ul>
-                            </div>
-
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-git-merge text-[var(--secondary-blue)]"></i> 2. 客户开发流程 (Prospecting Flow)</h4>
-                                <p class="mb-3 text-xs text-gray-400">针对销售漏斗最前端的指导工具：</p>
-                                <ul class="text-sm">
-                                    <li>清晰展示企业销售的 <strong>7 个步骤图</strong>（从初步接触到最终成交）。</li>
-                                    <li><strong>话术库：</strong>区分 TSP 渠道合作伙伴 与 最终车队用户，提供不同风格的邮件模板、电话冷呼话术和电梯临时演讲 (Elevator Pitch)，支持一键复制使用。</li>
-                                </ul>
-                            </div>
-
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-search text-purple-400"></i> 3. 需求探索会议 (Discovery Meeting)</h4>
-                                <p class="mb-3 text-xs text-gray-400">成功约到客户后，帮助销售问出正确问题：</p>
-                                <ul class="text-sm">
-                                    <li>提供结构化的<strong>“问题库”</strong>。</li>
-                                    <li>区分 TSP 和最终用户，从业务模式、痛点分析到部署限制和预算，指导销售一步步深入挖掘真实需求。</li>
-                                </ul>
-                            </div>
-
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-monitor-play text-orange-400"></i> 4. 幻灯片演示 (Presentation)</h4>
-                                <p class="mb-3 text-xs text-gray-400">向客户展示 Streamax 价值主张的核心剧本：</p>
-                                <ul class="text-sm">
-                                    <li><strong>视觉化呈现：</strong>内置动态插图，形象解释司机行为风险、资产安全风险等。</li>
-                                    <li><strong>闭环之旅：</strong>生动的动画演示，展示卡车从出发前、行驶中到到达后的 10 个关键环节中，Streamax 如何全程保驾护航，并提供配套演讲词。</li>
-                                </ul>
-                            </div>
-
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-calculator text-red-400"></i> 5. 价值与回报计算器 (Value Calculator)</h4>
-                                <p class="mb-3 text-xs text-gray-400">用数据说话，向客户证明系统能省钱：</p>
-                                <ul class="text-sm">
-                                    <li><strong>TCO 计算器：</strong>输入车队规模、里程等数据，动态计算燃油、安全和保险费用的节省额及 ROI。</li>
-                                    <li><strong>IFTA 优化器：</strong>北美货运特定工具。计算跨州燃油税，智能提示最佳加油州。</li>
-                                    <li><strong>订阅经济计算器：</strong>内部工具。计算硬件成本、平台费与订阅费间的利润率和回本周期。</li>
-                                </ul>
-                            </div>
-
-                            <div class="glass-panel p-5">
-                                <h4><i class="fa-solid fa-envelope-open-text text-yellow-400"></i> 6. 邮件营销工具 (Drip Mailer)</h4>
-                                <p class="mb-3 text-xs text-gray-400">自动化的邮件群发扩展应用：</p>
-                                <ul class="text-sm">
-                                    <li><strong>个性化签名：</strong>内置极简、带头像、带Logo三种专业排版。</li>
-                                    <li><strong>动态撰写预览：</strong>支持 {first_name}, {company} 等变量替换，所见即所得。</li>
-                                    <li><strong>自动化发送：</strong>上传 CSV 名单，设置发送延迟，系统将在工作时间随机时间点模拟人工发送，并提供详细执行日志。</li>
-                                </ul>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </details>
@@ -1443,8 +1389,8 @@ else:
             <button class="nav-btn" onclick="switchTab('email-tool', this)">
                 <i data-lucide="mail"></i> Email Tool
             </button>
-            <button class="nav-btn" onclick="switchTab('onboarding', this)">
-                <i data-lucide="graduation-cap"></i> Sales Onboarding
+            <button class="nav-btn" onclick="switchTab('marketing-resources', this)">
+                <i data-lucide="megaphone"></i> Marketing Resources
             </button>
             <button class="nav-btn" onclick="switchTab('configurator', this)">
                 <i data-lucide="settings-2"></i> Sales Configurator
@@ -1496,33 +1442,6 @@ else:
         lucide.createIcons();
 
         // --- APP INTRO LANGUAGE TOGGLE LOGIC ---
-        function toggleAppIntroLang(e) {
-            // Prevent the details tab from collapsing when clicking the button
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const enContent = document.getElementById('app-intro-en');
-            const zhContent = document.getElementById('app-intro-zh');
-            const enBtn = document.getElementById('app-lang-en');
-            const zhBtn = document.getElementById('app-lang-zh');
-            const titleSpan = document.getElementById('app-intro-title');
-
-            if (enContent.classList.contains('hidden')) {
-                // Switch to EN
-                enContent.classList.remove('hidden');
-                zhContent.classList.add('hidden');
-                enBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors";
-                zhBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors";
-                titleSpan.innerHTML = '<i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> North America Sales Toolkit / User Guide';
-            } else {
-                // Switch to ZH
-                enContent.classList.add('hidden');
-                zhContent.classList.remove('hidden');
-                zhBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold bg-[var(--primary-green)] text-[#050810] transition-colors";
-                enBtn.className = "px-3 py-1 rounded-full text-[10px] font-bold text-gray-400 transition-colors";
-                titleSpan.innerHTML = '<i class="fa-solid fa-book-journal-whills mr-2 text-[var(--primary-green)]"></i> 北美销售工具 (Sales Toolkit) 使用指南';
-            }
-        }
 
         // --- TAB SWITCHING LOGIC ---
         function switchTab(tabId, btnElement) {
@@ -1874,6 +1793,7 @@ else:
             });
         }
     </script>
+__I18N_ENGINE__
 </body>
 </html>
 """
@@ -1881,7 +1801,7 @@ else:
     # 3. ASSEMBLE HTML EXACTLY AS ORIGINAL
     html_code = (
         html_head + "\n" +
-        sales_onboarding_content + "\n" +
+        marketing_resources_content + "\n" +
         streamaxpedia_content + "\n" +
         prospecting_flow_content + "\n" +
         discovery_meeting_content + "\n" +
@@ -1892,17 +1812,6 @@ else:
         html_tail
     )
 
-    # JHSun-only customization: rebrand the main header from
-    # "North America Trucking Division" to "Global Trucking Division".
-    # Done as a targeted string replace so the html_head r-string stays
-    # untouched and the swap is gated to one logged-in user.
-    if _is_jhsun:
-        html_code = html_code.replace(
-            '<span class="gradient-text">North America</span><br>\n'
-            '                <span style="font-weight: 300;">Trucking Division</span>',
-            '<span class="gradient-text">Global</span><br>\n'
-            '                <span style="font-weight: 300;">Trucking Division</span>',
-        )
 
     # Substitute the user identity placeholder inside the top-right pill.
     # Prefers email when available (e.g. real SMTP logins), falls back to
@@ -1917,6 +1826,17 @@ else:
     html_code = html_code.replace(
         "__USER_IDENTITY__", _html.escape(_display_identity)
     )
+
+    # Page-wide language switcher (see i18n.py). Substituted last so the
+    # dictionary is embedded exactly once, after every module's HTML is in.
+    if _i18n is not None:
+        html_code = (html_code
+                     .replace("__I18N_CSS__", "<style>" + _i18n.switcher_css() + "</style>")
+                     .replace("__I18N_SWITCHER__", _i18n.switcher_html())
+                     .replace("__I18N_ENGINE__", _i18n.engine_js()))
+    else:
+        for _ph in ("__I18N_CSS__", "__I18N_SWITCHER__", "__I18N_ENGINE__"):
+            html_code = html_code.replace(_ph, "")   # never leak a raw placeholder
 
     # 4. RENDER WITHOUT COMPONENT BRIDGE
     components.html(html_code, height=1800, scrolling=True)

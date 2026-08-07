@@ -24,13 +24,22 @@ import sys
 import types
 from pathlib import Path
 
+# Optional so a missing/broken i18n.py costs the language switcher, not the
+# whole boot — build_static.py runs at container start in APP_MODE=html.
+try:
+    import i18n as _i18n
+except Exception as _exc:                                            # noqa: BLE001
+    print(f"[BUILD] WARNING: i18n unavailable ({_exc}) — no language switcher.",
+          file=sys.stderr, flush=True)
+    _i18n = None
+
 ROOT = Path(__file__).parent
 OUT_DIR = ROOT / "site"
 OUT_FILE = OUT_DIR / "index.html"
 
 # Sections in the same order app.py concatenates them.
 SECTION_MODULES = [
-    ("sales_onboarding", "content"),
+    ("marketing_resources", "content"),
     ("streamaxpedia_app", "build_content"),   # callable: build_content(user_email)
     ("prospecting_flow", "content"),
     ("discovery_meeting", "content"),
@@ -102,13 +111,34 @@ def extract_literals(py_file: Path, names: set[str]) -> dict[str, str]:
 
 
 def collect_sections() -> list[str]:
+    """Import each tab module and collect its HTML.
+
+    A missing or broken module degrades to a visible placeholder rather than
+    killing the build — same contract `app.py` already applies to its own
+    imports. This matters because in `APP_MODE=html` the Dockerfile runs this
+    script at *container start*: an unhandled ImportError here means the service
+    never boots at all, so one stale entry in SECTION_MODULES takes the whole
+    site down instead of one tab. (That is exactly what a half-landed commit
+    did: `sales_onboarding.py` deleted, this list not updated.)
+    """
     _stub_streamlit()
     sections: list[str] = []
     for mod_name, attr in SECTION_MODULES:
-        mod = __import__(mod_name)
-        value = getattr(mod, attr)
-        # streamaxpedia exposes build_content(user_email); "" = no user-gated rows
-        sections.append(value("") if callable(value) else value)
+        try:
+            mod = __import__(mod_name)
+            value = getattr(mod, attr)
+            # streamaxpedia exposes build_content(user_email); "" = no user-gated rows
+            sections.append(value("") if callable(value) else value)
+        except Exception as exc:                                     # noqa: BLE001
+            print(f"[BUILD] WARNING: section '{mod_name}.{attr}' unavailable "
+                  f"({type(exc).__name__}: {exc}) — emitting a placeholder and "
+                  f"continuing. Fix SECTION_MODULES or restore the module.",
+                  file=sys.stderr, flush=True)
+            sections.append(
+                f"<div id='{mod_name}' class='content-section hidden'>"
+                f"<h2 style='color:#ff4757; text-align:center; padding:40px;'>"
+                f"⚠️ {mod_name}.py not available in this build</h2></div>"
+            )
     return sections
 
 
@@ -140,7 +170,7 @@ def rewire_for_static(html: str) -> str:
     html = re.sub(r'onclick="[^"]*"', _drop_iframe_escape, html)
 
     # The same iframe-escape logic also lives in named <script> functions (e.g.
-    # window.obOpenJerry in the Sales Onboarding tab), which the attribute pass
+    # window.obOpenJerry in the old Sales Onboarding tab), which the attribute pass
     # above cannot reach. Those build `base.split('?')[0].split('#')[0] + '/x'`
     # — and because base ends in '/', the result is '//x' -> 404. Normalise the
     # concatenation by stripping trailing slashes first. Generic, so it fixes
@@ -154,6 +184,16 @@ def rewire_for_static(html: str) -> str:
         '__USER_IDENTITY__',
         '<span id="stmx-user">&nbsp;</span>',
     )
+    # Page-wide language switcher — same three placeholders app.py fills at
+    # render time, so the Streamlit and static paths behave identically.
+    if _i18n is not None:
+        html = (html
+                .replace('__I18N_CSS__', '<style>' + _i18n.switcher_css() + '</style>')
+                .replace('__I18N_SWITCHER__', _i18n.switcher_html())
+                .replace('__I18N_ENGINE__', _i18n.engine_js()))
+    else:
+        for _ph in ('__I18N_CSS__', '__I18N_SWITCHER__', '__I18N_ENGINE__'):
+            html = html.replace(_ph, '')      # never leak a raw placeholder
     return html
 
 

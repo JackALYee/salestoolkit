@@ -13,7 +13,7 @@ The main header (`app.py`, the `header-meta` div — search `Version `) shows `V
 **Version scheme `X.Y.Z`:**
 - **X** — the **current month number** (January = 1 … August = 8 … December = 12). Set it to the month the change is made, so the version reads as a date stamp alongside the trailing `<Month Year>`. It is NOT a semantic major version — don't reserve it for milestones.
 - **On a month rollover, X becomes the new month and Y and Z BOTH RESET TO 0**, then start counting again from there. Y and Z are per-month change counters, not running totals. So August `8.17.22` → the first September change is `9.1.0` if it touches only the toolkit, `9.0.1` if only Jerry, `9.1.1` if both. Check the current date before bumping — if the last version's X is not this month, reset rather than increment.
-- **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `sales_onboarding.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
+- **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `marketing_resources.py`, `i18n.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
 - **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`, plus the sales-method modules (`marketing_skills.py`/`marketing_skills/`, `sales_process_skills.py`/`sales_process_skills/`, `topology.py`).
 
 Rules of thumb:
@@ -123,6 +123,31 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 `terminology_db.py` is the single source of truth for product terms (114+ entries) and validated product architectures (70+ entries). It's imported by both `streamaxpedia_app.py` (for the toolkit UI) and `jerry_gpt.py` (so Jerry knows every SKU + the download URLs for spec sheets/manuals). Updating an entry there propagates to both places on next deploy.
 
 `topology.py` is the single source of truth for the **interactive Ecosystem Map** — a curated force-directed graph (60 nodes / 125 edges) of products, cameras/sensors, capabilities, cloud platforms, solutions, and competitors and how they connect (`cat ∈ capability | device | camera | platform | solution | competitor`). It exposes `TOPOLOGY` + `topology_json` (the data) and `ecosystem_map_html(focus="")` (a self-contained D3 widget for `st.components.v1.html`). Two consumers: `streamaxpedia_app.py` embeds the data into its in-iframe "Ecosystem map" modal (per-term button → opens focused on that term, D3 loaded from cdnjs); `jerry_gpt.py` imports `ecosystem_map_html()` and pops the same map in an `st.dialog`. Jerry offers it by emitting a `[[ECOSYSTEM_MAP]]` / `[[ECOSYSTEM_MAP:Exact Node]]` marker (described in a cached `<interface_capabilities>` block) — `_ECO_RE` strips it from the displayed text via `_clean_display()` and `_render_ecosystem()` turns it into an "Open Ecosystem Map" button. **Edit the graph data only in `topology.py`** so both surfaces stay in sync. The map depends on D3 from `cdnjs.cloudflare.com`; a network that blocks cdnjs renders a blank graph (nothing else is affected).
+
+## Language switching (`i18n.py`)
+
+A page-wide selector sits top-right, sharing a fixed `.stmx-topright` flex cluster with the user pill so neither can overlap whatever the signed-in email's width. Seven languages: **English (default)**, 中文, 日本語, Español, Português, Français, Italiano. The choice persists in `localStorage` under `stmx_lang`.
+
+**It translates by sweeping text nodes, not by `data-i18n` keys.** The page is a concatenation of raw HTML strings from a dozen modules (~500 KB); threading keys through all of it would touch every module and rot the first time someone adds a heading without one. Instead the engine walks the DOM, snapshots each text node and translatable attribute (`placeholder`, `title`, `aria-label`, `alt`), and swaps them against `PHRASES`, keyed by the **English text itself**. Modules stay untouched and new English copy keeps working — it just stays English until a phrase is added.
+
+Three things are load-bearing and easy to break:
+- **The index is incremental.** Each node's original is captured exactly once, guarded by a `WeakSet`. Re-indexing wholesale would re-snapshot already-translated text as the "English original" — one MutationObserver tick later the page freezes in whatever language it was in and "back to English" restores the translation instead.
+- **`applying` guards the observer** so the engine's own writes don't retrigger it.
+- **Indexing is lazy** — built on the first switch away from English, so the default load pays nothing.
+
+Coverage is the page chrome: header, nav, section headings, the user guide, Marketing Resources, common controls. Deep reference content (terminology DB, knowledge tables, generated scripts) stays English on purpose — it's product vocabulary reps use in English with customers anyway. Widen coverage by adding to `PHRASES`; nothing else changes.
+
+`app.py` and `build_static.py` both fill the same three placeholders (`__I18N_CSS__`, `__I18N_SWITCHER__`, `__I18N_ENGINE__`) so the Streamlit and static paths behave identically. **`__I18N_CSS__` must sit AFTER `</style>`** — inside it, the injected `<style>` nests and the whole rule set is discarded.
+
+Browser test: `.scrape_venv/bin/python` + the Playwright check used when this shipped — load `site/index.html`, switch each language, round-trip to English, reload for persistence.
+
+## Marketing Resources (`marketing_resources.py`)
+
+The **Marketing Materials** subsection: public product microsites (Sentinel at `streamax-sentinel.com`) and the downloadable decks, each with a badge saying whether it is customer-safe or partner-only.
+
+The deck list is **generated from `downloads.ASSETS`**, so this tab and Jerry GPT can never disagree about what exists — add a file there and it appears in both. Files are served from `/assets/downloads/`.
+
+⚠️ The section carries `class="tex2jax_ignore"`. MathJax is configured with `inlineMath: [['$','$']]` for the TCO calculator, so a blurb mentioning "the $20 license vs. $60 tracker" gets typeset as maths and rendered twice. `app.py`'s MathJax config sets `options.ignoreHtmlClass` explicitly — MathJax does not honour the class without it. Any future prose section quoting two dollar amounts needs the same class.
 
 ## Sales Configurator (vendored — author: Kevin Wang)
 
