@@ -71,7 +71,7 @@ email_tool_content = r"""
         <div id="email-tool" class="content-section hidden">
             <div class="card fade-up">
                 <h2 class="gradient-text">Streamax Drip Mailer</h2>
-                <p>The Drip Mailer has been upgraded to a dedicated, standalone application to ensure maximum performance and deliverability.</p>
+                <p>Personalised outreach at scale, sent from your own Streamax mailbox &mdash; now built into this site.</p>
             </div>
 
             <!-- BUSINESS DEVELOPMENT PROMPTER (Solution Selling cold outreach) -->
@@ -179,10 +179,10 @@ email_tool_content = r"""
                 <i class="fa-solid fa-envelope-open-text" style="font-size: 4rem; color: var(--primary-green); margin-bottom: 20px; filter: drop-shadow(0 0 15px rgba(42, 245, 152, 0.3));"></i>
                 <h3 style="font-size: 2rem; margin-bottom: 15px; color: var(--text-white);">Launch the Drip Mailer</h3>
                 <p style="color: var(--text-grey); max-width: 600px; margin: 0 auto 30px auto; line-height: 1.6;">
-                    Securely log in with your Streamax credentials, design your custom HTML signature, and batch-send targeted email campaigns using dynamic variables mapped from your lead CSV files.
+                    Design an HTML signature, write once with merge variables, upload your lead CSV, send yourself a test, then batch-send. The preview is rendered by the same code that builds the outgoing mail, so what you see is exactly what lands.
                 </p>
-                <a href="https://dripmailer.streamlit.app/" target="_blank" style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); color: #050810; font-weight: 700; font-size: 1.1rem; padding: 15px 35px; border-radius: 30px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(42, 245, 152, 0.2);">
-                    Go to Drip Mailer App <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                <a href="/mailer" target="_top" style="display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%); color: #050810; font-weight: 700; font-size: 1.1rem; padding: 15px 35px; border-radius: 30px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(42, 245, 152, 0.2);">
+                    Open the Drip Mailer <i class="fa-solid fa-paper-plane"></i>
                 </a>
             </div>
             
@@ -1346,7 +1346,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.5.2 (2026) • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.6.2 (2026) • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

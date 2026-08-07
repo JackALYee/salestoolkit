@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drip Mailer — Streamax Sales Toolkit</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2AF598;--blue:#009EFD;--bg:#050810;--panel:#0B1221;
+        --grey:#A0AEC0;--white:#E6EAF0;--warn:#FFB800;--bad:#ff4757}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;color:var(--white);
+       background:var(--bg);background-image:radial-gradient(circle at 50% -10%,#0B1221,#050810)}
+  a{color:var(--blue)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;
+       padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.08);
+       position:sticky;top:0;z-index:50;background:rgba(5,8,16,.9);backdrop-filter:blur(10px)}
+  .top .brand{display:flex;align-items:center;gap:11px;font-weight:700}
+  .top .brand img{height:26px}
+  .top a.back{color:var(--grey);font-size:.82rem;text-decoration:none}
+  .top a.back:hover{color:var(--white)}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 90px}
+  h1{font-size:1.7rem;margin:0 0 4px}
+  h1 .g{background:linear-gradient(135deg,var(--green),var(--blue));
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .lede{color:var(--grey);font-size:.9rem;margin:0 0 22px}
+  .step{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
+        border-radius:14px;padding:20px 22px;margin-bottom:16px}
+  .step h2{font-size:1rem;margin:0 0 3px;display:flex;align-items:center;gap:9px}
+  .step h2 .n{display:inline-flex;align-items:center;justify-content:center;
+              width:22px;height:22px;border-radius:50%;font-size:.72rem;font-weight:800;
+              color:#050810;background:linear-gradient(135deg,var(--green),var(--blue))}
+  .step .note{color:var(--grey);font-size:.8rem;margin:0 0 15px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+  label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;
+        color:var(--grey);margin:0 0 5px}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:8px;font-family:inherit;
+        background:rgba(20,25,40,.85);border:1px solid rgba(255,255,255,.1);
+        color:var(--white);font-size:.88rem;outline:none;color-scheme:dark}
+  input:focus,select:focus,textarea:focus{border-color:var(--green)}
+  textarea{min-height:240px;resize:vertical;line-height:1.6}
+  .fld{margin-bottom:13px}
+  button{padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;
+         font-weight:700;font-size:.86rem;color:#050810;
+         background:linear-gradient(135deg,var(--green),var(--blue));transition:.2s}
+  button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 16px rgba(42,245,152,.32)}
+  button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  button.ghost{background:rgba(255,255,255,.06);color:var(--white);
+               border:1px solid rgba(255,255,255,.15);font-weight:600}
+  button.danger{background:linear-gradient(135deg,#ff6b6b,#ff4757);color:#fff}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+        font-size:.7rem;font-weight:700}
+  .pill.ok{background:rgba(42,245,152,.12);color:var(--green)}
+  .pill.warn{background:rgba(255,184,0,.12);color:var(--warn)}
+  .pill.bad{background:rgba(255,71,87,.12);color:var(--bad)}
+  .preview{background:#fff;color:#1e293b;border-radius:8px;padding:22px;
+           font-family:Arial,sans-serif;font-size:14px;line-height:1.6;
+           max-height:520px;overflow:auto}
+  .preview .subj{border-bottom:1px solid #e2e8f0;padding-bottom:11px;margin-bottom:17px;
+                 font-size:13px;color:#64748b;text-transform:uppercase;font-weight:600}
+  .preview .subj b{color:#0f172a;font-size:15px;text-transform:none;margin-left:8px}
+  .msg{font-size:.82rem;margin-top:10px;padding:9px 12px;border-radius:8px;display:none}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(42,245,152,.1);border:1px solid rgba(42,245,152,.3);color:var(--green)}
+  .msg.bad{background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.32);color:#ff8b95}
+  .msg.warn{background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:var(--warn)}
+  .log{background:#05070d;border:1px solid rgba(255,255,255,.09);border-radius:8px;
+       padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+       font-size:.74rem;line-height:1.65;max-height:280px;overflow:auto;white-space:pre-wrap}
+  .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin:12px 0 6px}
+  .bar > i{display:block;height:100%;width:0;border-radius:99px;
+           background:linear-gradient(90deg,var(--green),var(--blue));transition:width .3s}
+  table{width:100%;border-collapse:collapse;font-size:.78rem}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid rgba(255,255,255,.07)}
+  th{color:var(--grey);text-transform:uppercase;font-size:.66rem;letter-spacing:1px}
+  .scroll{max-height:240px;overflow:auto}
+  code{background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px;font-size:.8em}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <img src="/assets/streamax%20logo.png" alt="Streamax" onerror="this.style.display='none'">
+      <span>Drip Mailer</span>
+    </div>
+    <a class="back" href="/">&larr; Back to the Sales Toolkit</a>
+  </div>
+
+  <div class="wrap">
+    <h1><span class="g">Drip</span> Mailer</h1>
+    <p class="lede">
+      Personalised outreach at scale, sent from your own Streamax mailbox.
+      Build a signature, write once with merge fields, upload your list, test it on yourself, then send.
+    </p>
+
+    <!-- 1. mailbox -->
+    <div class="step">
+      <h2><span class="n">1</span> Mailbox</h2>
+      <p class="note">
+        Mail is sent <strong>as you</strong>, so your mail password is needed to authenticate to the
+        server. It is used for this send only &mdash; never stored, never logged, never written to
+        the session cookie. It is cleared when you leave the page.
+      </p>
+      <div class="grid3">
+        <div class="fld"><label for="mEmail">Streamax email</label>
+          <input id="mEmail" type="text" inputmode="email" autocomplete="username" spellcheck="false"></div>
+        <div class="fld"><label for="mPass">Mail password</label>
+          <input id="mPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+        <div class="fld"><label for="mFrom">From name</label>
+          <input id="mFrom" type="text" placeholder="Jack Yi"></div>
+      </div>
+    </div>
+
+    <!-- 2. signature -->
+    <div class="step">
+      <h2><span class="n">2</span> Signature</h2>
+      <p class="note">Rendered by the server, so what you see below is exactly what recipients get.</p>
+      <div class="grid2">
+        <div>
+          <div class="fld"><label for="sLayout">Layout</label><select id="sLayout"></select></div>
+          <div class="grid2">
+            <div class="fld"><label for="sName">Name</label><input id="sName" type="text"></div>
+            <div class="fld"><label for="sTitle">Title</label><input id="sTitle" type="text"></div>
+            <div class="fld"><label for="sCompany">Company</label><input id="sCompany" type="text"></div>
+            <div class="fld"><label for="sPhone">Phone</label><input id="sPhone" type="text"></div>
+          </div>
+          <div class="fld"><label for="sWebsite">Website</label><input id="sWebsite" type="text"></div>
+          <div class="fld" id="wrapAvatar" style="display:none"><label for="sAvatar">Avatar image URL</label><input id="sAvatar" type="text"></div>
+          <div class="fld" id="wrapLogo" style="display:none"><label for="sLogo">Logo image URL</label><input id="sLogo" type="text"></div>
+        </div>
+        <div>
+          <label>Preview &mdash; subject + body + signature</label>
+          <div class="preview" id="preview"><em style="color:#94a3b8">Loading…</em></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. compose -->
+    <div class="step">
+      <h2><span class="n">3</span> Compose</h2>
+      <p class="note">
+        Merge fields: <code>{first_name}</code> <code>{last_name}</code> <code>{company}</code>
+        <code>{role}</code> <code>{email}</code> &mdash; any column in your CSV works.
+        A field with no value shows as <code>[first_name]</code> in the preview so gaps are obvious.
+      </p>
+      <div class="fld"><label for="cSubject">Subject</label>
+        <input id="cSubject" type="text" value="Streamlining fleet operations at {company}"></div>
+      <div class="fld"><label for="cBody">Body</label><textarea id="cBody"></textarea></div>
+    </div>
+
+    <!-- 4. recipients -->
+    <div class="step">
+      <h2><span class="n">4</span> Recipients</h2>
+      <p class="note">
+        CSV with columns <code>Email, First_Name, Last_Name, Company, Role</code>.
+        Duplicates and invalid addresses are dropped and reported before anything sends.
+      </p>
+      <div class="row" style="margin-bottom:13px">
+        <input id="csvFile" type="file" accept=".csv,text/csv" style="max-width:320px">
+        <a class="back" href="/api/mailer/template.csv" download>Download the CSV template</a>
+      </div>
+      <div id="csvMsg" class="msg"></div>
+      <div id="csvTable" class="scroll" style="margin-top:12px"></div>
+    </div>
+
+    <!-- 5. send -->
+    <div class="step">
+      <h2><span class="n">5</span> Test, then send</h2>
+      <p class="note">
+        Always send yourself a test first &mdash; it is the only way to see the signature, images and
+        merge fields as a recipient will.
+      </p>
+      <div class="row">
+        <button id="btnTest" class="ghost" type="button">Send a test to myself</button>
+        <span style="flex:1"></span>
+        <label for="dDelay" style="margin:0;text-transform:none;letter-spacing:0">Delay between sends</label>
+        <input id="dDelay" type="number" min="0.3" step="0.1" value="1" style="width:90px">
+        <span style="color:var(--grey);font-size:.8rem">sec</span>
+      </div>
+      <div id="testMsg" class="msg"></div>
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:18px 0">
+      <div class="row">
+        <button id="btnSend" class="danger" type="button" disabled>Send to 0 recipients</button>
+        <span id="sendHint" style="color:var(--grey);font-size:.78rem">Upload a list first.</span>
+      </div>
+      <div id="sendMsg" class="msg"></div>
+      <div id="progWrap" style="display:none">
+        <div class="bar"><i id="progBar"></i></div>
+        <div id="progText" style="color:var(--grey);font-size:.78rem"></div>
+        <div class="log" id="log" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var RECIPIENTS = [], CSV_TEXT = '', DEFAULTS = {};
+
+function msg(el, kind, text) {
+  el.className = 'msg show ' + kind;
+  el.textContent = text;
+}
+function hide(el) { el.className = 'msg'; }
+
+function sigData() {
+  return {
+    name: $('sName').value, title: $('sTitle').value, company: $('sCompany').value,
+    phone: $('sPhone').value, email: $('mEmail').value, website: $('sWebsite').value,
+    avatarUrl: $('sAvatar').value, logoUrl: $('sLogo').value
+  };
+}
+function payload() {
+  return {
+    email: $('mEmail').value.trim(), from_name: $('mFrom').value,
+    layout: $('sLayout').value, signature: sigData(),
+    subject: $('cSubject').value, body: $('cBody').value,
+    row: RECIPIENTS.length ? RECIPIENTS[0] : null
+  };
+}
+
+// Preview is rendered SERVER-side by the same code that builds the outgoing
+// message, so it can never drift from what is actually sent.
+var previewTimer = null;
+function schedulePreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(doPreview, 260);
+}
+function doPreview() {
+  fetch('/api/mailer/preview', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin', body: JSON.stringify(payload())
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    $('preview').innerHTML =
+      '<div class="subj">Subject: <b>' +
+      (d.subject || '').replace(/[<>&]/g, function (c) {
+        return {'<': '&lt;', '>': '&gt;', '&': '&amp;'}[c];
+      }) + '</b></div>' + (d.html || '');
+  }).catch(function () {});
+}
+
+function onLayout() {
+  var l = $('sLayout').value;
+  $('wrapAvatar').style.display = (l === 'Creative with Avatar') ? '' : 'none';
+  $('wrapLogo').style.display = (l === 'Corporate with Logo') ? '' : 'none';
+  schedulePreview();
+}
+
+['sName','sTitle','sCompany','sPhone','sWebsite','sAvatar','sLogo','cSubject','cBody','mEmail']
+  .forEach(function (id) { $(id).addEventListener('input', schedulePreview); });
+$('sLayout').addEventListener('change', onLayout);
+
+// --- CSV -------------------------------------------------------------------
+$('csvFile').addEventListener('change', function (e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    CSV_TEXT = rd.result;
+    fetch('/api/mailer/recipients', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      credentials: 'same-origin', body: JSON.stringify({csv: CSV_TEXT})
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      RECIPIENTS = d.rows || [];
+      var n = d.count || 0;
+      var probs = d.problems || [];
+      if (!n) {
+        msg($('csvMsg'), 'bad', probs.join('  •  ') || 'No valid recipients found.');
+        $('csvTable').innerHTML = '';
+      } else if (probs.length) {
+        msg($('csvMsg'), 'warn', n + ' valid recipient(s). Skipped: ' + probs.join('  •  '));
+      } else {
+        msg($('csvMsg'), 'ok', n + ' valid recipient(s), no problems found.');
+      }
+      renderTable(RECIPIENTS);
+      setSendState(n);
+      schedulePreview();
+    }).catch(function () { msg($('csvMsg'), 'bad', 'Could not read that file.'); });
+  };
+  rd.readAsText(f);
+});
+
+function renderTable(rows) {
+  if (!rows.length) { $('csvTable').innerHTML = ''; return; }
+  var cols = ['email', 'first_name', 'last_name', 'company', 'role'];
+  var h = '<table><tr>' + cols.map(function (c) { return '<th>' + c + '</th>'; }).join('') + '</tr>';
+  rows.slice(0, 25).forEach(function (r) {
+    h += '<tr>' + cols.map(function (c) {
+      return '<td>' + String(r[c] == null ? '' : r[c]).replace(/[<>&]/g, '') + '</td>';
+    }).join('') + '</tr>';
+  });
+  $('csvTable').innerHTML = h + '</table>' +
+    (rows.length > 25 ? '<div style="color:#A0AEC0;font-size:.74rem;padding:8px 9px">…and ' +
+      (rows.length - 25) + ' more</div>' : '');
+}
+
+var TOTAL = 0;
+function setSendState(n) {
+  TOTAL = n;
+  $('btnSend').disabled = !n;
+  $('btnSend').textContent = 'Send to ' + n + ' recipient' + (n === 1 ? '' : 's');
+  $('sendHint').textContent = n ? 'This sends real email. Test on yourself first.'
+                                : 'Upload a list first.';
+}
+
+// --- test ------------------------------------------------------------------
+$('btnTest').addEventListener('click', function () {
+  var p = payload();
+  p.password = $('mPass').value;
+  if (!p.email || !p.password) { msg($('testMsg'), 'bad', 'Enter your email and mail password first.'); return; }
+  $('btnTest').disabled = true; $('btnTest').textContent = 'Sending test…';
+  hide($('testMsg'));
+  fetch('/api/mailer/test', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin', body: JSON.stringify(p)
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.ok) msg($('testMsg'), 'ok', 'Test sent to ' + d.to + ' via ' + d.backend + '. Check your inbox.');
+    else msg($('testMsg'), 'bad', d.error || 'Test failed.');
+  }).catch(function () { msg($('testMsg'), 'bad', 'Could not reach the server.'); })
+    .finally(function () { $('btnTest').disabled = false; $('btnTest').textContent = 'Send a test to myself'; });
+});
+
+// --- batch send ------------------------------------------------------------
+$('btnSend').addEventListener('click', function () {
+  var p = payload();
+  p.password = $('mPass').value;
+  p.csv = CSV_TEXT;
+  p.delay = parseFloat($('dDelay').value) || 1;
+  if (!p.email || !p.password) { msg($('sendMsg'), 'bad', 'Enter your email and mail password first.'); return; }
+  if (!confirm('Send ' + TOTAL + ' real email' + (TOTAL === 1 ? '' : 's') +
+               ' from ' + p.email + '?\n\nThis cannot be undone.')) return;
+
+  $('btnSend').disabled = true; $('btnTest').disabled = true;
+  hide($('sendMsg'));
+  $('progWrap').style.display = '';
+  $('log').textContent = ''; $('progBar').style.width = '0';
+  var done = 0, ok = 0, bad = 0;
+
+  fetch('/api/mailer/send', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin', body: JSON.stringify(p)
+  }).then(function (res) {
+    if (!res.ok) { return res.text().then(function (t) { throw new Error(t || res.status); }); }
+    var reader = res.body.getReader(), dec = new TextDecoder(), buf = '';
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) return;
+        buf += dec.decode(r.value, {stream: true});
+        var parts = buf.split('\n\n'); buf = parts.pop();
+        parts.forEach(function (block) {
+          var line = block.replace(/^data: ?/, '').trim();
+          if (!line || line === '[DONE]') return;
+          var e; try { e = JSON.parse(line); } catch (x) { return; }
+          if (e.type === 'connected') {
+            log('Connected via ' + e.backend + ' — sending to ' + e.total + '…');
+          } else if (e.type === 'sent') {
+            done++; e.ok ? ok++ : bad++;
+            log((e.ok ? '✅ ' : '❌ ') + e.email + (e.ok ? '' : '  ' + (e.error || '')));
+            $('progBar').style.width = (done / TOTAL * 100) + '%';
+            $('progText').textContent = done + ' / ' + TOTAL + '   ·   ' + ok + ' sent, ' + bad + ' failed';
+          } else if (e.type === 'fatal') {
+            msg($('sendMsg'), 'bad', e.message);
+          } else if (e.type === 'done') {
+            msg($('sendMsg'), e.failed ? 'warn' : 'ok',
+                'Finished — ' + e.sent + ' sent, ' + e.failed + ' failed, of ' + e.total + '.');
+          }
+        });
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(function (err) {
+    msg($('sendMsg'), 'bad', 'Send failed: ' + (err.message || err));
+  }).finally(function () {
+    $('btnSend').disabled = false; $('btnTest').disabled = false;
+  });
+});
+
+function log(line) {
+  var el = $('log');
+  el.textContent += (el.textContent ? '\n' : '') + line;
+  el.scrollTop = el.scrollHeight;
+}
+
+// --- boot ------------------------------------------------------------------
+fetch('/api/mailer/defaults', {credentials: 'same-origin'})
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+    DEFAULTS = d;
+    $('mEmail').value = d.email || '';
+    $('cBody').value = d.default_body || '';
+    $('dDelay').value = d.default_delay || 1;
+    $('dDelay').min = d.min_delay || 0.3;
+    $('sLayout').innerHTML = (d.layouts || []).map(function (l) {
+      return '<option>' + l + '</option>';
+    }).join('');
+    $('sCompany').value = 'Streamax Technology';
+    $('sWebsite').value = 'https://www.streamax.com';
+    if (d.email) $('sName').value = d.email.split('@')[0];
+    onLayout();
+  });
+
+// Don't leave the password sitting in a field behind a locked screen.
+window.addEventListener('pagehide', function () { $('mPass').value = ''; });
+</script>
+</body>
+</html>

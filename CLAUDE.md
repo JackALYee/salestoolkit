@@ -157,6 +157,24 @@ The portrait is vendored at `assets/easter-egg-portrait.jpg` rather than hot-lin
 
 ⚠️ These effects were silently lost in the Streamlit→HTML rebuild: `/api/login` authenticated the accounts correctly but returned no transition, so nobody noticed until someone signed in as Jerry and saw nothing.
 
+## Drip Mailer (`mailer.py` + `/mailer`)
+
+Personalised batch outreach sent from the user's own mailbox. Ported from the standalone Streamlit app at `~/Desktop/Streamax/Sales Toolkit/auto email/app.py`, which the Email Tool tab used to link out to (`dripmailer.streamlit.app`); that tab now opens `/mailer` on this site.
+
+`mailer.py` is the pure-Python engine — signatures, merge rendering, CSV parsing, SMTP. **The preview and the outgoing message are built by the same functions**, so what the user sees cannot drift from what lands in the inbox. Never render a preview client-side here.
+
+**Credentials.** Sending as the user needs their MAIL password, and the session cookie deliberately doesn't carry it (the login page promises credentials are never stored). So it is asked for in the mailer UI, travels on the request that uses it, lives in a local variable for the send, and is never written to disk, DB, cookie or log. Don't "helpfully" cache it.
+
+Sending goes through `connect()`, which walks the same backend list `login.py` authenticates against — so **Outlook mailboxes work too**, unlike the original's hardcoded `mail.streamax.com`. Non-ASCII passwords route through `login._auth_utf8` for the same reason they do at sign-in.
+
+Guardrails added because this is now company-wide rather than one person's script: a `MAX_RECIPIENTS` (500) cap per run, de-duplication and address validation reported *before* any send, a `MIN_DELAY_S` floor, a **send-a-test-to-myself** button (the original had no dry run), a typed recipient count on the send button, and a confirm dialog. Signature fields are HTML-escaped — the original interpolated raw, so a `<` in a name broke every mail in the batch.
+
+`/api/mailer/send` streams SSE (one event per recipient) because a 200-recipient run takes minutes and a silent progress bar gets killed halfway.
+
+Test: `python3 scripts/test_mailer.py` — merge fields, signatures, CSV validation, and a **real SMTP batch through a local `aiosmtpd` server** (needs `pip install aiosmtpd` in a venv; the SMTP section skips cleanly without it).
+
+**Not ported:** reply monitoring, AI draft generation and the blacklist/unsubscribe list from the `auto email` project. If outreach volume grows, the blacklist is the next thing to bring over — sending to someone who asked to be removed is the expensive kind of mistake.
+
 ## Language switching (`i18n.py`)
 
 A page-wide selector sits top-right, sharing a fixed `.stmx-topright` flex cluster with the user pill so neither can overlap whatever the signed-in email's width. Seven languages: **English (default)**, 中文, 日本語, Español, Português, Français, Italiano. The choice persists in `localStorage` under `stmx_lang`.

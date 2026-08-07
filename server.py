@@ -107,6 +107,10 @@ try:
     import ms_auth as _ms
 except Exception:                                                        # noqa: BLE001
     _ms = None
+try:
+    import mailer as _mailer
+except Exception:                                                        # noqa: BLE001
+    _mailer = None
 
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
@@ -127,6 +131,150 @@ if (ROOT / "configurator").is_dir():
     app.mount("/configurator",
               StaticFiles(directory=str(ROOT / "configurator"), html=True),
               name="configurator")
+
+
+# ---------------------------------------------------------------------------
+# Drip Mailer
+#
+# The mailer needs the user's MAIL password to send as them. The session cookie
+# deliberately does not carry it (the login page promises credentials are never
+# stored), so it is asked for in the mailer UI and travels on the request that
+# uses it — held in a local variable for the length of the send and never
+# written to disk, a database, the cookie, or a log line.
+# ---------------------------------------------------------------------------
+
+def _require_mailer():
+    if _mailer is None:
+        raise HTTPException(503, "mailer unavailable")
+    return _mailer
+
+
+@app.get("/api/mailer/template.csv")
+def api_mailer_template(request: Request):
+    require_user(request)
+    return Response(
+        _require_mailer().CSV_TEMPLATE, media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="leadList.csv"'},
+    )
+
+
+@app.get("/api/mailer/defaults")
+def api_mailer_defaults(request: Request):
+    user = require_user(request)
+    m = _require_mailer()
+    return {
+        "email": user if "@" in user else "",
+        "layouts": list(m.SIGNATURE_LAYOUTS),
+        "default_body": m.DEFAULT_BODY,
+        "max_recipients": m.MAX_RECIPIENTS,
+        "min_delay": m.MIN_DELAY_S,
+        "default_delay": m.DEFAULT_DELAY_S,
+        "required_columns": list(m.REQUIRED_COLUMNS),
+    }
+
+
+@app.post("/api/mailer/preview")
+async def api_mailer_preview(request: Request):
+    """Render exactly what would be sent, for the first recipient (or a sample).
+
+    Rendered server-side by the same functions `send_batch` uses, so the
+    preview cannot drift from the mail.
+    """
+    require_user(request)
+    m = _require_mailer()
+    body = await request.json()
+    row = body.get("row") or {"first_name": "John", "last_name": "Doe",
+                              "company": "Acme Logistics", "role": "Fleet Manager",
+                              "email": "john.doe@acme.com"}
+    sig = m.signature_html(body.get("layout") or "", body.get("signature") or {})
+    return {
+        "subject": m.render_template(body.get("subject") or "", row),
+        "html": m.build_html_body(body.get("body") or "", row, sig),
+    }
+
+
+@app.post("/api/mailer/recipients")
+async def api_mailer_recipients(request: Request):
+    """Validate an uploaded CSV before anything is sent."""
+    require_user(request)
+    m = _require_mailer()
+    body = await request.json()
+    rows, problems = m.parse_recipients(body.get("csv") or "")
+    return {"rows": rows[:50], "count": len(rows), "problems": problems[:40]}
+
+
+@app.post("/api/mailer/test")
+async def api_mailer_test(request: Request):
+    """Send a single test to the signed-in user. The original tool had no dry
+    run — the first thing anyone saw of a broken signature was the customer."""
+    user = require_user(request)
+    m = _require_mailer()
+    body = await request.json()
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    if not email or not password:
+        return JSONResponse({"ok": False, "error": "Mail address and password are required."}, 400)
+
+    row = body.get("row") or {"first_name": "John", "last_name": "Doe",
+                              "company": "Acme Logistics", "role": "Fleet Manager"}
+    sig = m.signature_html(body.get("layout") or "", body.get("signature") or {})
+    to_addr = user if "@" in user else email
+    try:
+        server, backend = m.connect(email, password)
+    except Exception as exc:                                         # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(exc)[:400]}, 400)
+    try:
+        msg = m.build_message(
+            "[TEST] " + m.render_template(body.get("subject") or "", row),
+            m.build_html_body(body.get("body") or "", row, sig),
+            to_addr, body.get("from_name") or "", email,
+        )
+        server.send_message(msg)
+    except Exception as exc:                                         # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(exc)[:400]}, 400)
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+    return {"ok": True, "to": to_addr, "backend": backend}
+
+
+@app.post("/api/mailer/send")
+async def api_mailer_send(request: Request):
+    """Run the batch, streaming one SSE event per recipient."""
+    require_user(request)
+    m = _require_mailer()
+    body = await request.json()
+
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    if not email or not password:
+        raise HTTPException(400, "Mail address and password are required.")
+
+    rows, problems = m.parse_recipients(body.get("csv") or "")
+    if not rows:
+        raise HTTPException(400, "; ".join(problems) or "No valid recipients.")
+
+    sig = m.signature_html(body.get("layout") or "", body.get("signature") or {})
+    params = dict(
+        email=email, password=password, from_name=body.get("from_name") or "",
+        subject_template=body.get("subject") or "", body_template=body.get("body") or "",
+        sig_html=sig, rows=rows, delay_s=body.get("delay") or m.DEFAULT_DELAY_S,
+    )
+
+    def stream():
+        yield f"data: {json.dumps({'type': 'start', 'total': len(rows), 'problems': problems})}\n\n"
+        try:
+            for event in m.send_batch(**params):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:                                     # noqa: BLE001
+            yield f"data: {json.dumps({'type': 'fatal', 'message': str(exc)[:300]})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no"})
 
 
 # ---------------------------------------------------------------------------
@@ -211,6 +359,15 @@ def login_page(request: Request, next: str = "/"):
         return RedirectResponse("/", status_code=302)
     page = _page("login.html").replace("<!--MS_SIGNIN-->", _ms_signin_block(next))
     return HTMLResponse(page)
+
+
+@app.get("/mailer", response_class=HTMLResponse)
+def mailer_page(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/login?next=/mailer", status_code=302)
+    if _mailer is None:
+        raise HTTPException(503, "mailer unavailable")
+    return HTMLResponse(_page("mailer.html"))
 
 
 @app.get("/jerry", response_class=HTMLResponse)
