@@ -265,6 +265,89 @@ if st.query_params.get("logout") == "1":
             st.query_params["view"] = _view_keep
         st.rerun()
 
+# --- MIGRATION NOTICE -------------------------------------------------------
+# The Sales Toolkit and Jerry GPT now live on their own site. This Streamlit
+# app is kept only so existing bookmarks land somewhere that explains where
+# everything went — it is no longer updated and WILL drift from the real thing.
+#
+# Placed AFTER the ?logout=1 handler (so signing out of the legacy app still
+# works) and BEFORE the login/toolkit render, so it covers the unauthenticated
+# login screen and ?view=jerry_gpt alike. `?legacy=1` bypasses it rather than
+# stranding anyone mid-task; the bypass then shows a slim persistent banner.
+#
+# Nothing here reaches the new site: build_static.py pulls only the html_head /
+# html_tail / email_tool_content literals out of this file via `ast`, and never
+# executes it.
+NEW_SITE_URL = "https://streamax-salestoolkit.com"
+
+if st.query_params.get("legacy") != "1":
+    _keep_view = st.query_params.get("view", "")
+    _legacy_href = "?legacy=1" + (f"&view={_keep_view}" if _keep_view else "")
+    # NOTE: no blank lines and no leading indentation inside this HTML string.
+    # st.markdown runs the text through Markdown first, so a blank line closes
+    # the raw-HTML block and any line indented 4+ spaces after it becomes an
+    # indented CODE block — which renders the <a> tags as visible source text
+    # instead of links.
+    _G = "background: linear-gradient(135deg, #2AF598 0%, #009EFD 100%);"
+    st.markdown(
+        "<div style=\"max-width:720px;margin:6vh auto 0;text-align:center;"
+        "font-family:'Inter',system-ui,sans-serif;\">"
+        "<div style=\"font-size:3.2rem;line-height:1;margin-bottom:18px;\">🚚</div>"
+        "<h1 style=\"font-size:2.4rem;line-height:1.2;margin:0 0 10px;color:#E6EAF0;\">"
+        f"<span style=\"{_G}-webkit-background-clip:text;background-clip:text;"
+        "-webkit-text-fill-color:transparent;\">We&rsquo;ve moved</span></h1>"
+        "<p style=\"color:#A0AEC0;font-size:1.05rem;margin:0 0 4px;\">"
+        "The <strong style=\"color:#E6EAF0;\">Streamax Sales Toolkit</strong> and "
+        "<strong style=\"color:#E6EAF0;\">Jerry GPT</strong> now live on their own "
+        "independent website.</p>"
+        "<p style=\"color:#A0AEC0;font-size:1rem;margin:0 0 30px;\">"
+        "销售工具箱与 Jerry GPT 已迁移至独立网站，请使用新地址访问。</p>"
+        f"<a href=\"{NEW_SITE_URL}\" target=\"_blank\" rel=\"noopener\" "
+        "style=\"display:inline-block;padding:15px 34px;border-radius:10px;"
+        "font-weight:700;font-size:1.05rem;text-decoration:none;color:#050810;"
+        f"{_G}box-shadow:0 8px 24px rgba(42,245,152,0.28);\">"
+        "Go to streamax-salestoolkit.com &rarr;</a>"
+        "<p style=\"color:#5c6880;font-size:0.82rem;margin:26px 0 0;\">"
+        "Sign in with the same Streamax account &mdash; or use "
+        "<strong style=\"color:#8b97ad;\">Sign in with Microsoft</strong> if your "
+        "mailbox is on Outlook.</p>"
+        "<div style=\"margin:34px auto 0;padding:18px 22px;max-width:560px;"
+        "text-align:left;border-radius:12px;background:rgba(255,255,255,0.03);"
+        "border:1px solid rgba(255,255,255,0.08);\">"
+        "<div style=\"color:#E6EAF0;font-size:0.82rem;font-weight:700;"
+        "text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;\">"
+        "What&rsquo;s on the new site</div>"
+        "<div style=\"color:#A0AEC0;font-size:0.86rem;line-height:1.75;\">"
+        "Everything that was here &mdash; Streamaxpedia, Jerry GPT, Prospecting Flow, "
+        "Discovery Meeting, Presentation, Value Calculator and the Email Tool &mdash; plus "
+        "<strong style=\"color:#E6EAF0;\">Marketing Resources</strong>, the "
+        "<strong style=\"color:#E6EAF0;\">Sales Configurator</strong>, and a "
+        "<strong style=\"color:#E6EAF0;\">language switcher</strong> "
+        "(English, 中文, 日本語, Español, Português, Français, Italiano).</div></div>"
+        f"<p style=\"margin:30px 0 0;\"><a href=\"{_legacy_href}\" target=\"_self\" "
+        "style=\"color:#5c6880;font-size:0.78rem;text-decoration:underline;\">"
+        "Continue to the old version anyway</a></p>"
+        "<p style=\"color:#4a5568;font-size:0.72rem;margin:10px 0 60px;\">"
+        "This Streamlit version is no longer updated. 此版本已停止更新。</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.stop()
+
+# Bypassed via ?legacy=1 — keep a slim reminder visible so nobody forgets they
+# are on the stale copy.
+st.markdown(
+    "<div style=\"position:sticky;top:0;z-index:999;margin:-10px 0 14px;"
+    "padding:9px 16px;border-radius:8px;text-align:center;"
+    "font-family:'Inter',system-ui,sans-serif;font-size:0.8rem;color:#FFB800;"
+    "background:rgba(255,184,0,0.09);border:1px solid rgba(255,184,0,0.28);\">"
+    "You are on the retired Streamlit version, which is no longer updated. "
+    f"<a href=\"{NEW_SITE_URL}\" target=\"_blank\" rel=\"noopener\" "
+    "style=\"color:#FFB800;font-weight:700;\">"
+    "Move to streamax-salestoolkit.com &rarr;</a></div>",
+    unsafe_allow_html=True,
+)
+
 # --- RENDER LOGIN OR TOOLKIT ---
 if not st.session_state['authenticated']:
     render_login()
@@ -1263,7 +1346,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.4.2 (2026) • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.5.2 (2026) • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

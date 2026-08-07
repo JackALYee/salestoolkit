@@ -4,6 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this app is
 
+> ⚠️ **The Streamlit app is retired.** The Sales Toolkit and Jerry GPT now live at **https://streamax-salestoolkit.com** (`server.py` + `templates/`, Docker on Render). `app.py` still runs on Streamlit Cloud, but it now shows a full-page migration notice and stops — `?legacy=1` bypasses it for anyone mid-task, with a persistent banner. **Ship features to the HTML site**; the Streamlit path is a signpost for old bookmarks and will drift.
+>
+> The notice sits after the `?logout=1` handler (so signing out of the legacy app still works) and before the login/toolkit render, covering the login screen and `?view=jerry_gpt` alike. It is invisible to the new site: `build_static.py` only pulls the `html_head`/`html_tail`/`email_tool_content` literals out of `app.py` via `ast` and never executes it.
+>
+> ⚠️ **`st.markdown(..., unsafe_allow_html=True)` runs Markdown first.** A blank line inside the HTML string closes the raw-HTML block, and any following line indented 4+ spaces becomes an indented *code* block — which renders your `<a>` tags as visible source text. Keep such HTML on unindented, blank-line-free lines. This bit the migration notice on the first attempt.
+
 A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Streamax Sales Toolkit** — internal tooling for the Trucking BU sales org. Entry point is `app.py`. The app combines a heavyweight HTML/JS UI (rendered inside `streamlit.components.v1.html`) with native Streamlit pages for the interactive features. SMTP-credential login gates access; a signed cookie keeps sessions alive across reloads.
 
 ## ⚠️ ALWAYS bump the version + date on every change
