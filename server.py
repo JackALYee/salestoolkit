@@ -352,11 +352,17 @@ def ms_callback(request: Request, code: str = "", state: str = "",
 def api_me(request: Request):
     user = require_user(request)
     is_leadership = bool(_login.resolve_leadership(user))
-    models = _jerry._allowed_models(is_leadership)
+    # VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS. Grants Claude models but NOT the
+    # pricing clearance leadership gets.
+    is_vip = bool(_login.resolve_vip(user))
+    models = _jerry._allowed_models(is_leadership, is_vip)
     return {
         "user": user,
         "is_leadership": is_leadership,
+        "is_vip": is_vip,
         "models": models,
+        # VIPs may pick Claude but still DEFAULT to DeepSeek — the expensive
+        # model should be a deliberate choice for anyone outside leadership.
         "default_model": (_jerry.DEFAULT_MODEL if is_leadership
                           else _jerry.NON_LEADERSHIP_DEFAULT),
     }
@@ -570,7 +576,8 @@ async def api_chat(request: Request):
         raise HTTPException(400, "no messages")
 
     is_leadership = bool(_login.resolve_leadership(user))
-    allowed = set(_jerry._allowed_models(is_leadership).values())
+    is_vip = bool(_login.resolve_vip(user))
+    allowed = set(_jerry._allowed_models(is_leadership, is_vip).values())
 
     model = body.get("model") or (_jerry.DEFAULT_MODEL if is_leadership
                                   else _jerry.NON_LEADERSHIP_DEFAULT)
@@ -587,7 +594,7 @@ async def api_chat(request: Request):
     if byo:
         key = byo
     else:
-        key, _src = _jerry._resolve_provider_key(provider, is_leadership)
+        key, _src = _jerry._resolve_provider_key(provider, is_leadership, is_vip)
     if not key:
         raise HTTPException(503, f"no API key configured for provider '{provider}'")
 

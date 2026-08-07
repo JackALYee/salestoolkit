@@ -182,7 +182,7 @@ def restore_session() -> None:
         st.session_state["user_name"] = user
         # Re-derive leadership clearance + canonical email from the restored
         # user identity so Jerry GPT enforces access control and the
-        # jhsun-only Streamaxpedia customizations (Emily, Global Trucking
+        # per-user Streamaxpedia customizations (none today; the Global Trucking
         # title, Jack GPT route) survive a page reload. The cookie carries
         # only the user_name (display name for easter-egg accounts, full
         # email for regular logins) — we look up the matching email here.

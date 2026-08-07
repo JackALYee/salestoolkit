@@ -8,17 +8,17 @@ A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Str
 
 ## ⚠️ ALWAYS bump the version + date on every change
 
-The main header (`app.py`, the `header-meta` div — search `Version `) shows `Version X.Y.Z • 货运产品线 Trucking BU • <Month Year>`. **Every time you make a change to this repo, before finishing, update that line in the same edit batch.** This is a hard, standing rule — never skip it, never ask whether to do it.
+The main header (`app.py`, the `header-meta` div — search `Version `) shows `Version X.Y.Z (YYYY) • 货运产品线 Trucking BU • <Month Year>`. **Every time you make a change to this repo, before finishing, update that line in the same edit batch.** This is a hard, standing rule — never skip it, never ask whether to do it.
 
 **Version scheme `X.Y.Z`:**
-- **X** — the **year and month, concatenated**: two-digit year followed by the month number, no padding and no separator. August 2026 = `268` (26 + 8); December 2026 = `2612`; January 2027 = `271`. It reads as a date stamp alongside the trailing `<Month Year>` and is NOT a semantic major version — don't reserve it for milestones. Because the month is inside X, the version is unambiguous across years.
-- **On a month rollover, X becomes the new year+month and Y and Z BOTH RESET TO 0**, then count again from there. Y and Z are per-month change counters, not running totals. So August 2026 `268.2.1` → the first September 2026 change is `269.1.0` if it touches only the toolkit, `269.0.1` if only Jerry, `269.1.1` if both. Check today's date before bumping — if the last version's X is not this year+month, reset rather than increment.
+- **X** — the **month number** (January = 1 … August = 8 … December = 12) of the change. The **year goes in the parenthesised suffix**, `(2026)`, so the two together date-stamp the build. X is NOT a semantic major version — don't reserve it for milestones.
+- **On a month rollover, X becomes the new month and Y and Z BOTH RESET TO 0**, then count again. Y and Z are per-month change counters, not running totals. So `8.3.1 (2026)` → the first September 2026 change is `9.1.0 (2026)` if it touches only the toolkit, `9.0.1 (2026)` if only Jerry, `9.1.1 (2026)` if both. On a year rollover the suffix changes too: January 2027 starts at `1.1.0 (2027)`. Check today's date before bumping — if the last version's X/year is not this month/year, reset rather than increment.
 - **Y** — Sales Toolkit change counter. Increment by 1 whenever the change touches the toolkit surface: `app.py`, `streamaxpedia_app.py`, `terminology_db.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `marketing_resources.py`, `i18n.py`, `login.py`, `auth.py`, the email/drip tooling, or shared assets/styles.
 - **Z** — Jerry GPT change counter. Increment by 1 whenever the change touches the Jerry GPT surface or its sibling AI modules: `jerry_gpt.py`, `jerry_gpt_knowledge/*`, `pm_skills.py`/`pm_skills/`, `file_io.py`, `downloads.py`/`assets/downloads/`, `product_images.py`/`assets/products/`, `usage_logger.py`, `chat_history.py`, plus the sales-method modules (`marketing_skills.py`/`marketing_skills/`, `sales_process_skills.py`/`sales_process_skills/`, `topology.py`).
 
 Rules of thumb:
 - A change that spans both surfaces bumps **both** Y and Z (+1 each) — after any month reset.
-- Historic versions used a bare month for X (`8.1.1` = August 2026). Don't renumber them; just follow the year+month rule from `268.2.1` onward.
+- Older tags used other X conventions (bare month `8.1.1`, then year+month `268.2.1`). Don't renumber them — follow the month + `(year)` form from `8.3.1 (2026)` onward.
 - A change to neither (docs-only, CLAUDE.md, requirements housekeeping) needs no bump — but if in doubt, bump the surface most affected.
 - One logical change = +1 (not +1 per file touched).
 - **Always** update the trailing `<Month Year>` to the current month/year of the change (e.g. `June 2026`).
@@ -129,11 +129,13 @@ Each toolkit section (Streamaxpedia, Prospecting Flow, etc.) lives in its own `.
 
 The Streamlit path set `is_leadership` / `is_vip` / the special-relationship dict into `st.session_state` at login and read them back on every rerun. **The FastAPI path has no session_state — every flag must be re-derived per request** from the signed cookie's `user` value, which is either a streamax.com email or an easter-egg display name (`Jerry`, `Hekun`, `ZNTang`). All the `login.resolve_*` helpers accept both and map display names to canonical emails first.
 
-Wired today: easter-egg logins (`/api/login` → `verify_streamax_credentials`), `resolve_leadership` (→ `/api/me` model catalog and `/api/chat` model enforcement + pricing clearance), and `resolve_special_relationship` (→ the per-turn clearance block).
+Wired today: easter-egg logins (`/api/login` → `verify_streamax_credentials`), `resolve_leadership` (→ `/api/me` model catalog and `/api/chat` model enforcement + pricing clearance), `resolve_vip` (→ Claude access, see below), and `resolve_special_relationship` (→ the per-turn clearance block).
+
+⚠️ **The login field must not be `type="email"`.** Browser email validation rejects the easter-egg accounts (`jerry_test`, `test_account` …) before the form can submit — curl bypasses it, so this passes an API test and still fails for a human. `templates/login.html` uses `type="text"` + a pattern that accepts an email *or* an `@`-less identifier, leaving the real decision to `verify_streamax_credentials`.
 
 ⚠️ `special_relationship` was pinned to `None` in `/api/chat` when the HTML site was built, which silently dropped Jerry's inner-circle behaviour — no one-time greeting for himself / Kun He / Rui Wang, and no 你 informal address-form override, so they got the default professional 您. Fixed; if you add another `_build_clearance_block` caller, pass the real value.
 
-**`is_vip` is currently vestigial on BOTH paths.** `login.resolve_vip()` and `EXTRA_VIP_EMAILS` still exist and `auth.py`/`jerry_gpt.py` still compute `st.session_state["is_vip"]`, but nothing reads it to gate anything — `_allowed_models()` takes only `is_leadership`. VIP lost its meaning when Claude access became leadership-only. Either wire it into `_allowed_models` or delete it; leaving it looks like a working grant that isn't.
+**VIP is wired.** `VIP = LEADERSHIP ∪ EXTRA_VIP_EMAILS` grants **Claude model access without pricing clearance**. Two functions must agree or a VIP gets a model in the picker that fails at request time: `_allowed_models(is_leadership, is_vip)` decides the menu, `_resolve_provider_key(provider, is_leadership, is_vip)` hands out the org Anthropic key. Both default `is_vip=False`, so an un-updated caller under-grants rather than over-grants. Pricing clearance stays keyed on `is_leadership` alone in `_build_clearance_block`. VIPs still **default** to DeepSeek — Claude is a deliberate per-session choice for anyone outside leadership.
 
 Test: `python3 scripts/test_identity_flags.py` (no network) — easter eggs, leadership for names and emails, special relationships reaching the prompt, first-turn-only greeting, and pricing clearance.
 

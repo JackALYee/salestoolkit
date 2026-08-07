@@ -148,11 +148,6 @@ def rewire_for_static(html: str) -> str:
     html = html.replace('?view=jerry_gpt', '/jerry')
     html = html.replace('"/jerry&logout=1"', '"/api/logout?next=/jerry"')
     html = html.replace('?logout=1', '/api/logout')
-    # Dead code path (the old special-feature CTA) — keep it from emitting a
-    # Streamlit-style ?view= URL if it is ever re-enabled.
-    html = html.replace('?view=${encodeURIComponent(sp.view)}',
-                        '/${encodeURIComponent(sp.view)}')
-
     # Strip the iframe-escape onclick handlers.
     #
     # In Streamlit the toolkit ran inside components.html, so links needed JS to

@@ -23,7 +23,7 @@ except Exception as _jerry_import_err:  # noqa: BLE001
 
 try:
     # build_content(user_email) lets us filter user-gated terminology rows
-    # (e.g. Emily, visible only to jhsun@streamax.com). Older deployments
+    # (no rows are user-gated today). Older deployments
     # may still expose only the static `content` symbol — fall back to it.
     from streamaxpedia_app import build_content as _build_streamaxpedia_content
     _STREAMAXPEDIA_FALLBACK = None
@@ -282,10 +282,10 @@ else:
         except Exception:
             pass
     # --- Per-user context ---
-    # user_email drives jhsun-only customizations: the "Global Trucking"
-    # header swap, Emily's terminology entry, and the Jack GPT route. We
-    # normalize to lowercase for comparison robustness; the cookie restore
-    # in auth.py persists user_email across reloads/new tabs.
+    # user_email is passed to the Streamaxpedia bundle builder so rows can be
+    # gated per user. Nothing is gated today (the last gated row went with the
+    # jhsun/Jack GPT removal), but the hook stays. Normalised to lowercase; the
+    # cookie restore in auth.py persists user_email across reloads/new tabs.
     _user_email = (st.session_state.get("user_email", "") or "").strip().lower()
 
     # --- QUERY-PARAM ROUTER: Jerry GPT sub-page ---
@@ -300,9 +300,8 @@ else:
         render_jerry_gpt()
         st.stop()
 
-    # Build the per-user Streamaxpedia bundle (filters Emily out for
-    # non-jhsun callers). If the older `content`-only import was hit,
-    # fall back to that pre-rendered string.
+    # Build the per-user Streamaxpedia bundle. If the older `content`-only
+    # import was hit, fall back to that pre-rendered string.
     if _build_streamaxpedia_content is not None:
         streamaxpedia_content = _build_streamaxpedia_content(_user_email)
     else:
@@ -1264,7 +1263,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 268.2.1 • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.3.1 (2026) • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

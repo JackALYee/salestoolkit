@@ -514,13 +514,19 @@ _BYO_ANTHROPIC = "jerry_byo_anthropic_key"
 _BYO_DEEPSEEK = "jerry_byo_deepseek_key"
 
 
-def _resolve_provider_key(provider: str, is_leadership: bool) -> tuple[str | None, str]:
+def _resolve_provider_key(provider: str, is_leadership: bool,
+                          is_vip: bool = False) -> tuple[str | None, str]:
     """Return (api_key, source) for the given provider under the access rules.
 
     source ∈ "byo" | "org" | "" (no key / not permitted).
       - DeepSeek: the user's own key if set, else the org DeepSeek key (everyone).
-      - Anthropic/Claude: the user's own key if set; otherwise the org key
-        ONLY for leadership. Non-leadership without a BYO key → not permitted.
+      - Anthropic/Claude: the user's own key if set; otherwise the org key for
+        LEADERSHIP **or VIP** (login.EXTRA_VIP_EMAILS grants Claude access
+        without pricing clearance). Anyone else without a BYO key → not
+        permitted.
+
+    Must stay in lockstep with `_allowed_models` — offering a model in the
+    picker that resolves to no key just fails at request time.
     """
     if provider == "deepseek":
         byo = (st.session_state.get(_BYO_DEEPSEEK) or "").strip()
@@ -532,22 +538,27 @@ def _resolve_provider_key(provider: str, is_leadership: bool) -> tuple[str | Non
     byo = (st.session_state.get(_BYO_ANTHROPIC) or "").strip()
     if byo:
         return byo, "byo"
-    if is_leadership:
+    if is_leadership or is_vip:
         org = _get_api_key()
         return (org, "org") if org else (None, "")
     return None, ""
 
 
-def _allowed_models(is_leadership: bool) -> dict:
+def _allowed_models(is_leadership: bool, is_vip: bool = False) -> dict:
     """The label->id model map this user may select, given clearance + any
     bring-your-own keys. DeepSeek always available; Claude models available to
-    leadership, or to anyone who supplied their own Anthropic key."""
+    LEADERSHIP or VIP, or to anyone who supplied their own Anthropic key.
+
+    VIP = LEADERSHIP ∪ login.EXTRA_VIP_EMAILS — it grants Claude access WITHOUT
+    the pricing clearance leadership gets (that stays keyed on is_leadership in
+    `_build_clearance_block`). is_vip defaults False so an un-updated caller
+    degrades to the old leadership-only behaviour rather than over-granting."""
     byo_anthropic = bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())
     allowed = {}
     for label, mid in MODEL_OPTIONS.items():
         if _provider_for(mid) == "deepseek":
             allowed[label] = mid
-        elif is_leadership or byo_anthropic:
+        elif is_leadership or is_vip or byo_anthropic:
             allowed[label] = mid
     # Always keep at least DeepSeek present even if catalog changes.
     if not allowed:
@@ -1690,7 +1701,9 @@ def _render_settings_panel() -> None:
         # unlocks the Claude models (billed to their key). A stale Claude
         # selection from a prior leadership session is silently downgraded.
         is_leadership = bool(st.session_state.get("is_leadership", False))
-        available_options = _allowed_models(is_leadership)
+        available_options = _allowed_models(
+            is_leadership, bool(st.session_state.get("is_vip", False))
+        )
 
         current_model = st.session_state.get("jerry_gpt_model", NON_LEADERSHIP_DEFAULT)
         if current_model not in available_options.values():
@@ -1714,12 +1727,13 @@ def _render_settings_panel() -> None:
         )
         st.session_state["jerry_gpt_model"] = available_options[selected_label]
 
-        if not is_leadership and not bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip()):
+        if (not is_leadership and not bool(st.session_state.get("is_vip", False))
+                and not bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())):
             st.markdown(
                 '<div style="font-size: 0.7rem; color: #6b7689; '
                 'margin-top: 4px; line-height: 1.4;">'
                 '<i class="fa-solid fa-lock" style="margin-right: 4px;"></i>'
-                'Claude models need leadership access — or add your own API key below.'
+                'Claude models need leadership or VIP access — or add your own API key below.'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -2729,7 +2743,9 @@ def _submit_message(
     # right key. BYO key wins; else org DeepSeek (everyone) / org Anthropic
     # (leadership only). No permitted key → tell the user how to get access.
     provider = _provider_for(model)
-    resolved_key, key_source = _resolve_provider_key(provider, is_leadership)
+    resolved_key, key_source = _resolve_provider_key(
+        provider, is_leadership, bool(st.session_state.get("is_vip", False))
+    )
     if not resolved_key:
         history.pop()  # roll back the user turn
         with st.chat_message("assistant", avatar=JERRY_AVATAR):

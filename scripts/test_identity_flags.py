@@ -78,6 +78,38 @@ later = clearance("Jerry", first_turn=False)
 check("first turn is longer (greeting attached)", len(first) > len(later))
 check("later turns still keep the informal register", "你" in later)
 
+print("\n=== VIP grants Claude models (but not pricing clearance) ===")
+LEAD, VIP_ONLY, PLAIN = "jcyi@streamax.com", "caojun@streamax.com", "nobody@streamax.com"
+check("caojun is VIP", login.resolve_vip(VIP_ONLY))
+check("caojun is NOT leadership", not login.resolve_leadership(VIP_ONLY))
+check("leadership is implicitly VIP", login.resolve_vip(LEAD))
+check("ordinary user is not VIP", not login.resolve_vip(PLAIN))
+
+def models(who):
+    return jerry_gpt._allowed_models(bool(login.resolve_leadership(who)),
+                                     bool(login.resolve_vip(who)))
+vip_models, plain_models = models(VIP_ONLY), models(PLAIN)
+check("VIP can select Opus 5", "claude-opus-5" in vip_models.values(), str(vip_models))
+check("VIP can select every model", len(vip_models) == len(jerry_gpt.MODEL_OPTIONS))
+check("non-VIP gets DeepSeek only", set(plain_models.values()) == {jerry_gpt._deepseek_model()},
+      str(plain_models))
+
+# A menu entry without a key would just fail at request time.
+def key_for(who):
+    return jerry_gpt._resolve_provider_key(
+        "anthropic", bool(login.resolve_leadership(who)), bool(login.resolve_vip(who)))[1]
+jerry_gpt._get_api_key = lambda: "sk-test"
+check("VIP actually resolves an org Anthropic key", key_for(VIP_ONLY) == "org")
+check("leadership resolves an org key", key_for(LEAD) == "org")
+check("non-VIP resolves NO Anthropic key", key_for(PLAIN) == "")
+
+# The block embeds the user's own identifier, so normalise that out before
+# comparing — what must match is the *clearance branch*, not the literal text.
+check("VIP does NOT get leadership pricing clearance",
+      clearance(VIP_ONLY).replace(VIP_ONLY, "U") == clearance(PLAIN).replace(PLAIN, "U"))
+check("...and leadership's block genuinely differs from VIP's",
+      clearance(LEAD).replace(LEAD, "U") != clearance(VIP_ONLY).replace(VIP_ONLY, "U"))
+
 print("\n=== pricing clearance still gated by LEADERSHIP ===")
 lead = clearance("jcyi@streamax.com")
 plain = clearance("nobody@streamax.com")

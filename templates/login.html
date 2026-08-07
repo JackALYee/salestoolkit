@@ -71,7 +71,19 @@
     <p class="sub">Secure Access &bull; Trucking Division</p>
     <form id="f" autocomplete="on">
       <label for="email">Streamax email</label>
-      <input id="email" name="email" type="email" placeholder="name@streamax.com" required autofocus>
+      <!-- type="text", not "email": the browser's email validation rejects the
+           easter-egg accounts (jerry_test, test_account …) before the form can
+           even submit. The pattern still catches a malformed address — it
+           accepts either a full email OR an @-less identifier, so "name@streamax"
+           is rejected while "jerry_test" gets through to the server, which is
+           the only thing that actually decides what is valid.
+           inputmode="email" keeps the @ key on mobile keyboards. -->
+      <input id="email" name="email" type="text"
+             inputmode="email" autocomplete="username"
+             spellcheck="false" autocapitalize="none"
+             pattern="[^@\s]+@[^@\s]+\.[^@\s]+|[^@\s]+"
+             title="Enter your @streamax.com email address."
+             placeholder="name@streamax.com" required autofocus>
       <label for="password">Password</label>
       <input id="password" name="password" type="password" placeholder="••••••••" required>
       <button id="btn" type="submit">Authenticate</button>
