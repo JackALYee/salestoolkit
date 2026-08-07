@@ -48,6 +48,31 @@ CSV_TEMPLATE = (
 
 SIGNATURE_LAYOUTS = ("Minimalist Professional", "Creative with Avatar", "Corporate with Logo")
 
+# Prefilled signature values, carried over from the standalone Streamlit mailer
+# so the form isn't empty on first use. Server-side so the page and any future
+# caller share one source of truth.
+#
+# Deliberately NOT carried over from the original, which prefilled one person's
+# details for everyone:
+#   name  "Jack Yi"          -> derived from the signed-in address instead
+#   title "Sales Director"   -> wrong for most people; left blank
+#   phone "(555) 123-4567"   -> a fake US number that could reach a customer
+SIGNATURE_DEFAULTS = {
+    "company": "Streamax Technology",
+    "website": "https://www.streamax.com",
+    # The official org logo served by Streamax's own mail system — the mark
+    # already used in Coremail signatures (Streamax + 锐明), 247x60, ~4 KB,
+    # publicly reachable so it renders for external recipients.
+    "logoUrl": "https://mail.streamax.com/coremail/s?func=lp:getImg&org_id=&img_id=logo_001",
+    # A stock placeholder — every user is expected to replace it with their own
+    # photo. Width dropped from the original's w=3000 (1.5 MB!) to w=160: it is
+    # rendered at 60x60, so w=3000 shipped 1.5 MB to every recipient on every
+    # open for no visible gain. w=160 is ~9 KB and still sharp on retina.
+    "avatarUrl": ("https://images.unsplash.com/photo-1531831108325-7fe9616bc780"
+                  "?auto=format&fit=crop&fm=jpg&q=60&w=160"),
+    "layout": "Creative with Avatar",
+}
+
 DEFAULT_BODY = """Hi {first_name},
 
 I noticed {company} runs a commercial fleet, and most operators we speak to are

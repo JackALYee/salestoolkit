@@ -130,7 +130,14 @@
             <div class="fld"><label for="sPhone">Phone</label><input id="sPhone" type="text"></div>
           </div>
           <div class="fld"><label for="sWebsite">Website</label><input id="sWebsite" type="text"></div>
-          <div class="fld" id="wrapAvatar" style="display:none"><label for="sAvatar">Avatar image URL</label><input id="sAvatar" type="text"></div>
+          <div class="fld" id="wrapAvatar" style="display:none">
+            <label for="sAvatar">Avatar image URL</label>
+            <input id="sAvatar" type="text">
+            <div style="color:var(--warn);font-size:.72rem;margin-top:5px">
+              The prefilled image is a stock placeholder &mdash; replace it with your own photo
+              before sending to customers.
+            </div>
+          </div>
           <div class="fld" id="wrapLogo" style="display:none"><label for="sLogo">Logo image URL</label><input id="sLogo" type="text"></div>
         </div>
         <div>
@@ -398,9 +405,20 @@ fetch('/api/mailer/defaults', {credentials: 'same-origin'})
     $('sLayout').innerHTML = (d.layouts || []).map(function (l) {
       return '<option>' + l + '</option>';
     }).join('');
-    $('sCompany').value = 'Streamax Technology';
-    $('sWebsite').value = 'https://www.streamax.com';
-    if (d.email) $('sName').value = d.email.split('@')[0];
+    // Prefilled signature values come from the server (mailer.SIGNATURE_DEFAULTS)
+    // so the page never hardcodes a second copy of them.
+    var sd = d.signature_defaults || {};
+    $('sCompany').value = sd.company || '';
+    $('sWebsite').value = sd.website || '';
+    $('sAvatar').value  = sd.avatarUrl || '';
+    $('sLogo').value    = sd.logoUrl || '';
+    if (sd.layout) $('sLayout').value = sd.layout;
+    // Name from the signed-in address; title and phone stay blank rather than
+    // prefilling one person's details for the whole company.
+    if (d.email) {
+      var u = d.email.split('@')[0].replace(/[._-]+/g, ' ');
+      $('sName').value = u.replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
     onLayout();
   });
 

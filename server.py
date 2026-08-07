@@ -165,6 +165,7 @@ def api_mailer_defaults(request: Request):
     return {
         "email": user if "@" in user else "",
         "layouts": list(m.SIGNATURE_LAYOUTS),
+        "signature_defaults": dict(m.SIGNATURE_DEFAULTS),
         "default_body": m.DEFAULT_BODY,
         "max_recipients": m.MAX_RECIPIENTS,
         "min_delay": m.MIN_DELAY_S,

@@ -171,6 +171,8 @@ Guardrails added because this is now company-wide rather than one person's scrip
 
 `/api/mailer/send` streams SSE (one event per recipient) because a 200-recipient run takes minutes and a silent progress bar gets killed halfway.
 
+Signature prefills live in `mailer.SIGNATURE_DEFAULTS` (server-side, exposed via `/api/mailer/defaults`) so the page holds no second copy. Carried over from the Streamlit mailer: company, website, the Coremail org logo, the stock avatar, and the `Creative with Avatar` default layout. **Not** carried over: the original prefilled one person's name, title and a fake `(555) 123-4567` phone for everyone — name is now derived from the signed-in address, title and phone start blank. The avatar URL's width was cut from `w=3000` (1.5 MB, for a 60×60 render) to `w=160` (~9 KB); the field carries a visible "stock placeholder" warning.
+
 Test: `python3 scripts/test_mailer.py` — merge fields, signatures, CSV validation, and a **real SMTP batch through a local `aiosmtpd` server** (needs `pip install aiosmtpd` in a venv; the SMTP section skips cleanly without it).
 
 **Not ported:** reply monitoring, AI draft generation and the blacklist/unsubscribe list from the `auto email` project. If outreach volume grows, the blacklist is the next thing to bring over — sending to someone who asked to be removed is the expensive kind of mistake.
