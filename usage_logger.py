@@ -141,6 +141,8 @@ def log_query(
     output_tokens: int = 0,
     cache_read_tokens: int = 0,
     cache_creation_tokens: int = 0,
+    user_email: str | None = None,
+    user_name: str | None = None,
 ) -> None:
     """Log one Jerry GPT turn to stdout (always) and Google Sheets (if configured).
 
@@ -151,15 +153,25 @@ def log_query(
     Streamax pricing. `sensitive_flagged` is computed from the question text
     via a keyword heuristic — together they enable audit filtering.
 
+    `user_email` / `user_name` must be passed by callers that have no Streamlit
+    session — the FastAPI server (`server.py`) is one, and its streamlit stub has
+    an empty `session_state`, so falling back to it logged every turn as an
+    anonymous `""`. They default to None (not "") so the Streamlit path keeps
+    resolving them from session_state exactly as before.
+
     Never raises. All failures are swallowed and printed so the user's chat
     experience is never disrupted by logging issues.
     """
     try:
         sensitive = _is_pricing_sensitive(question)
+        if user_email is None:
+            user_email = st.session_state.get("user_email", "")
+        if user_name is None:
+            user_name = st.session_state.get("user_name", "")
         record = {
             "timestamp_cn": datetime.now(CHINA_TZ).isoformat(timespec="seconds"),
-            "user_email": st.session_state.get("user_email", ""),
-            "user_name": st.session_state.get("user_name", ""),
+            "user_email": user_email or "",
+            "user_name": user_name or "",
             "is_leadership": bool(is_leadership),
             "sensitive_flagged": sensitive,
             "question": (question or "")[:MAX_QUESTION_LEN],

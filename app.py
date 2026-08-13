@@ -1348,7 +1348,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.9.3 (2026) • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.9.4 (2026) • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

@@ -544,7 +544,8 @@ def _resolve_provider_key(provider: str, is_leadership: bool,
     return None, ""
 
 
-def _allowed_models(is_leadership: bool, is_vip: bool = False) -> dict:
+def _allowed_models(is_leadership: bool, is_vip: bool = False,
+                    byo_anthropic: bool | None = None) -> dict:
     """The label->id model map this user may select, given clearance + any
     bring-your-own keys. DeepSeek always available; Claude models available to
     LEADERSHIP or VIP, or to anyone who supplied their own Anthropic key.
@@ -553,7 +554,12 @@ def _allowed_models(is_leadership: bool, is_vip: bool = False) -> dict:
     the pricing clearance leadership gets (that stays keyed on is_leadership in
     `_build_clearance_block`). is_vip defaults False so an un-updated caller
     degrades to the old leadership-only behaviour rather than over-granting."""
-    byo_anthropic = bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())
+    # Callers without a Streamlit session (server.py) must say whether the user
+    # supplied their own Anthropic key — reading session_state there always
+    # returns empty, so a BYO user silently lost access to the Claude models
+    # that the settings panel tells them a key unlocks.
+    if byo_anthropic is None:
+        byo_anthropic = bool((st.session_state.get(_BYO_ANTHROPIC) or "").strip())
     allowed = {}
     for label, mid in MODEL_OPTIONS.items():
         if _provider_for(mid) == "deepseek":

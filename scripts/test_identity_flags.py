@@ -117,5 +117,42 @@ check("leadership block differs from non-leadership", lead != plain)
 check("non-leadership is told not to disclose pricing",
       "not" in plain.lower() and "pric" in plain.lower())
 
+
+print("\n=== identity must reach the usage log (no Streamlit session on the server) ===")
+import usage_logger, io, contextlib, json as _json
+
+def logged(**kw):
+    """Capture the JSON line log_query prints to stdout."""
+    usage_logger._append_to_sheet = lambda *a, **k: None
+    buf = io.StringIO()
+    # The log line goes to stderr, not stdout.
+    with contextlib.redirect_stderr(buf):
+        usage_logger.log_query(question="q", model="deepseek-v4-pro", length="Medium",
+                               answer="a", **kw)
+    line = buf.getvalue()
+    return _json.loads(line.split("[JERRY_GPT_LOG]", 1)[1].strip())
+
+rec = logged(user_email="lucian@streamax.com", user_name="lucian@streamax.com")
+check("explicit user_email is logged", rec["user_email"] == "lucian@streamax.com", str(rec)[:90])
+check("explicit user_name is logged", rec["user_name"] == "lucian@streamax.com")
+rec = logged()
+check("omitting them still falls back (Streamlit path)", rec["user_email"] == "")
+
+src = pathlib.Path(__file__).resolve().parent.parent.joinpath("server.py").read_text()
+check("server.py passes user_email to log_query", "user_email=(user if" in src)
+check("server.py passes user_name to log_query", "user_name=user," in src)
+check("log_query no longer reads session_state for identity",
+      "st.session_state.get(\"user_email\")" not in
+      pathlib.Path(__file__).resolve().parent.parent.joinpath("usage_logger.py").read_text())
+
+print("\n=== a BYO Anthropic key unlocks Claude without a Streamlit session ===")
+check("no key -> DeepSeek only",
+      set(jerry_gpt._allowed_models(False, False, byo_anthropic=False).values())
+      == {jerry_gpt._deepseek_model()})
+check("BYO key -> full catalog",
+      len(jerry_gpt._allowed_models(False, False, byo_anthropic=True))
+      == len(jerry_gpt.MODEL_OPTIONS))
+check("server widens the allowed set from byo_key", "byo_anthropic=byo.startswith" in src)
+
 print(f"\n{'ALL PASS' if not fails else str(fails) + ' FAILED'}")
 sys.exit(1 if fails else 0)

@@ -816,7 +816,13 @@ async def api_chat(request: Request):
 
     is_leadership = bool(_login.resolve_leadership(user))
     is_vip = bool(_login.resolve_vip(user))
-    allowed = set(_jerry._allowed_models(is_leadership, is_vip).values())
+    # A user-supplied Anthropic key widens the menu, exactly as it does in the
+    # Streamlit settings panel.
+    byo = (body.get("byo_key") or "").strip()
+    allowed = set(_jerry._allowed_models(
+        is_leadership, is_vip,
+        byo_anthropic=byo.startswith("sk-ant"),
+    ).values())
 
     model = body.get("model") or (_jerry.DEFAULT_MODEL if is_vip
                                   else _jerry.NON_LEADERSHIP_DEFAULT)
@@ -832,7 +838,6 @@ async def api_chat(request: Request):
     # Bring-your-own-key: sent per request over HTTPS and used for this call
     # only. Never written to disk, the session cookie, or any log — same
     # session-only contract as the Streamlit settings panel.
-    byo = (body.get("byo_key") or "").strip()
     if byo:
         key = byo
     else:
@@ -977,6 +982,10 @@ async def api_chat(request: Request):
                             input_tokens=usage["input"], output_tokens=usage["output"],
                             cache_read_tokens=usage["cache_read"],
                             cache_creation_tokens=usage["cache_creation"],
+                            # Must be explicit: there is no Streamlit session
+                            # here, so the logger cannot look the user up itself.
+                            user_email=(user if "@" in user else ""),
+                            user_name=user,
                         )
                     except Exception as exc:
                         print(f"[usage] log failed: {exc}", file=sys.stderr, flush=True)
