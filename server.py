@@ -111,6 +111,10 @@ try:
     import mailer as _mailer
 except Exception:                                                        # noqa: BLE001
     _mailer = None
+try:
+    import customized_login as _custom
+except Exception:                                                        # noqa: BLE001
+    _custom = None
 
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
@@ -131,6 +135,64 @@ if (ROOT / "configurator").is_dir():
     app.mount("/configurator",
               StaticFiles(directory=str(ROOT / "configurator"), html=True),
               name="configurator")
+
+
+# ---------------------------------------------------------------------------
+# Account — password change for override-list users
+#
+# Only meaningful for accounts on customized_login: everyone else authenticates
+# against their mailbox, and this app has no business changing a mail password.
+# ---------------------------------------------------------------------------
+
+@app.get("/api/account")
+def api_account(request: Request):
+    user = require_user(request)
+    is_custom = bool(_custom and "@" in user and _custom.is_custom_user(user))
+    return {
+        "user": user,
+        "is_custom": is_custom,
+        "can_change_password": is_custom,
+        "storage": (_custom.storage_backend() if (_custom and is_custom) else ""),
+        "min_length": 8,
+    }
+
+
+@app.post("/api/account/password")
+async def api_account_password(request: Request):
+    user = require_user(request)
+    if not (_custom and "@" in user and _custom.is_custom_user(user)):
+        # Mailbox-authenticated users must change their password in the mail
+        # system; we have nothing to change here.
+        return JSONResponse(
+            {"ok": False,
+             "error": "Your sign-in is verified against the Streamax mail server. "
+                      "Change your password there instead."}, 403)
+
+    body = await request.json()
+    current = body.get("current") or ""
+    new = body.get("new") or ""
+    confirm = body.get("confirm") or ""
+
+    # Re-authenticate before allowing a change: a stolen session cookie must not
+    # be enough to lock the real owner out.
+    if not _custom.verify(user, current):
+        return JSONResponse({"ok": False, "error": "Current password is incorrect."}, 400)
+    if new != confirm:
+        return JSONResponse({"ok": False, "error": "The two new passwords do not match."}, 400)
+    if new == current:
+        return JSONResponse({"ok": False, "error": "The new password must be different."}, 400)
+    err = _custom.validate_new_password(new)
+    if err:
+        return JSONResponse({"ok": False, "error": err}, 400)
+
+    ok, detail = _custom.set_password(user, new)
+    if not ok:
+        return JSONResponse({"ok": False, "error": detail}, 400)
+    return {"ok": True,
+            "storage": _custom.storage_backend(),
+            # The caller may want to paste this into SEED_HASHES; it is a hash,
+            # not a password, so it is safe to show and safe to commit.
+            "hash": detail}
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +424,13 @@ def login_page(request: Request, next: str = "/"):
     return HTMLResponse(page)
 
 
+@app.get("/account", response_class=HTMLResponse)
+def account_page(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/login?next=/account", status_code=302)
+    return HTMLResponse(_page("account.html"))
+
+
 @app.get("/mailer", response_class=HTMLResponse)
 def mailer_page(request: Request):
     if not current_user(request):
@@ -412,8 +481,14 @@ async def api_login(request: Request):
     if not ok:
         return JSONResponse({"ok": False, "error": message}, 401)
 
-    # `message` is the display name for easter-egg accounts, else "Success".
-    user = email.strip().lower() if message == "Success" else message
+    # `message` is the display name for easter-egg accounts ("Jerry", "Hekun",
+    # "ZNTang"); "Success" is a mailbox login and "Custom" an override-list one.
+    # Both of those must resolve to the EMAIL — using the marker as the identity
+    # would give every override user the same session name, and with it the same
+    # chat history, the wrong clearance, and no account page.
+    user = (email.strip().lower()
+            if message in ("Success", "Custom")
+            else message)
     payload = {"ok": True, "user": user}
     # Some accounts get a full-screen transition before landing in the app —
     # the HTML port of what the Streamlit login played. Spec comes from

@@ -177,6 +177,26 @@ Test: `python3 scripts/test_mailer.py` — merge fields, signatures, CSV validat
 
 **Not ported:** reply monitoring, AI draft generation and the blacklist/unsubscribe list from the `auto email` project. If outreach volume grows, the blacklist is the next thing to bring over — sending to someone who asked to be removed is the expensive kind of mistake.
 
+## Override credentials (`customized_login.py`)
+
+A fallback for users the mail servers can't authenticate — M365 mailboxes blocked by basic-auth policy, contractors and partners with no Streamax mailbox, anyone mid-migration.
+
+**Precedence is fixed and load-bearing: Coremail → Outlook → override list.** The override is consulted *only* after both mail backends refuse, so a real mailbox password always wins and adding someone here can never shadow or weaken their normal sign-in. Addresses on the list also skip the `@streamax.com` domain gate (that's the point — partners), and non-Streamax addresses skip the SMTP round-trip entirely since those servers would never accept them.
+
+**Passwords are stored as PBKDF2-HMAC-SHA256** (stdlib, 240k iterations, per-user salt). Never plaintext — this repo is on GitHub and has already needed one credential clean-up. `SEED_HASHES` in the module is the committed baseline (hashes are safe to commit); generate a line with:
+
+```bash
+python3 scripts/custom_login.py hash someone@example.com
+```
+
+**Two storage layers, because Render's filesystem is ephemeral.** Runtime password changes go to a `custom_login` table in the Postgres already configured for chat history (`JERRY_GPT_DB_URL`) and **override the seed**. With no database it falls back to a gitignored local JSON file and says loudly — in the log and in the account UI — that changes will not survive a redeploy. ⚠️ **`JERRY_GPT_DB_URL` must be set on Render or password changes silently reset on every deploy.**
+
+Users change their own password at **`/account`** (`templates/account.html`), linked from the toolkit's user pill and Jerry's Settings modal. The endpoint re-verifies the current password first, so a stolen session cookie isn't enough to lock the owner out. Mailbox-authenticated users get a 403 and an explanation — this app has no business changing a mail password.
+
+⚠️ **`verify_streamax_credentials` returns the marker `"Custom"`, which `server.py` must map to the email.** Treating the marker as the session identity gave every override user the same session name — and with it a shared chat history, wrong clearance, and no account page. `server.py` maps both `"Success"` and `"Custom"` to the address.
+
+Test: `python3 scripts/test_customized_login.py` (no network) — hashing, precedence, that a real mailbox password wins, password change, and that the old password dies.
+
 ## Language switching (`i18n.py`)
 
 A page-wide selector sits top-right, sharing a fixed `.stmx-topright` flex cluster with the user pill so neither can overlap whatever the signed-in email's width. Seven languages: **English (default)**, 中文, 日本語, Español, Português, Français, Italiano. The choice persists in `localStorage` under `stmx_lang`.
@@ -188,7 +208,22 @@ Three things are load-bearing and easy to break:
 - **`applying` guards the observer** so the engine's own writes don't retrigger it.
 - **Indexing is lazy** — built on the first switch away from English, so the default load pays nothing.
 
-Coverage is the page chrome: header, nav, section headings, the user guide, Marketing Resources, common controls. Deep reference content (terminology DB, knowledge tables, generated scripts) stays English on purpose — it's product vocabulary reps use in English with customers anyway. Widen coverage by adding to `PHRASES`; nothing else changes.
+**The dictionary has two layers.** `i18n.PHRASES` is hand-curated (~60 chrome strings, wording chosen deliberately). `i18n_data.json` holds ~1,000 generated entries produced by `scripts/build_translations.py`, which walks the BUILT page with the same TreeWalker and skip list the runtime engine uses — so what it extracts is exactly what the engine will look up. Curated entries always win on conflict. Regenerate after copy changes:
+
+```bash
+python3 build_static.py
+.scrape_venv/bin/python scripts/build_translations.py     # incremental; --force to redo all
+```
+
+It runs 8 batches concurrently (serially it was ~5 min per 25 strings, i.e. hours), caches to disk after every batch so it is resumable, and finishes with a repair pass for strings the model returned unchanged. Costs a few dollars of API credit on a full run; incremental runs cost almost nothing.
+
+**Measured coverage: zh 91%, ja 90%, fr 88%, es 84%, it 81%** — `scripts/test_i18n.py` asserts per-language floors. The remainder is meant to stay English: product names, part numbers, URLs, file sizes, the version string, and the switcher's own language names.
+
+⚠️ Two traps worth knowing:
+- **Don't measure coverage by counting accented characters.** Spanish and Italian translate plenty of strings without producing one, which under-reports them by ~40 points. Measure "did the text change from English".
+- **A glossary term can swallow the whole phrase.** Told to keep "Streamax" verbatim, the model returned "Streamax Sales Toolkit" untranslated. The prompt now shows worked examples, and a repair pass re-asks for anything that came back identical in ≥2 languages.
+
+Lookup falls back through a leading list marker, so `1. Streamaxpedia` resolves via the bare `Streamaxpedia` entry — one rule covers the whole numbered family.
 
 `app.py` and `build_static.py` both fill the same three placeholders (`__I18N_CSS__`, `__I18N_SWITCHER__`, `__I18N_ENGINE__`) so the Streamlit and static paths behave identically. **`__I18N_CSS__` must sit AFTER `</style>`** — inside it, the injected `<style>` nests and the whole rule set is discarded.
 

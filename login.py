@@ -14,6 +14,12 @@ try:
 except Exception:  # noqa: BLE001
     _auth = None
 
+# Override credentials, consulted ONLY after both mail backends refuse.
+try:
+    import customized_login as _custom
+except Exception:  # noqa: BLE001
+    _custom = None
+
 
 def _persist(user_name: str) -> None:
     """Write the auth cookie after a successful sign-in."""
@@ -407,8 +413,12 @@ def verify_streamax_credentials(email, password):
     if email_lower == "test_account" and password == "testme":
         return True, "Success"
 
-    # 2. 使用全小写的 email_lower 来做后缀检查，避免大小写导致报错
-    if not email_lower.endswith("@streamax.com"):
+    # 2. 使用全小写的 email_lower 来做后缀检查，避免大小写导致报错。
+    # Addresses on the override list skip the domain gate on purpose: partners
+    # and contractors without a Streamax mailbox are exactly who that list is
+    # for, and they could never pass an SMTP check anyway.
+    _on_override_list = bool(_custom and _custom.is_custom_user(email_lower))
+    if not email_lower.endswith("@streamax.com") and not _on_override_list:
         return False, "Please provide a valid @streamax.com email address."
     if not password:
         return False, "Password cannot be empty."
@@ -420,7 +430,9 @@ def verify_streamax_credentials(email, password):
     authenticated = False
     smtp_auth_disabled = False
     conn_error = ""
-    for srv in _mail_servers():
+    _servers = () if (_on_override_list and not email_lower.endswith("@streamax.com")) \
+        else _mail_servers()
+    for srv in _servers:
         ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"], clean_email, password)
         if disabled:
             smtp_auth_disabled = True
@@ -443,6 +455,12 @@ def verify_streamax_credentials(email, password):
         elif email_lower == "zntang@streamax.com":
             return True, "ZNTang"
         return True, "Success"
+
+    # 4. Both mail servers refused. Only now consider the override list — a real
+    # mailbox password always wins, so an override can never shadow or weaken
+    # someone's normal sign-in.
+    if _on_override_list and _custom.verify(clean_email, password):
+        return True, "Custom"
 
     # Not accepted by any backend.
     if conn_error:

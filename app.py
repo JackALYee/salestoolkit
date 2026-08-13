@@ -1312,6 +1312,8 @@ __I18N_CSS__
     <div class="stmx-topright">
 __I18N_SWITCHER__
     <div class="user-pill">
+        <a href="/account" target="_top" class="signout-btn stmx-account"
+           title="Account settings"><i class="fa-solid fa-gear"></i></a>
         <i class="fa-solid fa-user-circle user-icon"></i>
         <span class="user-identity">__USER_IDENTITY__</span>
         <a href="?logout=1" class="signout-btn" onclick="
@@ -1346,7 +1348,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 8.7.2 (2026) • 货运产品线 Trucking BU • August 2026</div>
+            <div class="header-meta fade-up">Version 8.9.3 (2026) • 货运产品线 Trucking BU • August 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

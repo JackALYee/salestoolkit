@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account — Streamax Sales Toolkit</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2AF598;--blue:#009EFD;--bg:#050810;--grey:#A0AEC0;
+        --white:#E6EAF0;--warn:#FFB800;--bad:#ff4757}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;color:var(--white);
+       background:var(--bg);background-image:radial-gradient(circle at 50% -10%,#0B1221,#050810)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;
+       padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .top .brand{display:flex;align-items:center;gap:11px;font-weight:700}
+  .top .brand img{height:26px}
+  .top a{color:var(--grey);font-size:.82rem;text-decoration:none}
+  .top a:hover{color:var(--white)}
+  .wrap{max-width:620px;margin:0 auto;padding:34px 22px 80px}
+  h1{font-size:1.7rem;margin:0 0 4px}
+  h1 .g{background:linear-gradient(135deg,var(--green),var(--blue));
+        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .lede{color:var(--grey);font-size:.9rem;margin:0 0 24px}
+  .card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
+        border-radius:14px;padding:22px;margin-bottom:16px}
+  .card h2{font-size:1rem;margin:0 0 4px}
+  .card .note{color:var(--grey);font-size:.8rem;margin:0 0 18px;line-height:1.6}
+  label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;
+        color:var(--grey);margin:0 0 5px}
+  input{width:100%;padding:10px 12px;margin-bottom:14px;border-radius:8px;font-family:inherit;
+        background:rgba(20,25,40,.85);border:1px solid rgba(255,255,255,.1);
+        color:var(--white);font-size:.9rem;outline:none;color-scheme:dark}
+  input:focus{border-color:var(--green)}
+  button{padding:11px 20px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;
+         font-weight:700;font-size:.88rem;color:#050810;
+         background:linear-gradient(135deg,var(--green),var(--blue));transition:.2s}
+  button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 16px rgba(42,245,152,.32)}
+  button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .kv{display:flex;justify-content:space-between;gap:14px;padding:9px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);font-size:.86rem}
+  .kv:last-child{border-bottom:none}
+  .kv span:first-child{color:var(--grey)}
+  .msg{font-size:.83rem;margin-top:12px;padding:10px 13px;border-radius:8px;
+       display:none;line-height:1.55}
+  .msg.show{display:block}
+  .msg.ok{background:rgba(42,245,152,.1);border:1px solid rgba(42,245,152,.3);color:var(--green)}
+  .msg.bad{background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.32);color:#ff8b95}
+  .msg.warn{background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:var(--warn)}
+  code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:4px;
+       font-size:.78em;word-break:break-all}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <img src="/assets/streamax%20logo.png" alt="Streamax" onerror="this.style.display='none'">
+      <span>Account</span>
+    </div>
+    <a href="/">&larr; Back to the Sales Toolkit</a>
+  </div>
+
+  <div class="wrap">
+    <h1><span class="g">Account</span> settings</h1>
+    <p class="lede">Your sign-in details for the Sales Toolkit and Jerry GPT.</p>
+
+    <div class="card">
+      <h2>Signed in as</h2>
+      <p class="note" style="margin-bottom:10px"></p>
+      <div class="kv"><span>Account</span><span id="aUser">…</span></div>
+      <div class="kv"><span>Sign-in method</span><span id="aMethod">…</span></div>
+    </div>
+
+    <!-- Only rendered for override-list accounts. Everyone else signs in with
+         their mailbox password, which this app must not touch. -->
+    <div class="card" id="pwCard" style="display:none">
+      <h2>Change password</h2>
+      <p class="note">
+        Your password is stored as a salted hash &mdash; nobody, including an
+        administrator, can read it back. Choose something you don't use elsewhere.
+      </p>
+      <form id="pwForm" autocomplete="off">
+        <label for="cur">Current password</label>
+        <input id="cur" type="password" autocomplete="current-password" required>
+        <label for="new1">New password</label>
+        <input id="new1" type="password" autocomplete="new-password" minlength="8" required>
+        <label for="new2">Confirm new password</label>
+        <input id="new2" type="password" autocomplete="new-password" minlength="8" required>
+        <button id="pwBtn" type="submit">Update password</button>
+      </form>
+      <div class="msg" id="pwMsg"></div>
+    </div>
+
+    <div class="card" id="mailCard" style="display:none">
+      <h2>Change password</h2>
+      <p class="note" style="margin:0">
+        You sign in with your Streamax mailbox password, verified against the mail
+        server. This site never stores it and cannot change it &mdash; use your mail
+        system (Coremail or Outlook) to change your password, and the new one will
+        work here immediately.
+      </p>
+    </div>
+  </div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+function msg(kind, text) {
+  var el = $('pwMsg');
+  el.className = 'msg show ' + kind;
+  el.innerHTML = text;
+}
+
+fetch('/api/account', {credentials: 'same-origin'})
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
+    $('aUser').textContent = d.user || '—';
+    $('aMethod').textContent = d.is_custom
+      ? 'Override credentials (managed here)'
+      : 'Streamax mail server';
+    if (d.can_change_password) {
+      $('pwCard').style.display = '';
+      if (d.storage && d.storage !== 'database') {
+        msg('warn', 'Heads up: password changes are being written to a local file ' +
+                    'because no database is configured, so a redeploy will reset them. ' +
+                    'Set <code>JERRY_GPT_DB_URL</code> to make changes permanent.');
+      }
+    } else {
+      $('mailCard').style.display = '';
+    }
+    $('new1').minLength = d.min_length || 8;
+    $('new2').minLength = d.min_length || 8;
+  })
+  .catch(function () { $('aUser').textContent = 'could not load'; });
+
+$('pwForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var cur = $('cur').value, n1 = $('new1').value, n2 = $('new2').value;
+  if (n1 !== n2) { msg('bad', 'The two new passwords do not match.'); return; }
+  $('pwBtn').disabled = true; $('pwBtn').textContent = 'Updating…';
+  fetch('/api/account/password', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    credentials: 'same-origin',
+    body: JSON.stringify({current: cur, new: n1, confirm: n2})
+  })
+  .then(function (r) { return r.json().then(function (d) { return {ok: r.ok, d: d}; }); })
+  .then(function (res) {
+    if (res.ok && res.d.ok) {
+      $('pwForm').reset();
+      var extra = (res.d.storage === 'database')
+        ? 'It will persist across deploys.'
+        : 'Saved to a local file &mdash; it will NOT survive a redeploy.';
+      msg('ok', 'Password updated. ' + extra +
+                ' Use the new password next time you sign in.');
+    } else {
+      msg('bad', (res.d && res.d.error) || 'Could not update the password.');
+    }
+  })
+  .catch(function () { msg('bad', 'Could not reach the server.'); })
+  .finally(function () {
+    $('pwBtn').disabled = false; $('pwBtn').textContent = 'Update password';
+  });
+});
+</script>
+</body>
+</html>

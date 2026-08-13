@@ -24,3 +24,6 @@ scrape_log.txt
 
 # Generated static build (build_static.py) - regenerate, do not commit
 site/
+
+# Override-credential store written at runtime (hashes, but not ours to publish)
+customized_login_store.json
