@@ -179,6 +179,19 @@ Test: `python3 scripts/test_mailer.py` — merge fields, signatures, CSV validat
 
 **Not ported:** reply monitoring, AI draft generation and the blacklist/unsubscribe list from the `auto email` project. If outreach volume grows, the blacklist is the next thing to bring over — sending to someone who asked to be removed is the expensive kind of mistake.
 
+## Sign-in logging
+
+Every attempt through the HTML site emits one `[AUTH]` line to stderr — the line to grep in the Render log when someone says they can't get in:
+
+```
+[AUTH] OK    email=lucian@streamax.com  method=override   ip=203.0.113.22  user=lucian@streamax.com  leadership=False  vip=False
+[AUTH] FAIL  email=nobody@streamax.com  method=-          ip=203.0.113.44  reason=Email or password incorrect.
+```
+
+`method` is `mailbox` (Coremail or Outlook — the per-server `[LOGIN]` lines above it say which), `override` (customized_login), `shortcut` (easter-egg account), or `microsoft` (OAuth). Failures are logged too, with the attempted address and the reason. The client IP comes from `CF-Connecting-IP` / `X-Real-IP` / `X-Forwarded-For` before falling back to the socket, so it's the real caller and not Cloudflare.
+
+⚠️ **The password must never appear in a log line.** `log_auth()` takes only the address, and there is a canary check in the verification flow for this. If you add a field here, add it from data the server already holds — never from the request body's `password`.
+
 ## Override credentials (`customized_login.py`)
 
 A fallback for users the mail servers can't authenticate — M365 mailboxes blocked by basic-auth policy, contractors and partners with no Streamax mailbox, anyone mid-migration.

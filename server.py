@@ -469,16 +469,61 @@ def _set_session(resp, user: str, request: Request):
     return resp
 
 
+def _client_ip(request: Request) -> str:
+    """Caller's IP as seen before Cloudflare/Render. Falls back through the
+    proxy headers each hop sets, then the socket."""
+    for h in ("cf-connecting-ip", "x-real-ip"):
+        v = (request.headers.get(h) or "").strip()
+        if v:
+            return v
+    fwd = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    return fwd or (request.client.host if request.client else "-")
+
+
+# How the credentials were proved, derived from verify_streamax_credentials'
+# marker. "Success" is a mailbox (Coremail or Outlook — the per-server
+# [LOGIN] lines above say which); "Custom" is the override list.
+_AUTH_METHOD = {"Success": "mailbox", "Custom": "override"}
+
+
+def log_auth(request: Request, *, email: str, ok: bool,
+             method: str = "", reason: str = "", user: str = "") -> None:
+    """One line per sign-in attempt, success or failure, naming the address.
+
+    This is the line to grep in the Render log when someone says "I can't get
+    in". Everything here is already visible to the server; the password never
+    appears and must never be added.
+    """
+    parts = [
+        f"{'OK  ' if ok else 'FAIL'}",
+        f"email={email or '-'}",
+        f"method={method or '-'}",
+        f"ip={_client_ip(request)}",
+    ]
+    if ok and user:
+        parts.append(f"user={user}")
+        try:
+            parts.append(f"leadership={bool(_login.resolve_leadership(user))}")
+            parts.append(f"vip={bool(_login.resolve_vip(user))}")
+        except Exception:                                            # noqa: BLE001
+            pass
+    if reason:
+        parts.append(f"reason={reason[:120]}")
+    print("[AUTH] " + "  ".join(parts), file=sys.stderr, flush=True)
+
+
 @app.post("/api/login")
 async def api_login(request: Request):
     body = await request.json()
     email = (body.get("email") or "").strip()
     password = body.get("password") or ""
     if not email or not password:
+        log_auth(request, email=email, ok=False, reason="missing email or password")
         return JSONResponse({"ok": False, "error": "Email and password are required."}, 400)
 
     ok, message = _login.verify_streamax_credentials(email, password)
     if not ok:
+        log_auth(request, email=email, ok=False, reason=message)
         return JSONResponse({"ok": False, "error": message}, 401)
 
     # `message` is the display name for easter-egg accounts ("Jerry", "Hekun",
@@ -496,6 +541,8 @@ async def api_login(request: Request):
     egg = _login.resolve_easter_egg(user)
     if egg:
         payload["easter_egg"] = dict(egg, ms=_login.EASTER_EGG_MS)
+    log_auth(request, email=email, ok=True, user=user,
+             method=_AUTH_METHOD.get(message, "shortcut"))
     return _set_session(JSONResponse(payload), user, request)
 
 
@@ -573,6 +620,8 @@ def ms_callback(request: Request, code: str = "", state: str = "",
     if not (_ms and _ms.is_configured()):
         return _login_error("Microsoft sign-in is not configured yet.")
     if error:
+        log_auth(request, email="", ok=False, method="microsoft",
+                 reason=error_description or error)
         return _login_error(error_description or error)
 
     email, next_path, err = _ms.complete(
@@ -580,8 +629,10 @@ def ms_callback(request: Request, code: str = "", state: str = "",
         _ms_redirect_uri(request),
     )
     if err:
+        log_auth(request, email=email, ok=False, method="microsoft", reason=err)
         return _login_error(err, next_path)
 
+    log_auth(request, email=email, ok=True, user=email, method="microsoft")
     resp = RedirectResponse(next_path, status_code=302)
     _set_session(resp, email, request)
     resp.delete_cookie(_ms.STATE_COOKIE, path="/")
