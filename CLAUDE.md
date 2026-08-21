@@ -192,6 +192,26 @@ Every attempt through the HTML site emits one `[AUTH]` line to stderr — the li
 
 ⚠️ **The password must never appear in a log line.** `log_auth()` takes only the address, and there is a canary check in the verification flow for this. If you add a field here, add it from data the server already holds — never from the request body's `password`.
 
+## ⚠️ Sign-in policy — the bootstrap door
+
+**Any `@streamax.com` address with no toolkit password set is admitted with ANY password.** This is deliberate: Streamax mail passwords rotate quarterly and were locking people out, so the site lets them in far enough to set a password that never rotates.
+
+Order in `verify_streamax_credentials()`:
+1. Easter-egg shortcuts.
+2. Domain gate — `@streamax.com`, or an address on the override list.
+3. **Toolkit password**, if one exists. Local and instant; checked before the mailbox.
+4. **Mailbox** (Coremail → Outlook) — the recovery path when the toolkit password is wrong or forgotten. Skipped entirely while bootstrapping, since there is nothing to verify.
+5. Override-list users outside the domain.
+6. **Bootstrap**: Streamax address, no toolkit password → admitted, marker `"Setup"`.
+
+**The door closes per user the moment they set a password** (`customized_login.has_password()` starts returning True). That is the entire security model of this feature — without it the prompt would be theatre, since any password would keep working forever. Logged as `[LOGIN] bootstrap admit for …` and `[AUTH] … method=bootstrap`.
+
+⚠️ **Until a user sets a toolkit password, knowing their email address is the only barrier to this site** — which holds internal pricing, competitor intel and roadmaps. The exposure shrinks as people set passwords. To close it for everyone at once, delete the bootstrap branch (step 6) once adoption is high enough; the mail password and toolkit password both keep working.
+
+`"Setup"` reaches `/api/login` as `needs_password_setup: true`, which makes `templates/login.html` show the set-a-password modal before anything else (including the easter-egg transition, which would otherwise bury it). The modal posts to `/api/account/password`, which skips the current-password check when `has_password()` is False — on a first set there is nothing to re-authenticate against, and being signed in is the proof.
+
+Test: `python3 scripts/test_bootstrap_login.py`.
+
 ## Override credentials (`customized_login.py`)
 
 A fallback for users the mail servers can't authenticate — M365 mailboxes blocked by basic-auth policy, contractors and partners with no Streamax mailbox, anyone mid-migration.

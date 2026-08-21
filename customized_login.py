@@ -52,6 +52,11 @@ _LOCAL_STORE = Path(__file__).parent / "customized_login_store.json"
 _ITERATIONS = 240_000
 _MIN_PASSWORD = 8
 
+# Anyone with an address in this domain may set their own toolkit password —
+# they don't need to be pre-listed in SEED_HASHES. The list is still used for
+# people OUTSIDE the domain (partners, contractors).
+SELF_SERVICE_DOMAIN = "@streamax.com"
+
 
 # ── the list ────────────────────────────────────────────────────────────────
 # email -> PBKDF2 hash. Generate a line with:
@@ -194,6 +199,26 @@ def is_custom_user(email: str) -> bool:
     return (email or "").strip().lower() in set(all_emails())
 
 
+def can_self_serve(email: str) -> bool:
+    """May this address own a toolkit password?
+
+    Everyone in the Streamax domain, plus anyone explicitly pre-listed.
+    """
+    e = (email or "").strip().lower()
+    return bool(e) and (e.endswith(SELF_SERVICE_DOMAIN) or is_custom_user(e))
+
+
+def has_password(email: str) -> bool:
+    """Has a toolkit password actually been set for this address?
+
+    This is the switch that closes the bootstrap door: until it returns True,
+    `login.py` lets the user in with any password so they can get far enough to
+    set one. After that the toolkit password is required.
+    """
+    e = (email or "").strip().lower()
+    return bool(_overrides().get(e) or _seed().get(e))
+
+
 def verify(email: str, password: str) -> bool:
     """Check an override password. Runtime overrides beat the committed seed."""
     e = (email or "").strip().lower()
@@ -210,8 +235,9 @@ def verify(email: str, password: str) -> bool:
 def set_password(email: str, new_password: str) -> tuple[bool, str]:
     """Change an override password. Returns (ok, message-or-hash)."""
     e = (email or "").strip().lower()
-    if not is_custom_user(e):
-        return False, "This account is not on the override list."
+    if not can_self_serve(e):
+        return False, ("This account cannot set a toolkit password. Use a "
+                       "@streamax.com address, or ask to be added to the list.")
     err = validate_new_password(new_password)
     if err:
         return False, err

@@ -52,12 +52,15 @@ check("new password works", cl.verify("lucian@streamax.com", "a-much-better-one"
 check("OLD SEED PASSWORD NO LONGER WORKS", not cl.verify("lucian@streamax.com", "12345678"))
 check("store holds a hash, never the plaintext",
       "a-much-better-one" not in cl._LOCAL_STORE.read_text())
-ok, msg = cl.set_password("stranger@streamax.com", "whatever12")
-check("cannot set a password for an unlisted account", not ok, msg)
+ok, msg = cl.set_password("stranger@example.com", "whatever12")
+check("cannot set a password for an address outside the domain and off the list",
+      not ok, msg)
+ok, _ = cl.set_password("anyone@streamax.com", "whatever12")
+check("ANY @streamax.com address may set one (self-service by design)", ok)
 ok, msg = cl.set_password("lucian@streamax.com", "short")
 check("rejects a weak new password", not ok, msg)
 
-print("\n=== login precedence: mail servers are tried FIRST ===")
+print("\n=== login precedence: toolkit password first, mailbox as recovery ===")
 calls = []
 def fake_smtp(host, port, mode, email, password, timeout=10):
     calls.append(host)
@@ -66,9 +69,10 @@ login._smtp_auth = fake_smtp
 
 calls.clear()
 ok, msg = login.verify_streamax_credentials("lucian@streamax.com", "a-much-better-one")
-check("override accepted only after both mail backends refused", ok and msg == "Custom",
-      f"({ok}, {msg})")
-check("both mail servers were tried first", len(calls) == 2, str(calls))
+check("toolkit password signs the user in", ok and msg == "Custom", f"({ok}, {msg})")
+# Precedence deliberately changed: the toolkit password is local and instant,
+# an SMTP round-trip costs seconds. The mailbox is now the RECOVERY path.
+check("a correct toolkit password skips SMTP entirely", not calls, str(calls))
 
 calls.clear()
 ok, msg = login.verify_streamax_credentials("lucian@streamax.com", "wrong-password")
@@ -96,8 +100,9 @@ print("\n=== the session identity must be the email, not the marker ===")
 # to itself would give every override user one shared identity.
 import re
 src = pathlib.Path(__file__).resolve().parent.parent.joinpath("server.py").read_text()
-check("server maps both Success and Custom to the email",
-      'message in ("Success", "Custom")' in src)
+check("server maps every email-identity marker to the address",
+      all(m in src for m in ('"Success"', '"Custom"', '"Setup"'))
+      and "message in (" in src)
 
 print(f"\n{'ALL PASS' if not fails else str(fails)+' FAILED'}")
 sys.exit(1 if fails else 0)

@@ -398,6 +398,15 @@ def _describe_non_ascii(password):
     return "; ".join(parts)
 
 
+def _egg_or(default: str, email_lower: str) -> str:
+    """Display-name easter eggs, once the credentials have actually passed."""
+    return {
+        "jerry@streamax.com": "Jerry",
+        "hekun@streamax.com": "Hekun",
+        "zntang@streamax.com": "ZNTang",
+    }.get(email_lower, default)
+
+
 def verify_streamax_credentials(email, password):
     # 1. 自动清除首尾的隐藏空格，并转为小写用于校验
     clean_email = email.strip()
@@ -423,44 +432,72 @@ def verify_streamax_credentials(email, password):
     if not password:
         return False, "Password cannot be empty."
 
-    # 3. Verify the password by attempting an SMTP AUTH login against each mail
-    # backend (Coremail first, then Microsoft/Outlook). Whichever server accepts
-    # the credentials authenticates the user — covering mailboxes on either
-    # system. clean_email (whitespace-stripped) is sent to the server.
+    # 3. Toolkit password FIRST. It is the credential we want people using —
+    # it never rotates, and checking it is local and instant, where an SMTP
+    # round-trip costs seconds.
+    if _custom and _custom.has_password(email_lower):
+        if _custom.verify(clean_email, password):
+            return True, _egg_or("Custom", email_lower)
+        # Wrong toolkit password. Fall through to the mailbox as the RECOVERY
+        # path — forgetting the toolkit password must not lock anyone out, and
+        # the mail password is the one credential IT can always reset.
+
+    # 4. Mailbox check (Coremail, then Microsoft/Outlook). This runs when a
+    # toolkit password exists but didn't match, and for override-list users
+    # outside the Streamax domain it is skipped entirely — those servers would
+    # never accept them and each attempt costs ~10s.
+    #
+    # It is also SKIPPED for the bootstrap case below: a Streamax address with
+    # no toolkit password yet is admitted regardless of what they typed, so
+    # there is nothing to verify and no reason to make them wait for it.
+    _bootstrap = (email_lower.endswith("@streamax.com")
+                  and _custom is not None
+                  and not _custom.has_password(email_lower))
+
     authenticated = False
     smtp_auth_disabled = False
     conn_error = ""
-    _servers = () if (_on_override_list and not email_lower.endswith("@streamax.com")) \
-        else _mail_servers()
-    for srv in _servers:
-        ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"], clean_email, password)
-        if disabled:
-            smtp_auth_disabled = True
-        # Remember a connection-level failure (server unreachable) as distinct
-        # from an auth rejection, so we can surface it if nothing authenticates.
-        if not ok and not disabled and _looks_like_connection_error(err):
-            conn_error = err
-        print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} disabled={disabled} "
-              f"err={err[:140]}", file=sys.stderr, flush=True)
-        if ok:
-            authenticated = True
-            break
+    if not _bootstrap:
+        _servers = () if (_on_override_list and not email_lower.endswith("@streamax.com")) \
+            else _mail_servers()
+        for srv in _servers:
+            ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"],
+                                           clean_email, password)
+            if disabled:
+                smtp_auth_disabled = True
+            # Remember a connection-level failure (server unreachable) as distinct
+            # from an auth rejection, so we can surface it if nothing authenticates.
+            if not ok and not disabled and _looks_like_connection_error(err):
+                conn_error = err
+            print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} "
+                  f"disabled={disabled} err={err[:140]}", file=sys.stderr, flush=True)
+            if ok:
+                authenticated = True
+                break
 
     if authenticated:
-        # Special Easter Egg Logins (Must pass real SMTP Auth first!)
-        if email_lower == "jerry@streamax.com":
-            return True, "Jerry"
-        elif email_lower == "hekun@streamax.com":
-            return True, "Hekun"
-        elif email_lower == "zntang@streamax.com":
-            return True, "ZNTang"
-        return True, "Success"
+        return True, _egg_or("Success", email_lower)
 
-    # 4. Both mail servers refused. Only now consider the override list — a real
-    # mailbox password always wins, so an override can never shadow or weaken
-    # someone's normal sign-in.
-    if _on_override_list and _custom.verify(clean_email, password):
+    # 5. Override-list users outside the domain, whose password we only ever
+    # check here.
+    if _on_override_list and not email_lower.endswith("@streamax.com") \
+            and _custom.verify(clean_email, password):
         return True, "Custom"
+
+    # 6. BOOTSTRAP — the deliberate open door.
+    #
+    # A @streamax.com address with no toolkit password set is admitted with ANY
+    # password, so they can get in and set one. The "Setup" marker tells the
+    # caller to show the set-a-password prompt.
+    #
+    # ⚠️ Until that user sets a toolkit password, knowing their address is the
+    # only thing standing between a stranger and this site. The door closes for
+    # each person the moment they set one (has_password() above starts
+    # returning True), which is the whole point of the prompt.
+    if _bootstrap:
+        print(f"[LOGIN] bootstrap admit for {email_lower} (no toolkit password set yet)",
+              file=sys.stderr, flush=True)
+        return True, "Setup"
 
     # Not accepted by any backend.
     if conn_error:

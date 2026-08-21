@@ -121,6 +121,18 @@ fetch('/api/account', {credentials: 'same-origin'})
       : 'Streamax mail server';
     if (d.can_change_password) {
       $('pwCard').style.display = '';
+      // First-time set: there is no current password to ask for.
+      if (!d.has_password) {
+        $('cur').closest('form').querySelector('label[for="cur"]').style.display = 'none';
+        $('cur').style.display = 'none';
+        $('cur').required = false;
+        $('pwCard').querySelector('h2').textContent = 'Set your Sales Toolkit password';
+        $('pwCard').querySelector('.note').innerHTML =
+          'You have not set one yet, so <strong>any password currently signs you in</strong>. ' +
+          'Setting one closes that and gives you a password that never rotates. ' +
+          'Your Streamax mail password keeps working as a backup.';
+        $('pwBtn').textContent = 'Set password';
+      }
       if (d.storage && d.storage !== 'database') {
         msg('warn', 'Heads up: password changes are being written to a local file ' +
                     'because no database is configured, so a redeploy will reset them. ' +

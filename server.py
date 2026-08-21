@@ -147,12 +147,16 @@ if (ROOT / "configurator").is_dir():
 @app.get("/api/account")
 def api_account(request: Request):
     user = require_user(request)
-    is_custom = bool(_custom and "@" in user and _custom.is_custom_user(user))
+    can_set = bool(_custom and "@" in user and _custom.can_self_serve(user))
+    has_pw = bool(_custom and can_set and _custom.has_password(user))
     return {
         "user": user,
-        "is_custom": is_custom,
-        "can_change_password": is_custom,
-        "storage": (_custom.storage_backend() if (_custom and is_custom) else ""),
+        "is_custom": can_set,
+        "can_change_password": can_set,
+        # False means this is a FIRST-time set, so no current password is asked
+        # for (there isn't one) and the account is still on the bootstrap door.
+        "has_password": has_pw,
+        "storage": (_custom.storage_backend() if (_custom and can_set) else ""),
         "min_length": 8,
     }
 
@@ -160,26 +164,25 @@ def api_account(request: Request):
 @app.post("/api/account/password")
 async def api_account_password(request: Request):
     user = require_user(request)
-    if not (_custom and "@" in user and _custom.is_custom_user(user)):
-        # Mailbox-authenticated users must change their password in the mail
-        # system; we have nothing to change here.
+    if not (_custom and "@" in user and _custom.can_self_serve(user)):
         return JSONResponse(
             {"ok": False,
-             "error": "Your sign-in is verified against the Streamax mail server. "
-                      "Change your password there instead."}, 403)
+             "error": "This account cannot set a toolkit password."}, 403)
 
     body = await request.json()
     current = body.get("current") or ""
     new = body.get("new") or ""
     confirm = body.get("confirm") or ""
 
-    # Re-authenticate before allowing a change: a stolen session cookie must not
-    # be enough to lock the real owner out.
-    if not _custom.verify(user, current):
-        return JSONResponse({"ok": False, "error": "Current password is incorrect."}, 400)
+    # Re-authenticate before CHANGING an existing password: a stolen session
+    # cookie must not be enough to lock the real owner out. On a first-time set
+    # there is nothing to re-authenticate against — being signed in is the proof.
+    if _custom.has_password(user):
+        if not _custom.verify(user, current):
+            return JSONResponse({"ok": False, "error": "Current password is incorrect."}, 400)
     if new != confirm:
         return JSONResponse({"ok": False, "error": "The two new passwords do not match."}, 400)
-    if new == current:
+    if current and new == current:
         return JSONResponse({"ok": False, "error": "The new password must be different."}, 400)
     err = _custom.validate_new_password(new)
     if err:
@@ -483,7 +486,7 @@ def _client_ip(request: Request) -> str:
 # How the credentials were proved, derived from verify_streamax_credentials'
 # marker. "Success" is a mailbox (Coremail or Outlook — the per-server
 # [LOGIN] lines above say which); "Custom" is the override list.
-_AUTH_METHOD = {"Success": "mailbox", "Custom": "override"}
+_AUTH_METHOD = {"Success": "mailbox", "Custom": "toolkit", "Setup": "bootstrap"}
 
 
 def log_auth(request: Request, *, email: str, ok: bool,
@@ -532,9 +535,13 @@ async def api_login(request: Request):
     # would give every override user the same session name, and with it the same
     # chat history, the wrong clearance, and no account page.
     user = (email.strip().lower()
-            if message in ("Success", "Custom")
+            if message in ("Success", "Custom", "Setup")
             else message)
     payload = {"ok": True, "user": user}
+    # "Setup" = admitted without a toolkit password (see login.py step 6). The
+    # login page shows the set-a-password prompt on the strength of this flag.
+    if message == "Setup":
+        payload["needs_password_setup"] = True
     # Some accounts get a full-screen transition before landing in the app —
     # the HTML port of what the Streamlit login played. Spec comes from
     # login.LOGIN_EASTER_EGGS so both front-ends stay identical.
