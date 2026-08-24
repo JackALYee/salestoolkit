@@ -480,7 +480,12 @@ def _load_system_blocks() -> list[dict]:
         {
             "type": "text",
             "text": combined,
-            "cache_control": {"type": "ephemeral"},
+            # ttl "1h" instead of the 5-minute default. This is a ~90k-token
+            # prefix; an internal tool used a few times an hour missed the
+            # 5-minute window on nearly every query, so each one paid a full
+            # 90k prefill — the single biggest cause of "Jerry is slow".
+            # Reads stay ~0.1x; 1h writes cost more but happen far less often.
+            "cache_control": {"type": "ephemeral", "ttl": "1h"},
         }
     ]
 

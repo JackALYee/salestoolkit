@@ -4,13 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this app is
 
-> ⚠️ **The Streamlit app is retired.** The Sales Toolkit and Jerry GPT now live at **https://streamax-salestoolkit.com** (`server.py` + `templates/`, Docker on Render). `app.py` still runs on Streamlit Cloud, but it now shows a full-page migration notice and stops — `?legacy=1` bypasses it for anyone mid-task, with a persistent banner. **Ship features to the HTML site**; the Streamlit path is a signpost for old bookmarks and will drift.
+**The Streamax Sales Toolkit and Jerry GPT are an independent website: https://streamax-salestoolkit.com** — internal tooling for the Trucking BU sales org, now open company-wide.
+
+- **Stack:** FastAPI (`server.py`) + hand-written pages in `templates/`, serving a static toolkit page built by `build_static.py`. Packaged with the `Dockerfile` and deployed on **Render**; DNS and TLS via **Cloudflare** (apex + `www`, which 301s to the apex).
+- **Entry points:** `/` toolkit · `/jerry` Jerry GPT · `/mailer` Drip Mailer · `/account` account settings · `/configurator/` Kevin Wang's BOM builder · `/login`.
+- **Persistence:** Supabase Postgres via `JERRY_GPT_DB_URL` — Jerry chat history (`jerry_gpt_chats`) and toolkit passwords (`custom_login`). ⚠️ **Render's filesystem is ephemeral**: anything written at runtime and not in Postgres is lost on the next deploy.
+- **Access:** any `@streamax.com` address, with the bootstrap policy below. Jerry runs on DeepSeek for everyone and Claude for leadership/VIP.
+
+### The Streamlit app is retired
+
+> `app.py` still runs on Streamlit Community Cloud, but it now shows a full-page migration notice pointing at the website and stops. `?legacy=1` bypasses it for anyone mid-task, with a persistent banner. **Ship features to the website**; the Streamlit path is a signpost for old bookmarks and will drift.
 >
-> The notice sits after the `?logout=1` handler (so signing out of the legacy app still works) and before the login/toolkit render, covering the login screen and `?view=jerry_gpt` alike. It is invisible to the new site: `build_static.py` only pulls the `html_head`/`html_tail`/`email_tool_content` literals out of `app.py` via `ast` and never executes it.
+> `app.py` is nevertheless still load-bearing for the website: `build_static.py` extracts the `html_head` / `html_tail` / `email_tool_content` string literals from it with `ast` (never executing it) and concatenates the section modules' `content` around them. **Editing the toolkit page still means editing `app.py` and the section modules** — including the version string in the `header-meta` div.
+>
+> The migration notice sits after the `?logout=1` handler (so signing out of the legacy app still works) and before the login/toolkit render, covering the login screen and `?view=jerry_gpt` alike.
 >
 > ⚠️ **`st.markdown(..., unsafe_allow_html=True)` runs Markdown first.** A blank line inside the HTML string closes the raw-HTML block, and any following line indented 4+ spaces becomes an indented *code* block — which renders your `<a>` tags as visible source text. Keep such HTML on unindented, blank-line-free lines. This bit the migration notice on the first attempt.
 
-A single-tenant Streamlit app deployed to Streamlit Community Cloud as the **Streamax Sales Toolkit** — internal tooling for the Trucking BU sales org. Entry point is `app.py`. The app combines a heavyweight HTML/JS UI (rendered inside `streamlit.components.v1.html`) with native Streamlit pages for the interactive features. SMTP-credential login gates access; a signed cookie keeps sessions alive across reloads.
+### ⚠️ The server has no Streamlit session — pass identity explicitly
+
+`server.py` installs a **streamlit stub** so it can reuse `login.py` and `jerry_gpt.py` instead of forking their logic. The stub's `st.session_state` is empty and **stays empty**. Anything a shared module reads from it is blank on the website.
+
+This has bitten three times, each silently: `special_relationship` pinned to `None` (no inner-circle greeting), `usage_logger.log_query()` logging every turn as an anonymous `""`, and `_allowed_models()` never seeing a user's own Anthropic key (so BYO didn't unlock Claude despite the settings panel promising it). **Whenever you call a shared module from `server.py`, check what it reads from `session_state` and pass it explicitly.** The fixed functions take the value as an optional parameter defaulting to `None`, so the Streamlit path still resolves from session_state unchanged.
 
 ## ⚠️ ALWAYS bump the version + date on every change
 
@@ -34,29 +49,60 @@ The version string lives in exactly one place (the `header-meta` div) — that's
 ## Common commands
 
 ```bash
-# Local development
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # then fill in real keys
+# Build the toolkit page, then run the website exactly as Render does
+python3 build_static.py
+APP_MODE=html AUTH_SECRET=dev uvicorn server:app --port 8080
+
+# Or the whole container
+docker build -t streamax-toolkit . && \
+  docker run -p 8080:8080 -e APP_MODE=html -e AUTH_SECRET=dev streamax-toolkit
+
+# Deploy: push to main. Render rebuilds the Docker image and redeploys.
+git push origin main
+
+# Retired Streamlit app (shows the migration notice)
 streamlit run app.py
 
-# Deploy
-git push origin main           # Streamlit Cloud auto-deploys from main
+# Re-vendor Kevin Wang's Sales Configurator, then verify every asset resolves
+./sync_configurator.sh
 
-# Roadmap scraper (separate venv — playwright is heavy, not a runtime dep)
+# Regenerate translations after changing UI copy (incremental; costs API credit)
+python3 build_static.py && .scrape_venv/bin/python scripts/build_translations.py
+```
+
+### Tests
+
+Six standalone suites — no pytest, no network except where noted. Run the ones that touch what you changed:
+
+```bash
+python3 scripts/test_bootstrap_login.py      # sign-in policy + toolkit password
+python3 scripts/test_customized_login.py     # override list, hashing, precedence
+python3 scripts/test_identity_flags.py       # leadership/VIP, clearance, usage log
+python3 scripts/test_ms_auth.py              # Microsoft OIDC (31 checks)
+python3 scripts/test_login_smtp_auth.py      # SMTP AUTH incl. non-ASCII passwords
+.scrape_venv/bin/python scripts/test_i18n.py # browser: language switcher + coverage
+python3 scripts/test_mailer.py               # needs `pip install aiosmtpd` in a venv
+```
+
+`.scrape_venv` is the Playwright venv (also used by the roadmap scraper and the translation extractor):
+
+```bash
 python3 -m venv .scrape_venv
-source .scrape_venv/bin/activate
-pip install playwright pdfplumber python-docx openpyxl python-pptx
-playwright install chromium
+.scrape_venv/bin/pip install playwright anthropic pdfplumber python-docx openpyxl python-pptx
+.scrape_venv/bin/playwright install chromium
 python scrape_roadmap.py                # capture pages + downloads from the portal
 python scripts/distill_downloads.py     # re-distill _scrape_dump/downloads/ → 09_roadmap_documents.md
 ```
 
-There are no tests or linters in this repo. `requirements.txt` is the only runtime dependency manifest; Streamlit Cloud installs from it automatically.
+`requirements.txt` is the only runtime dependency manifest.
 
 ## High-level architecture
 
-### Render pipeline — two paths in one app
+### Render pipeline
 
-`app.py` checks `st.query_params["view"]` early and chooses between two completely different rendering strategies:
+**Website (what users see):** `build_static.py` → `site/index.html`, served by `server.py` at `/`. It pulls the shell literals out of `app.py` via `ast` and imports each section module's `content`. Jerry, the mailer and the account page are separate templates, not part of that page.
+
+**Streamlit (retired, but still the source of the toolkit markup):** `app.py` checks `st.query_params["view"]` early and chooses between two rendering strategies:
 
 1. **Default toolkit (no `?view=`)** — assembles a giant HTML string by concatenating `html_head` + the `content` HTML strings exported by each module (`streamaxpedia_app.py`, `prospecting_flow.py`, `discovery_meeting.py`, `presentation.py`, `value_calculator.py`, `dripmailer.py`, plus `email_tool_content` inline) + `html_tail`, then renders the whole thing through `components.html(..., height=1800, scrolling=True)`. Each module's `content` is a static HTML+JS string with no Python interactivity — navigation between tabs is pure client-side JavaScript inside the iframe.
 
@@ -212,6 +258,17 @@ Order in `verify_streamax_credentials()`:
 
 Test: `python3 scripts/test_bootstrap_login.py`.
 
+## Jerry GPT performance
+
+Users reported heavy lag and answers that never arrived. Four causes, in order of impact:
+
+1. **The DeepSeek client had no timeout** (`server.py`). The Anthropic client beside it, and the Streamlit DeepSeek path, both carry `httpx.Timeout(600, connect=15, read=90)` — added precisely because a stalled socket freezes the page forever. The website's DeepSeek branch was missed, and DeepSeek is what every non-leadership user gets, so it accounted for most "Jerry never replied". Both clients now also use `max_retries=2`: the China → US-origin → provider path is long and occasionally lossy.
+2. **Prompt cache TTL was 5 minutes** on a ~155k-token cached prefix. An internal tool used a few times an hour missed that window on nearly every query and paid a full prefill each time. Now `cache_control: {"type": "ephemeral", "ttl": "1h"}` — measured **5.79s → 2.47s** to first token on a hit.
+3. **`@st.cache_resource` was a no-op on the server.** The stub replaced it with a pass-through, so every chat turn opened a *fresh Postgres connection*, did a *fresh Google auth handshake*, and re-concatenated 360 KB of knowledge. The stub now memoises for real (`lru_cache`, with `.clear()` aliased for `chat_history`'s stale-connection retry).
+4. **Post-answer bookkeeping ran inside the request.** `chat_history.save_turn` (Postgres) and `usage_logger.log_query` (Google Sheets) fired in the generator's `finally`, holding the connection — and, with `WEB_CONCURRENCY=1`, the worker — after the user already had their answer. Now submitted to `_POST_WORK` (a 4-thread pool) via `_record_turn`; measured tail after the last token: **0.00s**.
+
+⚠️ **Not fixable in code — the stack is in the US and the users are in Shenzhen.** Measured against production: `cf-ray … LAX`, TLS handshake alone 750 ms, and ~1.5 s for a trivial `/healthz`. That is the floor under every request. The levers are Render's region (it offers Singapore) and instance size; `WEB_CONCURRENCY=1` also serialises concurrent users on one worker.
+
 ## Override credentials (`customized_login.py`)
 
 A fallback for users the mail servers can't authenticate — M365 mailboxes blocked by basic-auth policy, contractors and partners with no Streamax mailbox, anyone mid-migration.
@@ -290,7 +347,7 @@ Surfaced in three places: the **Sales Configurator** tab (`configurator_tab.py`,
 
 ## Required secrets
 
-`st.secrets` (or `.streamlit/secrets.toml` locally):
+On the **website** these are Render environment variables; the retired Streamlit app reads the same names from `st.secrets` / `.streamlit/secrets.toml`.
 
 - `ANTHROPIC_API_KEY` — org Claude key for Jerry GPT. With Jerry's multi-provider routing this is the **leadership-only** key (Claude models). Optional if `DEEPSEEK_API_KEY` is set (non-leadership users can run on DeepSeek alone).
 - `DEEPSEEK_API_KEY` — org DeepSeek key, available to **all** Jerry users; the only org-key model non-leadership may use. Jerry needs at least one of `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY`.

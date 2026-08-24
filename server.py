@@ -29,6 +29,7 @@ import os
 import sys
 import time
 import types
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 # --- streamlit stub (must run before importing login / jerry_gpt) -----------
@@ -47,13 +48,28 @@ if "streamlit" not in sys.modules:
 
     _st.secrets = _Secrets()
 
-    def _passthrough(*a, **k):
+    # ⚠️ These must MEMOISE, not pass through. `@st.cache_resource` exists to
+    # stop expensive work repeating, so a no-op silently reintroduces that cost
+    # on every request. Here it meant, per chat turn: a fresh Postgres connect
+    # to Supabase, a fresh Google auth handshake for the usage log, and
+    # re-concatenating 360 KB of knowledge base. All of it invisible.
+    #
+    # Every cached function in this codebase takes no args or one str, so
+    # lru_cache is safe. `.clear()` is aliased because chat_history calls it to
+    # drop a stale pooled connection.
+    import functools as _functools
+
+    def _memoise(*dargs, **dkw):
         def wrap(fn):
-            return fn
+            cached = _functools.lru_cache(maxsize=None)(fn)
+            cached.clear = cached.cache_clear      # Streamlit's spelling
+            return cached
+        if len(dargs) == 1 and callable(dargs[0]) and not dkw:
+            return wrap(dargs[0])                  # bare @st.cache_resource
         return wrap
 
-    _st.cache_resource = _passthrough
-    _st.cache_data = _passthrough
+    _st.cache_resource = _memoise
+    _st.cache_data = _memoise
     for _n in ("markdown", "write", "error", "warning", "info", "stop", "rerun",
                "button", "columns", "expander", "chat_message", "empty",
                "set_page_config", "spinner", "selectbox", "radio", "text_input",
@@ -122,6 +138,13 @@ TEMPLATES = ROOT / "templates"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
+
+# Post-answer sinks (Supabase Postgres + Google Sheets) are network round trips
+# to the US. Running them inside the streaming generator kept the request open
+# after the user already had their answer, and with WEB_CONCURRENCY=1 that also
+# held the worker while the next person waited. They are fire-and-forget: the
+# user's answer must never wait on bookkeeping.
+_POST_WORK = ThreadPoolExecutor(max_workers=4, thread_name_prefix="jerry-post")
 
 app = FastAPI(title="Streamax Sales Toolkit", docs_url=None, redoc_url=None)
 
@@ -830,6 +853,49 @@ def api_ecosystem(request: Request, focus: str = ""):
 MAX_TOKENS = {"Short": 1024, "Medium": 4096, "Long": 8192}
 
 
+def _record_turn(user, session_id, question, answer, model, length,
+                 usage, is_leadership) -> None:
+    """Persist one turn to chat history + the usage log. Runs in _POST_WORK,
+    never in the request. Each sink is isolated so one failing cannot lose the
+    other, and nothing here can affect the answer the user already has."""
+    cost = 0.0
+    if _usage is not None:
+        try:
+            cost = _usage._estimate_cost_usd(
+                model, usage["input"], usage["output"],
+                usage["cache_read"], usage["cache_creation"])
+        except Exception:                                            # noqa: BLE001
+            pass
+    if _history_on() and session_id:
+        try:
+            _history.save_turn(
+                user_email=user, user_name=user, session_id=session_id,
+                user_message=question, assistant_message=answer,
+                model=model, length=length,
+                input_tokens=usage["input"], output_tokens=usage["output"],
+                cache_read_tokens=usage["cache_read"],
+                cache_creation_tokens=usage["cache_creation"],
+                cost_usd=cost,
+            )
+        except Exception as exc:                                     # noqa: BLE001
+            print(f"[history] save failed: {exc}", file=sys.stderr, flush=True)
+    if _usage is not None:
+        try:
+            _usage.log_query(
+                question=question, model=model, length=length,
+                answer=answer, is_leadership=is_leadership,
+                input_tokens=usage["input"], output_tokens=usage["output"],
+                cache_read_tokens=usage["cache_read"],
+                cache_creation_tokens=usage["cache_creation"],
+                # Explicit: there is no Streamlit session here, so the logger
+                # cannot look the user up itself.
+                user_email=(user if "@" in user else ""),
+                user_name=user,
+            )
+        except Exception as exc:                                     # noqa: BLE001
+            print(f"[usage] log failed: {exc}", file=sys.stderr, flush=True)
+
+
 def _sse(obj: dict) -> str:
     return f"data: {json.dumps(obj)}\n\n"
 
@@ -946,8 +1012,23 @@ async def api_chat(request: Request):
         usage = {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}
         try:
             if provider == "deepseek":
+                import httpx
                 from openai import OpenAI
-                client = OpenAI(api_key=key, base_url=_jerry.DEEPSEEK_BASE_URL, max_retries=0)
+                # ⚠️ A client with NO timeout hangs forever on a stalled socket —
+                # the page spins and the user never gets an answer. The Anthropic
+                # client below and the Streamlit DeepSeek path both got this
+                # treatment; this one was missed, and DeepSeek is what every
+                # non-leadership user gets — so it accounts for most of the
+                # "Jerry never replied" reports. read=90s is the INTER-CHUNK gap.
+                #
+                # max_retries=2: the hop from China to a US origin to DeepSeek is
+                # long and occasionally lossy; one dropped connection should not
+                # cost the user their answer.
+                client = OpenAI(
+                    api_key=key, base_url=_jerry.DEEPSEEK_BASE_URL,
+                    timeout=httpx.Timeout(600.0, connect=15.0, read=90.0),
+                    max_retries=2,
+                )
                 sys_text = "\n\n".join(
                     b.get("text", "") for b in system_blocks if isinstance(b, dict)
                 )
@@ -976,7 +1057,7 @@ async def api_chat(request: Request):
                 import httpx
                 from anthropic import Anthropic
                 client = Anthropic(
-                    api_key=key, max_retries=0,
+                    api_key=key, max_retries=2,
                     timeout=httpx.Timeout(600.0, connect=15.0, read=90.0),
                 )
                 with client.messages.stream(
@@ -1008,45 +1089,13 @@ async def api_chat(request: Request):
             print(f"[chat] {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
             yield _sse({"error": f"{type(exc).__name__}: {exc}"})
         finally:
-            # Post-work is best-effort and must never break the response the
-            # user already received — each sink is isolated.
+            # Best-effort bookkeeping, moved OFF the request path — see
+            # _POST_WORK. Values are captured now; the request can close.
             if answer:
-                cost = 0.0
-                if _usage is not None:
-                    try:
-                        cost = _usage._estimate_cost_usd(
-                            model, usage["input"], usage["output"],
-                            usage["cache_read"], usage["cache_creation"])
-                    except Exception:
-                        pass
-                if _history_on() and session_id:
-                    try:
-                        _history.save_turn(
-                            user_email=user, user_name=user, session_id=session_id,
-                            user_message=question_text, assistant_message=answer,
-                            model=model, length=length,
-                            input_tokens=usage["input"], output_tokens=usage["output"],
-                            cache_read_tokens=usage["cache_read"],
-                            cache_creation_tokens=usage["cache_creation"],
-                            cost_usd=cost,
-                        )
-                    except Exception as exc:
-                        print(f"[history] save failed: {exc}", file=sys.stderr, flush=True)
-                if _usage is not None:
-                    try:
-                        _usage.log_query(
-                            question=question_text, model=model, length=length,
-                            answer=answer, is_leadership=is_leadership,
-                            input_tokens=usage["input"], output_tokens=usage["output"],
-                            cache_read_tokens=usage["cache_read"],
-                            cache_creation_tokens=usage["cache_creation"],
-                            # Must be explicit: there is no Streamlit session
-                            # here, so the logger cannot look the user up itself.
-                            user_email=(user if "@" in user else ""),
-                            user_name=user,
-                        )
-                    except Exception as exc:
-                        print(f"[usage] log failed: {exc}", file=sys.stderr, flush=True)
+                _POST_WORK.submit(
+                    _record_turn, user, session_id, question_text, answer,
+                    model, length, dict(usage), is_leadership,
+                )
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={
         "Cache-Control": "no-cache",
