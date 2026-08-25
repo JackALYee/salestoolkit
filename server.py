@@ -1012,7 +1012,6 @@ async def api_chat(request: Request):
         usage = {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}
         try:
             if provider == "deepseek":
-                import httpx
                 from openai import OpenAI
                 # ⚠️ A client with NO timeout hangs forever on a stalled socket —
                 # the page spins and the user never gets an answer. The Anthropic
@@ -1021,12 +1020,23 @@ async def api_chat(request: Request):
                 # non-leadership user gets — so it accounts for most of the
                 # "Jerry never replied" reports. read=90s is the INTER-CHUNK gap.
                 #
+                # httpx is imported here (not at module top) and behind a fallback
+                # so a missing/incompatible httpx degrades to a plain total-timeout
+                # float instead of 500-ing the whole chat with "No module named
+                # 'httpx'". It is declared in requirements.txt for the fine-grained
+                # path; the fallback is belt-and-suspenders.
+                #
                 # max_retries=2: the hop from China to a US origin to DeepSeek is
                 # long and occasionally lossy; one dropped connection should not
                 # cost the user their answer.
+                try:
+                    import httpx
+                    _timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
+                except Exception:
+                    _timeout = 90.0
                 client = OpenAI(
                     api_key=key, base_url=_jerry.DEEPSEEK_BASE_URL,
-                    timeout=httpx.Timeout(600.0, connect=15.0, read=90.0),
+                    timeout=_timeout,
                     max_retries=2,
                 )
                 sys_text = "\n\n".join(
@@ -1054,11 +1064,15 @@ async def api_chat(request: Request):
                         answer += piece
                         yield _sse({"delta": piece})
             else:
-                import httpx
                 from anthropic import Anthropic
+                try:
+                    import httpx
+                    _timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
+                except Exception:
+                    _timeout = 90.0
                 client = Anthropic(
                     api_key=key, max_retries=2,
-                    timeout=httpx.Timeout(600.0, connect=15.0, read=90.0),
+                    timeout=_timeout,
                 )
                 with client.messages.stream(
                     model=model, max_tokens=max_tokens,

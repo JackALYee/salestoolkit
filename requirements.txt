@@ -3,6 +3,11 @@ pandas
 anthropic>=0.40.0
 # DeepSeek is OpenAI-compatible — reached via the OpenAI SDK + base_url override
 openai>=1.40.0
+# httpx is imported directly in server.py / jerry_gpt.py to set streaming timeouts.
+# It ships as a transitive dep of anthropic/openai, but a direct import must be
+# declared explicitly — otherwise a resolver change drops it and Jerry 500s with
+# "No module named 'httpx'".
+httpx>=0.27
 extra-streamlit-components>=0.1.70
 gspread>=6.0.0
 google-auth>=2.20.0
