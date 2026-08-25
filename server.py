@@ -900,6 +900,22 @@ def _sse(obj: dict) -> str:
     return f"data: {json.dumps(obj)}\n\n"
 
 
+def _describe_exc(exc: BaseException) -> str:
+    """'<Type>: <msg>' with the underlying cause chain unwrapped.
+
+    SDK wrappers like APIConnectionError stringify to a useless 'Connection
+    error.' — the real reason (DNS failure, connect timeout, refused, TLS, or a
+    misrouted base_url) lives in __cause__/__context__. Chaining them makes the
+    red error box in the UI (and the Render log line) actually diagnostic."""
+    parts, seen, cur = [], set(), exc
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        msg = str(cur).strip()
+        parts.append(f"{type(cur).__name__}: {msg}" if msg else type(cur).__name__)
+        cur = cur.__cause__ or cur.__context__
+    return "  <-  ".join(parts)
+
+
 def _attach_files(text: str, files: list) -> tuple:
     """Turn browser-uploaded files into Anthropic content blocks.
 
@@ -1100,8 +1116,10 @@ async def api_chat(request: Request):
             yield _sse({"done": True, "model": model, "session_id": session_id,
                         "usage": usage, "extras": extras})
         except Exception as exc:
-            print(f"[chat] {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
-            yield _sse({"error": f"{type(exc).__name__}: {exc}"})
+            detail = _describe_exc(exc)
+            print(f"[chat] provider={provider} model={model} {detail}",
+                  file=sys.stderr, flush=True)
+            yield _sse({"error": detail})
         finally:
             # Best-effort bookkeeping, moved OFF the request path — see
             # _POST_WORK. Values are captured now; the request can close.
