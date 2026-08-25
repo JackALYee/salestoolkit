@@ -2588,12 +2588,17 @@ def _run_anthropic_stream(
 
     # Streaming-aware timeout so a stalled connection FAILS and retries instead
     # of hanging the page forever (read=90s inter-chunk). Own retry loop below.
+    # Must be anthropic's OWN Timeout: anthropic 1.0.0 vendors httpx as `httpx2`,
+    # so a real httpx.Timeout is a foreign type and every request dies with
+    # "TypeError: 'httpx.Timeout' object cannot be interpreted as an integer or
+    # float" (the failure surfaces at request time, not construction). Plain
+    # float is the version-proof fallback.
     try:
-        import httpx
-        _ct = httpx.Timeout(600.0, connect=15.0, read=90.0)
-        client = Anthropic(api_key=api_key, timeout=_ct, max_retries=0)
+        from anthropic import Timeout as _AnthropicTimeout
+        _ct = _AnthropicTimeout(600.0, connect=15.0, read=90.0)
     except Exception:
-        client = Anthropic(api_key=api_key)
+        _ct = 90.0
+    client = Anthropic(api_key=api_key, timeout=_ct, max_retries=0)
 
     full_text = ""
     total_input = total_output = total_cache_read = total_cache_creation = 0

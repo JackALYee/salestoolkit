@@ -1081,9 +1081,17 @@ async def api_chat(request: Request):
                         yield _sse({"delta": piece})
             else:
                 from anthropic import Anthropic
+                # ⚠️ Use anthropic's OWN Timeout, never httpx.Timeout. anthropic
+                # 1.0.0 vendors its httpx fork as `httpx2`, so a real
+                # `httpx.Timeout` is a foreign type it can't read as a number and
+                # every request dies with "APIConnectionError: Connection error.
+                # <- TypeError: 'httpx.Timeout' object cannot be interpreted as an
+                # integer or float". (The DeepSeek path is fine — the OpenAI SDK
+                # uses real httpx.) Fall back to a plain float, which any version
+                # accepts, if the Timeout export ever moves.
                 try:
-                    import httpx
-                    _timeout = httpx.Timeout(600.0, connect=15.0, read=90.0)
+                    from anthropic import Timeout as _AnthropicTimeout
+                    _timeout = _AnthropicTimeout(600.0, connect=15.0, read=90.0)
                 except Exception:
                     _timeout = 90.0
                 client = Anthropic(
