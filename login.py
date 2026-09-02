@@ -61,6 +61,10 @@ VIP_EMAILS = LEADERSHIP_EMAILS | EXTRA_VIP_EMAILS
 # Easter-egg auth shortcuts (jerry_test, hekun_test, etc.) authenticate as a
 # display name. Map the display name back to the canonical streamax.com email
 # so the leadership check works for the bypass accounts too.
+# Marks a display name as coming from a `_test` shortcut rather than a proved
+# mailbox. Privilege resolvers never strip it; only resolve_easter_egg does.
+_DEMO_SUFFIX = "(demo)"
+
 _EASTER_EGG_TO_EMAIL = {
     "jerry": "jerry@streamax.com",
     "hekun": "hekun@streamax.com",
@@ -188,7 +192,13 @@ def resolve_easter_egg(display_name: str) -> dict | None:
     Only the web-facing fields — `session_key` / `image_remote` are Streamlit
     plumbing and have no meaning to the HTML front-end.
     """
-    egg = LOGIN_EASTER_EGGS.get((display_name or "").strip())
+    name = (display_name or "").strip()
+    # `Jerry (demo)` is the unprivileged _test login — it still gets the
+    # transition, which is the whole point of the shortcut, but every
+    # privilege resolver above sees the suffixed name and declines it.
+    if name.endswith(_DEMO_SUFFIX):
+        name = name[: -len(_DEMO_SUFFIX)].strip()
+    egg = LOGIN_EASTER_EGGS.get(name)
     if not egg:
         return None
     return {k: v for k, v in egg.items()
@@ -229,9 +239,16 @@ def _grant_vip(name_or_email: str) -> None:
 #   Entra app registration; see the "Microsoft sign-in" section of CLAUDE.md.
 #   This SMTP attempt is kept as a harmless fallback for any mailbox where basic
 #   auth does still work, and is skipped entirely when MS_SMTP_AUTH=0.
+# `timeout` is per server because they are not remotely comparable. Measured
+# from the app host: Coremail completes connect+TLS+EHLO in ~0.15s, Microsoft
+# in ~1.1s — and Microsoft then needs three more STARTTLS/AUTH round trips.
+# A single 10s budget was tight enough that a slow moment on Microsoft's side
+# surfaced to the user as "email or password incorrect".
 _MAIL_SERVERS = (
-    {"label": "coremail",  "host": "mail.streamax.com",  "port": 465, "mode": "ssl"},
-    {"label": "microsoft", "host": "smtp.office365.com", "port": 587, "mode": "starttls"},
+    {"label": "coremail",  "host": "mail.streamax.com",  "port": 465,
+     "mode": "ssl",       "timeout": 12},
+    {"label": "microsoft", "host": "smtp.office365.com", "port": 587,
+     "mode": "starttls",  "timeout": 25},
 )
 
 
@@ -285,7 +302,7 @@ def _auth_login_utf8(server, email, password):
     raise smtplib.SMTPAuthenticationError(code, resp)
 
 
-def _auth_utf8(server, email, password):
+def _auth_sasl(server, email, password):
     """Authenticate with a credential that isn't pure ASCII.
 
     `smtplib.SMTP.login()` encodes credentials as **ASCII** and raises
@@ -305,6 +322,8 @@ def _auth_utf8(server, email, password):
     if not server.has_extn("auth"):
         raise smtplib.SMTPNotSupportedError("Server does not advertise SMTP AUTH.")
     mechs = (server.esmtp_features.get("auth") or "").upper()
+    print(f"[LOGIN]   AUTH mechanisms advertised: {mechs.strip() or '(none)'}",
+          file=sys.stderr, flush=True)
     if "PLAIN" in mechs:
         return _auth_plain_utf8(server, email, password)
     if "LOGIN" in mechs:
@@ -330,10 +349,17 @@ def _smtp_auth(host, port, mode, email, password, timeout=10):
             server.ehlo()
             server.starttls(context=context)
             server.ehlo()
-        if _is_ascii(password):
-            server.login(email, password)
-        else:
-            _auth_utf8(server, email, password)
+        # Always our own SASL, never smtplib.login().
+        #
+        # smtplib sends AUTH LOGIN with an RFC 4954 *initial response*
+        # (`AUTH LOGIN <b64user>` in one command). Microsoft 365 advertises only
+        # `LOGIN XOAUTH2`, so that is the form Outlook mailboxes were getting —
+        # while a non-ASCII password took _auth_utf8's conservative multi-step
+        # exchange instead. Two different wire conversations with the same
+        # server, chosen by whether the password happened to be ASCII, is
+        # exactly the shape of "sometimes the right password is rejected".
+        # _auth_sasl() is the multi-step form for everyone.
+        _auth_sasl(server, email, password)
         return True, False, ""
     except smtplib.SMTPAuthenticationError as e:
         msg = str(e).lower()
@@ -343,8 +369,17 @@ def _smtp_auth(host, port, mode, email, password, timeout=10):
         # alone therefore mislabels every wrong Outlook password as a tenant
         # policy block and shows the user the wrong advice — require the actual
         # disabled/blocked wording instead.
-        disabled = ("disabled" in msg or "blocked" in msg) and (
-            "auth" in msg or "tenant" in msg or "basic" in msg)
+        disabled = (
+            (("disabled" in msg or "blocked" in msg or "not enabled" in msg)
+             and ("auth" in msg or "tenant" in msg or "basic" in msg))
+            # Conditional Access / Security Defaults reject basic auth with a
+            # correct password and never say "disabled" — without these the
+            # user is told their password is wrong when it is not.
+            or "conditional access" in msg
+            or "security defaults" in msg
+            or "basic authentication is not supported" in msg
+            or "authentication policy" in msg
+        )
         return False, disabled, str(e)
     except Exception as e:
         return False, False, str(e)
@@ -413,12 +448,19 @@ def verify_streamax_credentials(email, password):
     email_lower = clean_email.lower()
 
     # Test Easter Egg Overrides and Bypass
+    #
+    # These prove NOTHING — no mailbox is contacted — so they return a
+    # `... (demo)` display name. The suffix is what keeps them unprivileged:
+    # resolve_leadership/resolve_vip/resolve_special_relationship look the name
+    # up verbatim and miss, while resolve_easter_egg strips it and still plays
+    # the transition. Returning a bare "Jerry" here handed anyone who typed
+    # `jerry_test` / `testme` full LEADERSHIP + VIP clearance.
     if email_lower == "jerry_test" and password == "testme":
-        return True, "Jerry"
+        return True, "Jerry (demo)"
     if email_lower == "hekun_test" and password == "testme":
-        return True, "Hekun"
+        return True, "Hekun (demo)"
     if email_lower == "zntang_test" and password == "testme":
-        return True, "ZNTang"
+        return True, "ZNTang (demo)"
     if email_lower == "test_account" and password == "testme":
         return True, "Success"
 
@@ -432,10 +474,19 @@ def verify_streamax_credentials(email, password):
     if not password:
         return False, "Password cannot be empty."
 
+    # LEADERSHIP accounts are held to mailbox proof only.
+    #
+    # These addresses unlock internal cost and margin data, so "knows the
+    # address" must never be enough. Neither the toolkit password nor the
+    # bootstrap door admits them — the only accepted proof is a live SMTP AUTH
+    # against Coremail or Outlook (or "Sign in with Microsoft", which is the
+    # same mailbox proved over OIDC instead of SMTP).
+    _is_leadership = resolve_leadership(email_lower)
+
     # 3. Toolkit password FIRST. It is the credential we want people using —
     # it never rotates, and checking it is local and instant, where an SMTP
-    # round-trip costs seconds.
-    if _custom and _custom.has_password(email_lower):
+    # round-trip costs seconds. Skipped entirely for leadership.
+    if _custom and not _is_leadership and _custom.has_password(email_lower):
         if _custom.verify(clean_email, password):
             return True, _egg_or("Custom", email_lower)
         # Wrong toolkit password. Fall through to the mailbox as the RECOVERY
@@ -452,7 +503,8 @@ def verify_streamax_credentials(email, password):
     # there is nothing to verify and no reason to make them wait for it.
     _bootstrap = (email_lower.endswith("@streamax.com")
                   and _custom is not None
-                  and not _custom.has_password(email_lower))
+                  and not _custom.has_password(email_lower)
+                  and not _is_leadership)
 
     authenticated = False
     smtp_auth_disabled = False
@@ -462,7 +514,8 @@ def verify_streamax_credentials(email, password):
             else _mail_servers()
         for srv in _servers:
             ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"],
-                                           clean_email, password)
+                                           clean_email, password,
+                                           timeout=srv.get("timeout", 15))
             if disabled:
                 smtp_auth_disabled = True
             # Remember a connection-level failure (server unreachable) as distinct
@@ -480,7 +533,8 @@ def verify_streamax_credentials(email, password):
 
     # 5. Override-list users outside the domain, whose password we only ever
     # check here.
-    if _on_override_list and not email_lower.endswith("@streamax.com") \
+    if _on_override_list and not _is_leadership \
+            and not email_lower.endswith("@streamax.com") \
             and _custom.verify(clean_email, password):
         return True, "Custom"
 
@@ -514,13 +568,26 @@ def verify_streamax_credentials(email, password):
             "and retype the password. If your password really does contain it, use "
             "“Sign in with Microsoft” instead — it never sends your password to the mail server."
         )
+    # Leadership never reaches the toolkit-password or bootstrap fallbacks, so a
+    # failure here is the end of the road for them — say why, or they will keep
+    # retyping a toolkit password that is no longer accepted for their account.
+    if _is_leadership:
+        return False, (
+            "Email or password incorrect. Leadership accounts must sign in with "
+            "the Streamax mailbox password (Coremail or Outlook) — a Sales "
+            "Toolkit password is not accepted for these accounts. If your "
+            "mailbox is on Outlook, use “Sign in with Microsoft”."
+        )
     if smtp_auth_disabled:
-        # An Outlook mailbox rejected us because SMTP AUTH is off. A Coremail
-        # user with a typo can also reach here (Coremail rejects, then Microsoft
-        # reports disabled), so keep it soft and actionable.
-        return False, ("Email or password incorrect. (If your mailbox is on "
-                       "Outlook and the password is right, SMTP sign-in may be "
-                       "disabled for your account — ask IT to enable SMTP AUTH.)")
+        # The mail server refused the *method*, not necessarily the password:
+        # Microsoft 365 turns SMTP AUTH off per-mailbox by default, and
+        # Conditional Access rejects basic auth outright. Telling someone with a
+        # correct password that it is wrong is the exact complaint this handles.
+        return False, ("Sign-in could not be completed. Your mailbox appears to "
+                       "block password sign-in from apps (common on Outlook / "
+                       "Microsoft 365, where SMTP AUTH is off by default) — this "
+                       "is not necessarily a wrong password. Use “Sign in with "
+                       "Microsoft”, or ask IT to enable SMTP AUTH for your mailbox.")
     return False, "Email or password incorrect."
 
 def render_login():

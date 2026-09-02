@@ -40,12 +40,23 @@ def clearance(user, first_turn=True):
     )["text"]
 
 print("=== login easter eggs still authenticate ===")
-for creds, want in [(("jerry_test", "testme"), "Jerry"),
-                    (("hekun_test", "testme"), "Hekun"),
-                    (("zntang_test", "testme"), "ZNTang"),
+# The `_test` shortcuts return a "(demo)" identity on purpose: they prove no
+# mailbox, so they must not resolve to the real person's clearance. The suffix
+# is the mechanism — privilege lookups miss it, resolve_easter_egg strips it.
+for creds, want in [(("jerry_test", "testme"), "Jerry (demo)"),
+                    (("hekun_test", "testme"), "Hekun (demo)"),
+                    (("zntang_test", "testme"), "ZNTang (demo)"),
                     (("test_account", "testme"), "Success")]:
     ok, msg = login.verify_streamax_credentials(*creds)
     check(f"{creds[0]:14s} -> {want}", ok and msg == want, f"got ({ok}, {msg!r})")
+for shortcut in ("jerry_test", "hekun_test", "zntang_test"):
+    _, ident = login.verify_streamax_credentials(shortcut, "testme")
+    check(f"{shortcut:14s} carries NO leadership",
+          not login.resolve_leadership(ident), ident)
+    check(f"{shortcut:14s} carries NO vip",
+          not login.resolve_vip(ident), ident)
+    check(f"{shortcut:14s} still plays its easter egg",
+          bool(login.resolve_easter_egg(ident)), ident)
 ok, _ = login.verify_streamax_credentials("jerry_test", "wrongpass")
 check("wrong easter-egg password rejected", not ok)
 

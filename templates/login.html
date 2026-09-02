@@ -44,6 +44,33 @@
   .err{display:none;margin-top:16px;padding:11px 13px;border-radius:8px;font-size:.85rem;
        background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.35);color:#ff8b95}
   .err.show{display:block}
+  /* Repeated-failure helper. Anchored to the bottom of the viewport and paired
+     with body.has-help's bottom padding, so it can never sit on top of the
+     error message the user is being asked to screenshot. */
+  #help{display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+        z-index:60;width:min(460px,calc(100vw - 28px));
+        background:rgba(14,20,34,.97);border:1px solid rgba(42,245,152,.34);
+        border-radius:12px;padding:15px 17px;box-shadow:0 10px 34px rgba(0,0,0,.5);
+        backdrop-filter:blur(6px);
+        /* Never taller than the viewport — the Chinese line is the one that
+           must not be clipped, and it is last. */
+        max-height:calc(100vh - 36px);overflow-y:auto}
+  #help.show{display:block;animation:helpIn .28s ease-out}
+  @keyframes helpIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}
+                    to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  /* padding-right keeps the text clear of the absolutely-positioned close
+     button, which otherwise sits in the middle of the first line. */
+  #help p{margin:0 0 7px;font-size:.83rem;line-height:1.55;color:#E6EAF0;
+          padding-right:20px}
+  #help p.zh{margin:0;color:#A0AEC0}
+  /* width:auto is load-bearing — the global `button` rule is full-width, which
+     stretched this to the whole card and centred the glyph in the middle of
+     the first line of text. */
+  #help .x{position:absolute;top:7px;right:11px;width:auto;cursor:pointer;
+           color:#5c6880;font-size:1.1rem;line-height:1;background:none;
+           border:none;padding:4px;font-weight:400}
+  #help .x:hover{color:#E6EAF0}
+  body.has-help{padding-bottom:200px}
   .foot{text-align:center;color:#5c6880;font-size:.75rem;margin-top:22px}
   .or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;
       color:#5c6880;font-size:.72rem;text-transform:uppercase;letter-spacing:1px}
@@ -140,6 +167,15 @@
       <!--MS_SIGNIN-->
     </form>
     <p class="foot">Verified against the Streamax mail server. Credentials are never stored.</p>
+  </div>
+
+  <!-- Shown after repeated failures. Wording is the customer's, verbatim, in
+       both languages. -->
+  <div id="help" role="status" aria-live="polite">
+    <button class="x" id="helpX" type="button" aria-label="Dismiss">&times;</button>
+    <p>If you encounter a problem while logging in, please screenshot the error
+       message and pin to Jack Yi on DingTalk.</p>
+    <p class="zh">如果您在登录时遇到问题，请截屏报错信息并钉钉 易嘉辰Jack。</p>
   </div>
 
   <!-- First sign-in with no toolkit password: say why one is needed, then set
@@ -273,6 +309,22 @@
     });
   });
 
+  // Repeated-failure helper. Two failures is a typo; three is a stuck user.
+  var FAIL_LIMIT = 3, failCount = 0, helpDismissed = false;
+  document.getElementById('helpX').addEventListener('click', function () {
+    helpDismissed = true;
+    document.getElementById('help').classList.remove('show');
+    document.body.classList.remove('has-help');
+  });
+  function noteFailure() {
+    failCount += 1;
+    if (failCount < FAIL_LIMIT || helpDismissed) return;
+    document.getElementById('help').classList.add('show');
+    document.body.classList.add('has-help');
+    // Keep the error the user is being asked to screenshot on screen.
+    try { err.scrollIntoView({block: 'center', behavior: 'smooth'}); } catch (_) {}
+  }
+
   f.addEventListener('submit', function (e) {
     e.preventDefault();
     err.classList.remove('show');
@@ -299,11 +351,13 @@
       err.textContent = (res.d && res.d.error) || 'Sign-in failed.';
       err.classList.add('show');
       btn.disabled = false; btn.textContent = 'Authenticate';
+      noteFailure();
     })
     .catch(function () {
       err.textContent = 'Could not reach the server. Try again.';
       err.classList.add('show');
       btn.disabled = false; btn.textContent = 'Authenticate';
+      noteFailure();
     });
   });
 </script>

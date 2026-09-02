@@ -176,6 +176,44 @@ CA24S, C20D, CA20D. This is why Jerry answers strategy and positioning well but 
 on "what are this box's specs / how many ports are left". **Closing it needs real spec
 sheets loaded into `terminology_db.py` — do not paper over it with generated prose.**
 
+**Leadership accounts are mailbox-only (Sep-2026).** Addresses in
+`LEADERSHIP_EMAILS` unlock internal cost and margin data, so "knows the address" must never
+be enough. `verify_streamax_credentials()` computes `_is_leadership` up front and uses it to
+close *every* non-mailbox path for those addresses: the toolkit-password check is skipped,
+the bootstrap door is excluded, and the off-domain override branch refuses them. The only
+accepted proof is a live SMTP AUTH against Coremail/Outlook — or "Sign in with Microsoft",
+which sets the session identity to the email and therefore resolves leadership normally.
+A leadership failure returns a message that names the reason, because these users have no
+fallback to fall back to. Before this, 11 of 12 leadership addresses were admittable with
+any password.
+
+The `_test` shortcuts (`jerry_test`, `hekun_test`, `zntang_test`) were a second way in: they
+returned the bare display name `"Jerry"`, which `_EASTER_EGG_TO_EMAIL` maps straight to
+`jerry@streamax.com`, granting full LEADERSHIP + VIP for the password `testme`. They now
+return `"Jerry (demo)"`. The suffix is the whole mechanism — `resolve_leadership` /
+`resolve_vip` / `resolve_special_relationship` look the name up verbatim and miss, while
+`resolve_easter_egg` strips `_DEMO_SUFFIX` and still plays the transition. **Don't
+"tidy" that suffix away.**
+
+**SMTP: one SASL path for every password.** `_smtp_auth()` no longer calls
+`smtplib.login()`. smtplib sends AUTH LOGIN with an RFC 4954 *initial response*
+(`AUTH LOGIN <b64user>`), while the hand-rolled helper uses the conservative multi-step
+exchange — so an ASCII and a non-ASCII password held two different wire conversations with
+the same Microsoft endpoint. Everything now goes through `_auth_sasl()` (renamed from
+`_auth_utf8`). Timeouts are per server (`coremail` 12s, `microsoft` 25s) because Microsoft
+is ~7x slower to handshake; these are socket timeouts, so a real two-server failure still
+returns in ~7s. Policy rejections (Conditional Access, Security Defaults, per-mailbox SMTP
+AUTH off) are detected separately and **must not** be reported as a wrong password —
+Microsoft often answers with an ambiguous `535 5.7.3`, which is why the definitive fix for
+Outlook users is the OIDC "Sign in with Microsoft" button, not more SMTP heuristics.
+
+**Repeated-failure helper** (`templates/login.html`): after 3 failed attempts a
+bottom-anchored bilingual card tells the user to screenshot the error and DingTalk Jack Yi.
+It is paired with `body.has-help{padding-bottom:200px}` so it can never cover the error
+message it is asking them to screenshot. Its close button needs an explicit `width:auto` —
+the global `button` rule is `width:100%`, which otherwise stretches it across the card and
+centres the glyph in the middle of the first line.
+
 **Anthropic prompt cache quirk** worth knowing: max 4 `cache_control` breakpoints per request. The knowledge base is a single block with one breakpoint. The clearance block deliberately has no cache_control so it doesn't consume a breakpoint and can vary freely.
 
 ### Usage logging — two sinks, never raises

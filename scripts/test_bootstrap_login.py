@@ -89,9 +89,19 @@ check("under 8 chars refused", not ok, msg)
 
 print("\n=== 8. easter eggs and display names survive ===")
 ok, msg = login.verify_streamax_credentials("jerry_test", "testme")
-check("jerry_test still works", ok and msg == "Jerry")
+check("jerry_test still works", ok and msg == "Jerry (demo)", msg)
+check("jerry_test still plays its egg", bool(login.resolve_easter_egg(msg)), msg)
+check("jerry_test is NOT leadership", not login.resolve_leadership(msg), msg)
+
+# jerry@ is on the LEADERSHIP list, so the bootstrap door must not open for it:
+# these addresses unlock internal cost data and require live mailbox proof.
 ok, msg = login.verify_streamax_credentials("jerry@streamax.com", "anything")
-check("jerry@ bootstraps with the display name", ok and msg in ("Setup", "Jerry"), msg)
+check("leadership address is REFUSED by the bootstrap door", not ok, msg)
+check("  and is told why", "mailbox password" in msg, msg)
+# A fresh address — `newperson@` has had a toolkit password set by this point
+# in the file, which correctly closes its own bootstrap door.
+ok, msg = login.verify_streamax_credentials("someoneelse@streamax.com", "anything")
+check("a normal address still bootstraps", ok and msg == "Setup", msg)
 
 print(f"\n{'ALL PASS' if not fails else str(fails)+' FAILED'}")
 sys.exit(1 if fails else 0)

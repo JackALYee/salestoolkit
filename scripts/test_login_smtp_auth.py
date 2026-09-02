@@ -54,7 +54,7 @@ def attempt(password, want_pass, mechs=b"AUTH PLAIN LOGIN"):
     threading.Thread(target=serve, args=(sock, USER, want_pass, log, mechs), daemon=True).start()
     srv = smtplib.SMTP("127.0.0.1", port, timeout=5)
     try:
-        login._auth_utf8(srv, USER, password)
+        login._auth_sasl(srv, USER, password)
         return True, "", log
     except Exception as e:
         return False, f"{type(e).__name__}: {e}", log
