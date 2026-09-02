@@ -148,6 +148,20 @@ _POST_WORK = ThreadPoolExecutor(max_workers=4, thread_name_prefix="jerry-post")
 
 app = FastAPI(title="Streamax Sales Toolkit", docs_url=None, redoc_url=None)
 
+# Say which sign-in policy this deploy is running, so the mode is answerable
+# from the Render log alone rather than by guessing at the env.
+try:
+    _mode = _login.login_mode()
+    print(
+        "[BOOT] LOGIN_MODE=" + _mode + " — non-leadership accounts "
+        + ("must authenticate with a real email and password"
+           if _mode == _login.LOGIN_MODE_STRICT
+           else "may sign in with ANY password until they set a toolkit one")
+        + ". Leadership always requires mailbox proof.",
+        file=sys.stderr, flush=True)
+except Exception as _exc:                                            # noqa: BLE001
+    print(f"[BOOT] could not resolve LOGIN_MODE: {_exc}", file=sys.stderr, flush=True)
+
 if (ROOT / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=str(ROOT / "assets")), name="assets")
 
@@ -561,8 +575,15 @@ async def api_login(request: Request):
             if message in ("Success", "Custom", "Setup")
             else message)
     payload = {"ok": True, "user": user}
-    # "Setup" = admitted without a toolkit password (see login.py step 6). The
-    # login page shows the set-a-password prompt on the strength of this flag.
+    # The set-a-password prompt is ONLY for someone admitted without proving a
+    # credential — i.e. the "Setup" marker from the bootstrap door.
+    #
+    # Anyone who signed in with a real email and password (mailbox = "Success",
+    # toolkit = "Custom") is never interrupted by it, in either LOGIN_MODE. They
+    # already hold a working credential; nagging them adds a step and no
+    # security. Under LOGIN_MODE=strict the bootstrap door never opens, so this
+    # prompt correctly never fires at all — /account remains the deliberate,
+    # opt-in place to set or change a toolkit password.
     if message == "Setup":
         payload["needs_password_setup"] = True
     # Some accounts get a full-screen transition before landing in the app —

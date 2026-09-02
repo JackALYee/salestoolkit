@@ -101,8 +101,13 @@ check("correct MAILBOX pw -> accepted", (ok, msg), (True, "Success"))
 
 print("\nnon-leadership behaviour is unchanged")
 TOOLKIT.clear(); MAILBOX.clear()
+os.environ["LOGIN_MODE"] = "open"
 ok, msg = L.verify_streamax_credentials(NORM, "whatever")
-check("bootstrap door still open for everyone else", (ok, msg), (True, "Setup"))
+check("bootstrap door still open for everyone else (LOGIN_MODE=open)",
+      (ok, msg), (True, "Setup"))
+os.environ["LOGIN_MODE"] = "strict"
+ok, _ = L.verify_streamax_credentials(NORM, "whatever")
+check("  and shut again under the shipping default (strict)", ok, False)
 TOOLKIT[NORM] = "my-toolkit-pw"
 ok, msg = L.verify_streamax_credentials(NORM, "my-toolkit-pw")
 check("toolkit password still works", (ok, msg), (True, "Custom"))

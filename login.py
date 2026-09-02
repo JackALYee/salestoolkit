@@ -244,6 +244,44 @@ def _grant_vip(name_or_email: str) -> None:
 # in ~1.1s — and Microsoft then needs three more STARTTLS/AUTH round trips.
 # A single 10s budget was tight enough that a slow moment on Microsoft's side
 # surfaced to the user as "email or password incorrect".
+# ── Login mode for NON-LEADERSHIP @streamax.com addresses ───────────────────
+# Flip with the LOGIN_MODE environment variable; no code change and no rebuild,
+# so switching is just a Render restart.
+#
+#   LOGIN_MODE=strict   (default)  A real credential is required — the Streamax
+#                                  mailbox password, or a Sales Toolkit password
+#                                  the person has already set.
+#   LOGIN_MODE=open                Any password admits a @streamax.com address
+#                                  that has no toolkit password yet, so people
+#                                  can get in and set one. Use for a rollout
+#                                  push; it means knowing an address is enough.
+#
+# LEADERSHIP is unaffected by this setting — those addresses always require
+# live mailbox proof, in either mode.
+#
+# Read per call rather than cached at import so the value cannot go stale, and
+# an unrecognised value fails CLOSED (strict) rather than silently opening the
+# door.
+LOGIN_MODE_STRICT = "strict"
+LOGIN_MODE_OPEN = "open"
+
+_OPEN_ALIASES = ("open", "temp", "any", "bootstrap", "2")
+_STRICT_ALIASES = ("strict", "real", "closed", "1", "")
+
+
+def login_mode() -> str:
+    """Return the active login mode for non-leadership accounts."""
+    raw = os.environ.get("LOGIN_MODE", "").strip().lower()
+    if raw in _OPEN_ALIASES:
+        return LOGIN_MODE_OPEN
+    if raw in _STRICT_ALIASES:
+        return LOGIN_MODE_STRICT
+    print(f"[LOGIN] LOGIN_MODE={raw!r} is not recognised — falling back to "
+          f"'{LOGIN_MODE_STRICT}'. Valid: strict | open",
+          file=sys.stderr, flush=True)
+    return LOGIN_MODE_STRICT
+
+
 _MAIL_SERVERS = (
     {"label": "coremail",  "host": "mail.streamax.com",  "port": 465,
      "mode": "ssl",       "timeout": 12},
@@ -498,35 +536,38 @@ def verify_streamax_credentials(email, password):
     # outside the Streamax domain it is skipped entirely — those servers would
     # never accept them and each attempt costs ~10s.
     #
-    # It is also SKIPPED for the bootstrap case below: a Streamax address with
-    # no toolkit password yet is admitted regardless of what they typed, so
-    # there is nothing to verify and no reason to make them wait for it.
+    # It runs even when the bootstrap door below would admit them anyway. That
+    # costs a round trip, but it is the only way to know WHETHER the password
+    # was real — and that distinction drives the set-a-password prompt, which
+    # must never be shown to someone who just authenticated properly. Skipping
+    # the check labelled every open-mode sign-in a bootstrap admission, prompt
+    # included, even when the person typed their correct mailbox password.
     _bootstrap = (email_lower.endswith("@streamax.com")
                   and _custom is not None
                   and not _custom.has_password(email_lower)
-                  and not _is_leadership)
+                  and not _is_leadership
+                  and login_mode() == LOGIN_MODE_OPEN)
 
     authenticated = False
     smtp_auth_disabled = False
     conn_error = ""
-    if not _bootstrap:
-        _servers = () if (_on_override_list and not email_lower.endswith("@streamax.com")) \
-            else _mail_servers()
-        for srv in _servers:
-            ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"],
-                                           clean_email, password,
-                                           timeout=srv.get("timeout", 15))
-            if disabled:
-                smtp_auth_disabled = True
-            # Remember a connection-level failure (server unreachable) as distinct
-            # from an auth rejection, so we can surface it if nothing authenticates.
-            if not ok and not disabled and _looks_like_connection_error(err):
-                conn_error = err
-            print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} "
-                  f"disabled={disabled} err={err[:140]}", file=sys.stderr, flush=True)
-            if ok:
-                authenticated = True
-                break
+    _servers = () if (_on_override_list and not email_lower.endswith("@streamax.com")) \
+        else _mail_servers()
+    for srv in _servers:
+        ok, disabled, err = _smtp_auth(srv["host"], srv["port"], srv["mode"],
+                                       clean_email, password,
+                                       timeout=srv.get("timeout", 15))
+        if disabled:
+            smtp_auth_disabled = True
+        # Remember a connection-level failure (server unreachable) as distinct
+        # from an auth rejection, so we can surface it if nothing authenticates.
+        if not ok and not disabled and _looks_like_connection_error(err):
+            conn_error = err
+        print(f"[LOGIN] {srv['label']} auth for {email_lower}: ok={ok} "
+              f"disabled={disabled} err={err[:140]}", file=sys.stderr, flush=True)
+        if ok:
+            authenticated = True
+            break
 
     if authenticated:
         return True, _egg_or("Success", email_lower)
@@ -577,6 +618,17 @@ def verify_streamax_credentials(email, password):
             "the Streamax mailbox password (Coremail or Outlook) — a Sales "
             "Toolkit password is not accepted for these accounts. If your "
             "mailbox is on Outlook, use “Sign in with Microsoft”."
+        )
+    # Strict mode: no bootstrap door to fall through to, so say what will work
+    # instead of leaving someone retyping a password that was never checked.
+    if (login_mode() == LOGIN_MODE_STRICT and not _is_leadership
+            and email_lower.endswith("@streamax.com")
+            and _custom is not None and not _custom.has_password(email_lower)
+            and not smtp_auth_disabled):
+        return False, (
+            "Email or password incorrect. Sign in with your Streamax mailbox "
+            "password (the one you use for Coremail or Outlook). Once you are "
+            "in you can set a Sales Toolkit password that never rotates."
         )
     if smtp_auth_disabled:
         # The mail server refused the *method*, not necessarily the password:

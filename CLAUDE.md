@@ -176,6 +176,50 @@ CA24S, C20D, CA20D. This is why Jerry answers strategy and positioning well but 
 on "what are this box's specs / how many ports are left". **Closing it needs real spec
 sheets loaded into `terminology_db.py` — do not paper over it with generated prose.**
 
+**`LOGIN_MODE` — the sign-in policy switch for NON-leadership accounts.** Set as an
+environment variable, read per call in `login.login_mode()`, so changing policy is a Render
+restart with no code change or rebuild:
+
+| Value | Behaviour |
+|---|---|
+| `strict` *(default, currently deployed)* | A real credential is required: the Streamax mailbox password, or a Sales Toolkit password already set. |
+| `open` | A `@streamax.com` address with no toolkit password yet is admitted with **any** password, so people can get in and set one. For a rollout push only — knowing an address is enough. |
+
+Accepted aliases: `strict|real|closed|1|""` and `open|temp|any|bootstrap|2`. **An
+unrecognised value fails closed to `strict`** and logs why — never add a value that opens
+the door by accident. `server.py` prints a `[BOOT] LOGIN_MODE=…` banner at startup, so the
+live policy is answerable from the Render log rather than by inspecting the env.
+**LEADERSHIP is exempt from this switch in both directions** — those addresses always
+require live mailbox proof.
+
+**The set-a-password prompt only follows a credential-LESS admission.** `server.py` gates
+`needs_password_setup` on the `"Setup"` marker alone. Anyone who signed in with a real email
+and password — mailbox (`"Success"`) or toolkit (`"Custom"`) — is never interrupted by it,
+in either mode; they already hold a working credential. Under `strict` the bootstrap door
+never opens, so the prompt never fires at all, and `/account` stays the deliberate opt-in
+place to set or change a toolkit password.
+
+Because of that rule **the mailbox is verified before the open door is considered**, even in
+`open` mode where the admission was going to succeed regardless. That costs a round trip,
+and it is deliberate: skipping it (the old "fast path") meant a person typing their correct
+mailbox password was still recorded as a bootstrap admission and shown the prompt. Do not
+re-add the short-circuit.
+
+**Toolkit passwords survive every `LOGIN_MODE` switch — this is a guarantee, not an
+accident.** `customized_login.py` never reads `LOGIN_MODE` (asserted by
+`scripts/test_password_persistence.py`), there is no delete path, and writes are upserts
+(`ON CONFLICT (email) DO UPDATE`). Switching modes is a policy change for people who have
+**no** password yet; it can never invalidate or hide one already set, in either direction.
+Passwords live in the `custom_login` table in the Supabase Postgres reached via
+`JERRY_GPT_DB_URL` — external to Render, so deploys do not touch them. **If that variable is
+ever unset the store silently falls back to `customized_login_store.json` on Render's
+ephemeral disk and every password is lost on the next deploy** — the module logs a warning
+when that happens; treat it as an incident, not a nuisance.
+
+The one exception is deliberate: a **leadership** address's toolkit password is *retained
+and still verifies*, but is not accepted as proof of identity, because those accounts are
+mailbox-only. Lift that rule and the stored password works again immediately.
+
 **Leadership accounts are mailbox-only (Sep-2026).** Addresses in
 `LEADERSHIP_EMAILS` unlock internal cost and margin data, so "knows the address" must never
 be enough. `verify_streamax_credentials()` computes `_is_leadership` up front and uses it to

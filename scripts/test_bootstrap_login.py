@@ -2,7 +2,12 @@
 
     python3 scripts/test_bootstrap_login.py
 """
+import os
 import pathlib, sys, tempfile, types
+
+# This file exercises the open door, so it must ask for it. The shipping
+# default is LOGIN_MODE=strict, where the door does not exist.
+os.environ["LOGIN_MODE"] = "open"
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 _st = types.ModuleType("streamlit"); _st.session_state = {}
@@ -35,9 +40,14 @@ for pw in ("literally anything", "x", "hunter2", "不是密码"):
     ok, msg = login.verify_streamax_credentials(NEW, pw)
     check(f"admitted with {pw!r}", ok and msg == "Setup", f"({ok}, {msg})")
 
+# The mailbox is now checked BEFORE the door opens, on purpose: it is the only
+# way to tell a real sign-in from a bootstrap admission, and that distinction
+# decides whether the set-a-password prompt is shown. A wrong password still
+# lands on "Setup"; a right one comes back "Success" and is never prompted.
 smtp_calls.clear()
-login.verify_streamax_credentials(NEW, "whatever")
-check("no SMTP round-trip while bootstrapping (fast path)", not smtp_calls, str(smtp_calls))
+ok, msg = login.verify_streamax_credentials(NEW, "whatever")
+check("mailbox is checked before the door opens", bool(smtp_calls), str(smtp_calls))
+check("  a bad password still bootstraps", ok and msg == "Setup", f"({ok}, {msg})")
 
 print("\n=== 2. non-Streamax addresses are still refused ===")
 ok, msg = login.verify_streamax_credentials("outsider@gmail.com", "anything")
