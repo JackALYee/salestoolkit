@@ -14,7 +14,7 @@ Never mix these conversations. The pitch is different.
 
 ## The Coalition message (use in EVERY TSP conversation)
 
-> *"None of us — not Streamax, not any individual TSP — is big enough to defeat Samsara or Motive alone. They have $1.2B+ in annual revenue, vertically integrated platforms, direct sales teams in every major market. But Streamax, by working with 500+ partners globally, is creating a jointly available platform that gives every partner the best chance to succeed. This is a crowdfunded approach to competing with Big Tech: Streamax commits the R&D, the AI, the manufacturing, the platform. Each partner contributes local market expertise, customer relationships, installation capability. 1+1>2. Together we give fleets a better product at a better price — delivered through a local partner who actually knows their market."*
+> *"None of us — not Streamax, not any individual TSP — is big enough to defeat Samsara or Motive alone. Samsara alone is approaching $2B in annual recurring revenue and is now GAAP-profitable; they have vertically integrated platforms, direct sales teams in every major market. But Streamax, by working with 500+ partners globally, is creating a jointly available platform that gives every partner the best chance to succeed. This is a crowdfunded approach to competing with Big Tech: Streamax commits the R&D, the AI, the manufacturing, the platform. Each partner contributes local market expertise, customer relationships, installation capability. 1+1>2. Together we give fleets a better product at a better price — delivered through a local partner who actually knows their market."*
 
 ---
 

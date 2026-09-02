@@ -363,3 +363,5 @@ Public examples to cite:
 ---
 
 **Sources:** Apr-2026 v3 government-contract pricing report (Streamax Trucking BU Strategy), 86 distinct sources including Sourcewell #020221/#102924-SAM/GEO, GSA Federal, NASPO ValuePoint, Berg Insight Video Telematics 6th & 7th eds., Berg Insight Fleet Management Americas 14th ed., Samsara SEC filings ($1.75B ARR FY2026), Motive S-1 (Dec-2025, $501M ARR), Civic IQ government database, Fleet Hoster shop.fleethoster.com, eBay secondary market analysis. Data window: April 2024 – April 2026.
+
+> **Correction, verified 2 Sep 2026.** The `$1.75B ARR FY2026` figure above is what the Apr-2026 report carried and is now superseded. Samsara **closed FY2026 at $1.9B ARR** and reported **$1.991B ARR with GAAP EPS of $0.08** in Q1 FY2027 (4 Jun 2026). Quote the current numbers from `19_competitor_financials_2026.md`; the pricing analysis in this file is unaffected.

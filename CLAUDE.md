@@ -148,6 +148,34 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
+**Knowledge maintained from the usage log (Sep-2026).** The 610 logged Q&A pairs in
+`jerry_gpt_chats` are the feedback loop for the knowledge base — read them before deciding
+what to add. That review produced three files and one standing finding:
+
+- `19_competitor_financials_2026.md` — dated, sourced financials for Samsara / Motive /
+  Netradyne / Lytx plus Berg market structure. Written because leadership asked whether
+  Samsara is profitable (it is: GAAP-profitable three quarters running, $1.991B ARR at
+  Q1 FY27) and the KB carried only a stale $1.75B. **Every figure is dated — re-verify
+  after each Samsara print (roughly early Mar / Jun / Sep / Dec).**
+- `20_regulatory_calendar_2026.md` — the compliance clock by market: Japan's UN R151
+  mandate (>8t new types May 2022, continued production May 2024; 3.5–8t subsidised at
+  ¥50,000 but not compelled), EU GSR2 including the still-future 7 Jan 2029 HGV
+  direct-vision requirement, UK DVS, and the FCC Hikvision/Dahua position.
+- `21_known_gaps_and_routing.md` — the registry of what Jerry does *not* hold, so a gap
+  costs one sentence instead of three improvised paragraphs. Also pins model names that
+  do not exist (`AD Lite`, `P3V`, `N9M`) so they get corrected rather than invented.
+
+**The standing finding — Streamaxpedia is a product index, not a spec database.** Of the
+114 terms in `terminology_db.py`, 75% have no spec-sheet URL and 41% have a description
+under 80 characters, and the thinness is systematic: *concept* categories are well
+covered (Core Telematics 13/14, Connectivity 14/14, AI Vision 13/13) while *hardware*
+categories are empty (MDVR 0/3, Dashcam 1/4, Visibility 0/10, Accessories 0/7 — 16
+entries just say "Component dynamically extracted from the Master Product Matrix").
+Whole models are absent: C27, C28, XPAD 5.0, X5N Pro, A8Pro, A16Max, P3, P3D, CMS20,
+CA24S, C20D, CA20D. This is why Jerry answers strategy and positioning well but stalls
+on "what are this box's specs / how many ports are left". **Closing it needs real spec
+sheets loaded into `terminology_db.py` — do not paper over it with generated prose.**
+
 **Anthropic prompt cache quirk** worth knowing: max 4 `cache_control` breakpoints per request. The knowledge base is a single block with one breakpoint. The clearance block deliberately has no cache_control so it doesn't consume a breakpoint and can vary freely.
 
 ### Usage logging — two sinks, never raises
