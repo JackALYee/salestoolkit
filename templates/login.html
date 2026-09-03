@@ -41,7 +41,11 @@
          background:linear-gradient(135deg,var(--green),var(--blue));transition:.25s}
   button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 15px rgba(42,245,152,.4)}
   button:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  /* pre-line so a two-line message (e.g. the bilingual test_account notice)
+     breaks where the server put the newline instead of running together.
+     textContent alone would collapse it to a space. */
   .err{display:none;margin-top:16px;padding:11px 13px;border-radius:8px;font-size:.85rem;
+       white-space:pre-line;line-height:1.55;
        background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.35);color:#ff8b95}
   .err.show{display:block}
   /* Repeated-failure helper. Anchored to the bottom of the viewport and paired

@@ -244,6 +244,25 @@ def _grant_vip(name_or_email: str) -> None:
 # in ~1.1s — and Microsoft then needs three more STARTTLS/AUTH round trips.
 # A single 10s budget was tight enough that a slow moment on Microsoft's side
 # surfaced to the user as "email or password incorrect".
+# `test_account` is retired. It was a shared, password-known shortcut into the
+# app — the second most active identity in the usage log — so every one of its
+# sessions was anonymous and unattributable. Rejected on sight, whatever the
+# password, with the notice below in both languages.
+RETIRED_ACCOUNTS = ("test_account",)
+
+RETIRED_ACCOUNT_MESSAGE = (
+    "test_account is no longer in use. Please log in with your corporate "
+    "email account.\n"
+    "test_account测试功能已被禁用，请用您的企业邮箱登录。"
+)
+
+
+def is_retired_account(email: str) -> bool:
+    """True for a retired shortcut identity, bare or written as an address."""
+    e = (email or "").strip().lower()
+    return any(e == r or e.startswith(r + "@") for r in RETIRED_ACCOUNTS)
+
+
 # ── Login mode for NON-LEADERSHIP @streamax.com addresses ───────────────────
 # Flip with the LOGIN_MODE environment variable; no code change and no rebuild,
 # so switching is just a Render restart.
@@ -485,6 +504,12 @@ def verify_streamax_credentials(email, password):
     clean_email = email.strip()
     email_lower = clean_email.lower()
 
+    # Retired shortcut accounts are refused first, ahead of the domain gate —
+    # `test_account` has no "@", so anything later would answer with the
+    # generic "use a @streamax.com address" and never explain the retirement.
+    if is_retired_account(email_lower):
+        return False, RETIRED_ACCOUNT_MESSAGE
+
     # Test Easter Egg Overrides and Bypass
     #
     # These prove NOTHING — no mailbox is contacted — so they return a
@@ -499,8 +524,6 @@ def verify_streamax_credentials(email, password):
         return True, "Hekun (demo)"
     if email_lower == "zntang_test" and password == "testme":
         return True, "ZNTang (demo)"
-    if email_lower == "test_account" and password == "testme":
-        return True, "Success"
 
     # 2. 使用全小写的 email_lower 来做后缀检查，避免大小写导致报错。
     # Addresses on the override list skip the domain gate on purpose: partners

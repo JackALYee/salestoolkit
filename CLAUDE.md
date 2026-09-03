@@ -176,6 +176,20 @@ CA24S, C20D, CA20D. This is why Jerry answers strategy and positioning well but 
 on "what are this box's specs / how many ports are left". **Closing it needs real spec
 sheets loaded into `terminology_db.py` — do not paper over it with generated prose.**
 
+**`test_account` is retired.** `RETIRED_ACCOUNTS` / `RETIRED_ACCOUNT_MESSAGE` in `login.py`
+refuse it on sight — any password, bare or written as `test_account@…`, matched
+case-insensitively. The check runs *before* the domain gate, because `test_account` has no
+`@` and every later branch would answer with the generic "use a @streamax.com address"
+instead of explaining the retirement. The notice is bilingual and deliberately two lines,
+which is why `.err` in `templates/login.html` carries `white-space:pre-line` — `textContent`
+would otherwise collapse the newline and run the English and Chinese together.
+
+It mattered because `test_account` was the **second most active identity in the usage log**
+(116 questions): a shared shortcut with a published password, so none of those sessions were
+attributable to a person. The `jerry_test` / `hekun_test` / `zntang_test` demo shortcuts are
+unaffected. Historical `jerry_gpt_chats` rows keyed to `test_account` are left alone; that
+history does not follow anyone to their real account.
+
 **`LOGIN_MODE` — the sign-in policy switch for NON-leadership accounts.** Set as an
 environment variable, read per call in `login.login_mode()`, so changing policy is a Render
 restart with no code change or rebuild:

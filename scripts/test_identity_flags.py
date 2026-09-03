@@ -45,10 +45,28 @@ print("=== login easter eggs still authenticate ===")
 # is the mechanism — privilege lookups miss it, resolve_easter_egg strips it.
 for creds, want in [(("jerry_test", "testme"), "Jerry (demo)"),
                     (("hekun_test", "testme"), "Hekun (demo)"),
-                    (("zntang_test", "testme"), "ZNTang (demo)"),
-                    (("test_account", "testme"), "Success")]:
+                    (("zntang_test", "testme"), "ZNTang (demo)")]:
     ok, msg = login.verify_streamax_credentials(*creds)
     check(f"{creds[0]:14s} -> {want}", ok and msg == want, f"got ({ok}, {msg!r})")
+
+print("\n=== test_account is retired ===")
+# It was a shared identity with a published password — every session it logged
+# was anonymous. Refused whatever the password, with a bilingual notice.
+for pw in ("testme", "", "anything", "不是密码"):
+    ok, msg = login.verify_streamax_credentials("test_account", pw)
+    check(f"refused with password {pw!r:12s}", not ok, f"got ({ok}, {msg!r})")
+_, msg = login.verify_streamax_credentials("test_account", "testme")
+check("notice names the account", "test_account is no longer in use" in msg, msg)
+check("notice tells them what to use instead",
+      "corporate email account" in msg, msg)
+check("notice carries the Chinese line",
+      "测试功能已被禁用，请用您的企业邮箱登录。" in msg, msg)
+check("notice is two lines", msg.count("\n"), 1)
+for variant in ("test_account", "TEST_ACCOUNT", " test_account ",
+                "test_account@streamax.com"):
+    ok, msg = login.verify_streamax_credentials(variant, "testme")
+    check(f"{variant!r:28s} refused with the notice",
+          (not ok) and "no longer in use" in msg, f"got ({ok}, {msg!r})")
 for shortcut in ("jerry_test", "hekun_test", "zntang_test"):
     _, ident = login.verify_streamax_credentials(shortcut, "testme")
     check(f"{shortcut:14s} carries NO leadership",
