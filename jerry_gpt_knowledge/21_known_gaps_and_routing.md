@@ -47,7 +47,17 @@ description does not. Give the link; don't narrate specs around it.
 ### Known thin entries
 `CA51` (no A/D variant split) · `ADKIT` / `ADKIT 3.0` (no packing list or BOM) ·
 `X3N Pro` / `X3N Pro-H0404` (architecture only, no spec sheet, no Chinese
-manual) · `M1N` / `M1N 2.0` · `C29N` · `C6 Lite` · `AD Plus 2.0` · `AD Max`
+manual) · `M1N` / `M1N 2.0`
+
+> **CLOSED for the freight dashcam line (Sep-2026).** Full specifications for
+> **AD Plus 2.0 V1.1 · AD Plus 2.0-S · C6 Lite 2.0 · C6 Lite 2.0-S · DC Max ·
+> AD Plus 3.0 · DS100** now live in `22_dashcam_line_specs.md` — dimensions,
+> channel counts, lens/FOV, storage, interfaces, AI combinations and power.
+> Answer dashcam questions from that file. It is **Confidential**: use it to
+> size and decide, never paste it to a customer. It also settles that
+> **"AD Lite" does not exist**, and flags `AD Max` vs `DC Max` as an unresolved
+> naming collision — DC Max is the name the spec sheet uses, and it **cannot be
+> deployed without a GT1 Pro gateway**.
 
 ### Port counts — a specific, recurring trap
 The validated-architecture table proves a combination **is officially

@@ -148,6 +148,28 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
+**Dashcam specs come from a workbook, via a generator.** `jerry_gpt_knowledge/` also holds
+`Dashcam_Series_Comparison_EN_New_Models.xlsx`, and **the loader globs `*.md` only — an
+.xlsx dropped in that folder is invisible to Jerry.** `scripts/build_dashcam_kb.py` turns it
+into `22_dashcam_line_specs.md`, which is what Jerry actually reads. **Re-run the generator
+when the workbook changes; never hand-edit the .md**, or the specs drift from the source.
+
+Covers all 7 freight dashcams — AD Plus 2.0 V1.1, AD Plus 2.0-S, C6 Lite 2.0, C6 Lite 2.0-S,
+DC Max, AD Plus 3.0 (*not launched*), DS100 — with dimensions, channels, lens/FOV, storage,
+interfaces, AI combinations and power. Three things the generated file calls out because
+they cost deals: **DC Max cannot run without a GT1 Pro gateway** (which the product DB
+records as USA-restricted); **`AD Max` and `DC Max` are duplicate entries** for what looks
+like one product and the collision is unresolved; and **side-view BSD ships without the
+algorithm** on AD Plus 2.0/-S and DC Max.
+
+The workbook is marked **Confidential — "not to be released directly to customers"**. That
+handling rule is reproduced at the top of the generated file and must stay there: Jerry
+writes customer-facing copy, so the constraint has to travel with the specs.
+
+When keying spec rows, note the workbook's labels are only unique by full path —
+`Type` appears under both *GPS Positioning* and *Storage*, and keying on the leaf silently
+printed the SD-card spec as the GPS type.
+
 **Knowledge maintained from the usage log (Sep-2026).** The 610 logged Q&A pairs in
 `jerry_gpt_chats` are the feedback loop for the knowledge base — read them before deciding
 what to add. That review produced three files and one standing finding:
