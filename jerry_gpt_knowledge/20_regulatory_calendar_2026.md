@@ -46,6 +46,39 @@ in-cab lamp — when a left turn would risk a collision.
 4. R159 (**MOIS**, moving-off information) and R158 (reversing) are adopted
    too — a multi-regulation bundle sells better than a single-box sale.
 
+## The full EU compliance matrix — not just vehicle safety
+
+GSR2 is one row in a wider grid. Several of these bind Streamax directly as a
+supplier, and two have deadlines still ahead. Source: internal EU regulatory
+briefing (`GDPR.pdf`).
+
+| Regulation / standard | What it governs | Streamax products in scope | Force | Key date |
+|---|---|---|---|---|
+| **GDPR** (EU) 2016/679 | Personal-data lifecycle | Whole range — cameras, cloud | Legal | **In force** |
+| **CRA** — Cyber Resilience Act | Lifecycle cybersecurity of any product with digital elements | All connected devices | Legal | **Full enforcement 11 Dec 2027** |
+| **EU AI Act** | AI risk tiering, transparency, human oversight | **ADAS, DMS, passenger classification** | Legal | **High-risk obligations 2 Aug 2027** |
+| **NIS2** | Operator-side cybersecurity | Cloud / SaaS operations | Legal | **In force since Oct 2024** |
+| **RED** 2014/53/EU | Radio equipment safety | All wireless devices | Legal | Certified |
+| **GSR** 2019/2144 | UN-regulation performance for DMS and CMCS | ADAS, DMS, CMCS | Legal | **ADDW 7 Jul 2026** |
+| **CE marking** | Market access | All hardware | Legal | Continuous |
+| **ITxPT** | In-vehicle interoperability | IBCU, vehicle network | Procurement | Widely enforced |
+| **VDV 301 / IBIS-IP** | In-vehicle comms protocol | IBCU, passenger information | German-market | Widely enforced |
+
+Three of these change how to sell, not just how to comply:
+
+- **NIS2 binds the operator, and reaches Streamax through the supply chain.**
+  European transit operators using Streamax products are directly regulated;
+  Streamax is caught indirectly by NIS2's supply-chain security clauses. Expect
+  security questionnaires from operators who never sent one before.
+- **The EU AI Act puts ADAS and DMS in the high-risk tier** — with obligations
+  landing **2 Aug 2027**. This is the next compliance-led sales cycle after
+  GSR2, and it is close enough to start pipeline now.
+- **Under GSR, Streamax is a Tier-1 supplier**: vehicle manufacturers will
+  require conformity evidence at type approval, so **UN-regulation test reports
+  for DMS and CMCS are a deliverable**, not paperwork. (This also confirms
+  **CMCS** is a real regulated product category, though its full expansion is
+  still unverified — see `21_known_gaps_and_routing.md`.)
+
 ## European Union — GSR2, and one date still in the future
 
 | Requirement | Applies to | Date |

@@ -1,5 +1,10 @@
 # GDPR & Data Compliance — EU privacy positioning
 
+> **Companion file:** `24_gdpr_roles_and_contracting.md` — Controller vs
+> Processor, who signs the DPA/LIA/DPIA/ROPA, Art. 9 triggers, cross-border
+> transfer, and the in-vehicle notice obligation. This file is the technical
+> architecture; that one is the legal and commercial frame.
+>
 > **HANDLING — read before using any of this.**
 >
 > Two source documents, both restricted:
@@ -83,9 +88,12 @@ trip leaves no trace off-vehicle. This also removes the mass-breach surface.
 → *Art. 5(1)(e)* storage limitation · **Art. 5(2)** accountability (deletion is
 logged, so an audit can be answered) · *Art. 5(1)(f)* security
 
-⚠️ **The two sources disagree on the L2 number** — the deck says 30/60 days, the
-whitepaper says configurable "e.g. 6 months". Retention is a configuration, so
-**quote no fixed figure**: say it is policy-driven and set with the customer.
+⚠️ **Three internal documents give three different retention figure sets** —
+this deck (30/60 days), the whitepaper ("e.g. 6 months"), and the EU regulatory
+briefing (7–30 days normal, 3–6 months event, 30–90 days DMS behaviour).
+Retention is a **configuration**, so **quote no fixed figure** — say it is
+policy-driven and set with the customer. See the table in
+`24_gdpr_roles_and_contracting.md`.
 
 Overarching: **Art. 25** (data protection by design and by default) and
 **Art. 5(2)** (accountability) are what the five together are demonstrating.

@@ -148,6 +148,40 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
+**GDPR roles & contracting (`24_gdpr_roles_and_contracting.md`, Sep-2026)** is the legal
+and commercial half of the pair — `23_...` is the technical architecture. Distilled from
+`GDPR.pdf` (7-page EU regulatory briefing) and the deck
+`GDPR 落地第一步：分清角色，再定签谁`. The load-bearing content: Streamax is the
+**Processor**, the EU operator is the **Controller**, and **three things silently promote
+Streamax to Controller** — training AI on customer video without authorisation, aggregating
+across operators, and unrestricted China-team access to EU video. The fix is a written
+authorisation annex in the DPA, not a technical control. Also carries the DPA/LIA/DPIA/ROPA
+"four-piece set" and who signs each, the Art. 9 trigger table (behaviour detection is *not*
+Art. 9; face login and cross-shift profiles *are*, per EDPB Guidelines 3/2019), SCC+TIA for
+China transfers, **CJEU C-422/24** making in-vehicle notice a collection-time obligation,
+and the German Betriebsvereinbarung requirement.
+
+Its EU regulatory matrix was folded into `20_regulatory_calendar_2026.md`: **CRA full
+enforcement 11 Dec 2027**, **EU AI Act high-risk 2 Aug 2027** (ADAS/DMS are in that tier),
+**NIS2 in force since Oct 2024** (binds operators, reaches Streamax via supply-chain
+clauses), **GSR ADDW 7 Jul 2026**, plus ITxPT and VDV 301/IBIS-IP as procurement
+requirements.
+
+**Retention figures now conflict across three internal documents** (7–30 days / 48–72h /
+"e.g. 6 months"). That is expected — retention is configuration. The files instruct Jerry to
+**quote no fixed number**; do not "fix" this by picking one.
+
+**GDPR downloads** (`downloads.py`): three assets — the Data-Boundary deck (ZIP), the Roles &
+Contracting deck (ZIP), and the EU Regulatory Briefing (PDF), all under `assets/downloads/`.
+The slide decks are folders of HTML, so they ship zipped; the recipient opens
+`点击播放.html`. **Triggers deliberately exclude a bare "gdpr"** — Jerry mentions GDPR in
+most EU compliance answers, and attaching three files to each would be noise; each asset
+fires on phrases specific to its own subject. `MAX_DOWNLOADS` was raised to 4 so a
+multi-topic compliance answer does not silently drop the third. **The GDPR whitepaper is
+deliberately NOT downloadable** — it is a legal-review draft, and `DOWNLOAD_HINT` tells
+Jerry never to offer it. `scripts/test_downloads.py` pins all of this, including the
+no-false-positive cases.
+
 **GDPR / data-compliance knowledge (`23_gdpr_and_data_compliance.md`, Sep-2026)** is
 distilled from two restricted sources kept alongside it: `GDPR_Whitepaper_EN.docx` (v1.0,
 2026-05) and the 10-slide deck `守护数据边界，驱动合规未来-slides/`. Neither is loaded

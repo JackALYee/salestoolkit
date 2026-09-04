@@ -37,9 +37,49 @@ ASSETS = [
         "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "blurb": "The full Inherent CAN partner-enablement deck — the $20 license vs. $60 tracker economics, 24+ parameters, 3,000+ vehicle coverage, and FT Cloud activation.",
     },
+    # ── GDPR set ────────────────────────────────────────────────────────────
+    # Deliberately NOT triggered by a bare "gdpr": Jerry discusses GDPR in
+    # almost any EU compliance answer, and attaching three files to every one
+    # of them is noise. Each deck fires on the phrases specific to its own
+    # subject instead.
+    {
+        "id": "gdpr_data_boundary_deck",
+        "triggers": ["privacy by design", "data boundary", "masking",
+                     "mosaic", "privacy masking", "geofence recording",
+                     "alert tolerance", "tiered retention", "打码", "数据边界"],
+        "filename": "Streamax-GDPR-Data-Boundary-Slides.zip",
+        "label": "Download · GDPR Data-Boundary deck, 10 slides (ZIP, open 点击播放.html)",
+        "mime": "application/zip",
+        "blurb": "The five privacy features mapped to GDPR articles — masking, alert tolerance, geofence auto-stop, event-only upload, tiered retention. Product-function material, not legal advice.",
+    },
+    {
+        "id": "gdpr_roles_deck",
+        "triggers": ["controller", "processor", "dpa", "data processing agreement",
+                     "dpia", "ropa", "legitimate interests", "works council",
+                     "betriebsvereinbarung", "article 28", "art. 28",
+                     "分清角色", "四件套"],
+        "filename": "Streamax-GDPR-Roles-and-Contracting-Slides.zip",
+        "label": "Download · GDPR Roles & Contracting deck, 8 slides (ZIP, open 点击播放.html)",
+        "mime": "application/zip",
+        "blurb": "Controller vs Processor, the DPA/LIA/DPIA/ROPA four-piece set and who signs each, DMS design red lines, and the two-layer in-vehicle notice. INTERNAL — do not forward outside Streamax.",
+    },
+    {
+        "id": "gdpr_regulatory_briefing",
+        "triggers": ["cra", "cyber resilience act", "eu ai act", "nis2",
+                     "itxpt", "vdv 301", "ibis-ip", "sccs", "scc + tia",
+                     "transfer impact assessment", "cross-border transfer",
+                     "adequacy decision", "article 44", "regulatory landscape",
+                     "跨境传输", "法规全景"],
+        "filename": "Streamax-GDPR-EU-Regulatory-Briefing.pdf",
+        "label": "Download · EU Regulatory Landscape & GDPR Briefing (PDF, 7 pages)",
+        "mime": "application/pdf",
+        "blurb": "The full EU matrix — GDPR, CRA, AI Act, NIS2, RED, GSR, CE, ITxPT, VDV 301 — plus role definition, Art. 9 triggers, DPA clauses, SCC+TIA for China transfers, and enforcement precedents. INTERNAL.",
+    },
 ]
 
-MAX_DOWNLOADS = 3
+# Three GDPR assets can plausibly match one compliance answer, so the cap has
+# to clear that or the third is silently dropped.
+MAX_DOWNLOADS = 4
 
 # Pre-compile a word-boundary regex per asset so triggers match as whole
 # tokens — "obd" fires on "OBD-II" but NOT inside "obdurate", and bare "can"
@@ -84,13 +124,25 @@ def find_downloads(text: str) -> list[dict]:
 # Injected into Jerry's system prompt so he names the topic (which is what
 # lets the scanner attach the file) and knows the download exists.
 DOWNLOAD_HINT = (
-    "Two Streamax decks can be offered to the user as downloads:\n"
+    "Five Streamax documents can be offered to the user as downloads:\n"
     "- eSIM: when the user asks about eSIM, eUICC, MFF2, or SIM/connectivity, "
     "mention 'eSIM' explicitly in your answer.\n"
     "- Inherent CAN: when the user asks about CAN bus, the CAN license, OBD/"
     "J1939 data, or reading vehicle data from the dashcam, mention 'CAN bus' "
     "explicitly in your answer.\n"
-    "When you name the matching topic, the interface automatically shows the "
-    "user a download button for that deck. Do not paste links or invent a URL "
-    "— just answer the question and name the topic."
+    "- GDPR Data-Boundary deck (10 slides): for questions about the privacy "
+    "features themselves — name 'privacy masking', 'alert tolerance', "
+    "'geofence recording' or 'tiered retention'.\n"
+    "- GDPR Roles & Contracting deck (8 slides): for who signs what — name "
+    "'controller', 'processor', 'DPA', 'DPIA' or 'works council'.\n"
+    "- EU Regulatory Landscape & GDPR briefing (7-page PDF): for the wider "
+    "regulatory picture or China transfers — name 'CRA', 'EU AI Act', 'NIS2', "
+    "or 'cross-border transfer'.\n"
+    "When you name the matching topic the interface attaches the download "
+    "button automatically. Do not paste links or invent a URL — answer the "
+    "question and name the topic.\n"
+    "The two GDPR decks and the briefing are INTERNAL Streamax material. When "
+    "you offer one, say it is for internal use and should not be forwarded to "
+    "a customer. The GDPR whitepaper is a legal-review draft and is "
+    "deliberately NOT downloadable — never offer it."
 )

@@ -76,7 +76,7 @@ interface and channel rules automatically.
 | **"N9M"** | **Resolved (Sep-2026): N9M is the proprietary in-vehicle transmission protocol**, not a hardware model — named three times in the GDPR whitepaper (encryption in transit, IPC→MDVR, MDVR→cloud). That is why it was never in the product database. See `23_gdpr_and_data_compliance.md`. |
 | **"N9M2.0"** | Still **unconfirmed as a device**. Nothing by that name exists in the product DB, solution decks, roadmap or MDVR line. **Do not guess a relationship to A8Pro 2.0 or anything else** — most likely the protocol name misread as a model. |
 | **"Starry PaaS"** | Outside the Streamax portfolio. |
-| **"CMCS"** | Understood as the electronic-mirror/camera-monitor capability, which lands on **CMS20** as the product. The exact expansion is **unconfirmed** — flag it rather than asserting it. |
+| **"CMCS"** | Partly confirmed (Sep-2026): the EU regulatory briefing lists **CMCS alongside DMS as a product category subject to GSR 2019/2144**, so it is a real regulated category, not a mis-remembering. It lands on **CMS20** as the product. The exact expansion of the acronym is **still unconfirmed** — flag it rather than asserting it. |
 
 ## 3. Terminology awaiting confirmation
 
