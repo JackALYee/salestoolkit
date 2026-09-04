@@ -148,6 +148,34 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
+**GDPR / data-compliance knowledge (`23_gdpr_and_data_compliance.md`, Sep-2026)** is
+distilled from two restricted sources kept alongside it: `GDPR_Whitepaper_EN.docx` (v1.0,
+2026-05) and the 10-slide deck `守护数据边界，驱动合规未来-slides/`. Neither is loaded
+directly — the loader globs `*.md`, and the slide deck is a folder of HTML besides.
+
+**Both carry handling restrictions that are reproduced at the top of the .md and must stay
+there.** The whitepaper's own closing line is *"Draft — Legal review required before
+external publication"* and it is marked Confidential, so it must never be forwarded to a
+customer; the deck states it is a product-function description and **not legal advice**.
+Jerry writes customer-facing copy, so the rule travels with the content: describe what the
+product does, never assert that a customer "is GDPR compliant" — compliance is a property of
+their deployment, and Streamax is normally the **processor**, not the controller.
+
+Content worth knowing it now has: five privacy features mapped to specific GDPR articles
+(masking, alert tolerance, geofence auto-stop, event-only upload, tiered retention), the
+per-device storage table (sensors store nothing; the MDVR is the primary archive),
+transmission paths and encryption, Art. 15–22 rights implementation, and the three
+residency answers — EU hosting, on-premises, or **fully local with no cloud at all**.
+
+Two traps encoded in the file: the deck and the whitepaper **disagree on cloud retention**
+(30/60 days vs "e.g. 6 months"), so no fixed figure may be quoted — it is configuration; and
+**ISO/SAE 21434 is "in progress" and UN R155/R156 "supported", not certified** (ISO 27001,
+ISO 27701 and SOC 2 Type II are the ones actually held).
+
+This also resolved a long-standing gap: **`N9M` is the proprietary in-vehicle transmission
+protocol**, not a hardware model — which is why it never appeared in the product database
+despite being asked about repeatedly. A separate "N9M2.0" *device* remains unconfirmed.
+
 **Dashcam specs come from a workbook, via a generator.** `jerry_gpt_knowledge/` also holds
 `Dashcam_Series_Comparison_EN_New_Models.xlsx`, and **the loader globs `*.md` only — an
 .xlsx dropped in that folder is invisible to Jerry.** `scripts/build_dashcam_kb.py` turns it

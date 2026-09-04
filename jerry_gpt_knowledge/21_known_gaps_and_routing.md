@@ -73,7 +73,8 @@ interface and channel rules automatically.
 |---|---|
 | **"AD Lite"** | Not a Streamax model. The dashcam line is **C6 Lite / AD Plus 2.0 / AD Max**. Ask which they meant. |
 | **"P3V"** | Not a model. Passenger counting is **P3** and **P3D**. |
-| **"N9M" / "N9M2.0"** | Asked repeatedly by more than one person, and **absent from every source** — product DB, solution decks, roadmap, MDVR line. Either an internal codename that never reached the toolkit, or a misremembered name. **Do not guess a relationship to A8Pro or anything else.** Worth confirming with the product line and adding here once identified. |
+| **"N9M"** | **Resolved (Sep-2026): N9M is the proprietary in-vehicle transmission protocol**, not a hardware model — named three times in the GDPR whitepaper (encryption in transit, IPC→MDVR, MDVR→cloud). That is why it was never in the product database. See `23_gdpr_and_data_compliance.md`. |
+| **"N9M2.0"** | Still **unconfirmed as a device**. Nothing by that name exists in the product DB, solution decks, roadmap or MDVR line. **Do not guess a relationship to A8Pro 2.0 or anything else** — most likely the protocol name misread as a model. |
 | **"Starry PaaS"** | Outside the Streamax portfolio. |
 | **"CMCS"** | Understood as the electronic-mirror/camera-monitor capability, which lands on **CMS20** as the product. The exact expansion is **unconfirmed** — flag it rather than asserting it. |
 

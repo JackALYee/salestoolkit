@@ -27,3 +27,8 @@ site/
 
 # Override-credential store written at runtime (hashes, but not ours to publish)
 customized_login_store.json
+
+# Office lock/temp files — Word leaves a `.~$name.docx` beside an open document
+.~*.doc*
+~$*.doc*
+~$*.xls*
