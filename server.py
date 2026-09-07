@@ -416,6 +416,18 @@ def read_token(token: str | None) -> str | None:
         return None
     if time.time() > float(expiry):
         return None
+
+    # Authorisation is decided at LOGIN, but a session outlives that decision.
+    # Retiring test_account shut the door without evicting anyone already
+    # inside: it kept asking questions for five days afterwards on a cookie
+    # issued before the block, because nothing on the authenticated path ever
+    # asked again whether that identity was still allowed. Re-check here — the
+    # one choke point every authenticated request passes through — so a
+    # retirement takes effect immediately instead of after SESSION_DAYS.
+    if _login is not None and _login.is_retired_account(user):
+        print(f"[AUTH] session rejected for retired account {user}",
+              file=sys.stderr, flush=True)
+        return None
     return user
 
 

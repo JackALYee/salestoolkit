@@ -260,6 +260,21 @@ CA24S, C20D, CA20D. This is why Jerry answers strategy and positioning well but 
 on "what are this box's specs / how many ports are left". **Closing it needs real spec
 sheets loaded into `terminology_db.py` — do not paper over it with generated prose.**
 
+**Blocking a login does not evict anyone already signed in.** `read_token()` used to verify
+only the HMAC and the expiry — never whether the identity was *still allowed*. Retiring
+`test_account` shut the door and evicted nobody: it kept asking Jerry questions for five days
+afterwards on a cookie minted before the block, all in one pre-existing session.
+`read_token()` now calls `_login.is_retired_account(user)` on every authenticated request, so
+a retirement takes effect immediately instead of after `SESSION_DAYS` (7).
+
+**The general lever is `AUTH_SECRET`.** Sessions are stateless HMAC tokens, so there is no
+server-side session table to clear — **rotating `AUTH_SECRET` on Render invalidates every
+outstanding cookie at once** and forces everyone to sign in under the current rules. That is
+the only way to retire *pre-existing* sessions for a rule the token cannot re-check, notably
+**leadership sessions issued before the mailbox-only rule** — those cookies stay valid until
+they expire, because a mailbox password cannot be re-verified without the password.
+`scripts/test_session_revocation.py` pins the retired-account behaviour.
+
 **`test_account` is retired.** `RETIRED_ACCOUNTS` / `RETIRED_ACCOUNT_MESSAGE` in `login.py`
 refuse it on sight — any password, bare or written as `test_account@…`, matched
 case-insensitively. The check runs *before* the domain gate, because `test_account` has no
