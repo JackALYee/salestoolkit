@@ -75,6 +75,21 @@
   .body pre{background:rgba(0,0,0,.4);border:1px solid var(--line);padding:12px;border-radius:8px;
             overflow-x:auto}
   .body a{color:var(--blue)}
+  /* Tables. The wrapper — not the table — scrolls, so a wide table never
+     widens the chat column or forces the page to scroll sideways. */
+  .body .tblwrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);
+                 border-radius:8px;background:rgba(0,0,0,.22)}
+  .body table{border-collapse:collapse;width:100%;font-size:.86rem;line-height:1.5}
+  .body thead th{background:rgba(42,245,152,.09);color:var(--green);font-weight:600;
+                 text-align:left;white-space:nowrap;
+                 border-bottom:1px solid rgba(42,245,152,.25)}
+  .body th,.body td{padding:8px 12px;border-right:1px solid var(--line);
+                    vertical-align:top}
+  .body th:last-child,.body td:last-child{border-right:none}
+  .body tbody tr{border-top:1px solid var(--line)}
+  .body tbody tr:nth-child(even){background:rgba(255,255,255,.022)}
+  .body tbody tr:hover{background:rgba(42,245,152,.05)}
+  .body td code{white-space:nowrap}
   .welcome{text-align:center;color:var(--grey);padding:40px 12px}
   .welcome img{width:68px;height:68px;border-radius:50%;object-fit:cover;margin-bottom:14px;
                border:2px solid rgba(42,245,152,.45)}
@@ -291,6 +306,70 @@
   var AVATAR = '/assets/jerry.png';
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  /* GFM pipe tables. Must run BEFORE newlines become <br>, or the rows are
+     shredded into loose text — which is exactly what used to happen: Jerry
+     emits proper markdown tables and they rendered as pipe-separated lines.
+     Runs AFTER the inline replacements so **bold**, `code` and links inside
+     cells still work. */
+  function isSepRow(line) {
+    var cells = splitRow(line);
+    if (!cells.length) return false;
+    for (var i = 0; i < cells.length; i++) {
+      if (!/^:?-{1,}:?$/.test(cells[i].replace(/\s/g, ''))) return false;
+    }
+    return true;
+  }
+  function splitRow(line) {
+    var s = line.trim();
+    if (s.indexOf('|') === -1) return [];
+    s = s.replace(/\\\|/g, '\u0000');                 // protect escaped pipes
+    if (s.charAt(0) === '|') s = s.slice(1);
+    if (s.charAt(s.length - 1) === '|') s = s.slice(0, -1);
+    return s.split('|').map(function (c) {
+      return c.replace(/\u0000/g, '|').trim();
+    });
+  }
+  function alignOf(cell) {
+    var c = cell.replace(/\s/g, '');
+    var l = c.charAt(0) === ':', r = c.charAt(c.length - 1) === ':';
+    return (l && r) ? 'center' : r ? 'right' : l ? 'left' : '';
+  }
+  function mdTables(src) {
+    var lines = src.split('\n'), out = [], i = 0;
+    while (i < lines.length) {
+      var head = splitRow(lines[i]);
+      if (head.length && i + 1 < lines.length && isSepRow(lines[i + 1])) {
+        var al = splitRow(lines[i + 1]).map(alignOf);
+        var rows = [];
+        i += 2;
+        while (i < lines.length && lines[i].indexOf('|') !== -1 && lines[i].trim()) {
+          rows.push(splitRow(lines[i]));
+          i++;
+        }
+        out.push(buildTable(head, al, rows));
+      } else {
+        out.push(lines[i]);
+        i++;
+      }
+    }
+    return out.join('\n');
+  }
+  function buildTable(head, al, rows) {
+    function cell(tag, text, n) {
+      var a = al[n] ? ' style="text-align:' + al[n] + '"' : '';
+      return '<' + tag + a + '>' + (text === undefined ? '' : text) + '</' + tag + '>';
+    }
+    var h = head.map(function (c, n) { return cell('th', c, n); }).join('');
+    var b = rows.map(function (r) {
+      var tds = '';
+      for (var n = 0; n < head.length; n++) tds += cell('td', r[n], n);
+      return '<tr>' + tds + '</tr>';
+    }).join('');
+    /* wrapper scrolls on its own so a wide table never breaks the chat column */
+    return '<div class="tblwrap"><table><thead><tr>' + h + '</tr></thead>' +
+           (b ? '<tbody>' + b + '</tbody>' : '') + '</table></div>';
+  }
+
   function md(t) {
     var s = esc(t);
     s = s.replace(/```([\s\S]*?)```/g, function (m,c) { return '<pre><code>'+c+'</code></pre>'; });
@@ -301,7 +380,13 @@
     s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     s = s.replace(/^\s*[-•]\s+(.+)$/gm, '<li>$1</li>');
     s = s.replace(/(<li>[\s\S]*?<\/li>)(?![\s\S]*?<li>)/, '<ul>$1</ul>');
-    return s.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+    s = mdTables(s);
+    s = s.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+    /* A table is a block element; the <br> either side of it would add dead
+       space and, worse, browsers hoist stray <br> out of table markup. */
+    s = s.replace(/(<br>\s*)+(<div class="tblwrap">)/g, '$2');
+    s = s.replace(/(<\/table><\/div>)(\s*<br>)+/g, '$1');
+    return s;
   }
 
   /* ---------- modals ---------- */

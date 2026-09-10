@@ -210,6 +210,31 @@ This also resolved a long-standing gap: **`N9M` is the proprietary in-vehicle tr
 protocol**, not a hardware model — which is why it never appeared in the product database
 despite being asked about repeatedly. A separate "N9M2.0" *device* remains unconfirmed.
 
+**DMS/ADAS parameter tuning (`25_dms_adas_parameter_tuning.md`, Sep-2026)** — distilled from
+the 28-page *DMS and ADAS Parameter Setting User Manual* (12 Sep 2025), the densest
+operational file in the KB. Carries Table 1.1 (sensitivity in seconds for every DMS alarm),
+both fatigue algorithms (IPC deep-learning probability vs AHD rule-based — they are *not* the
+same product experience), distraction logic (80% eyes-off-road in a sliding window, aligned
+to Euro NCAP; deflection angles 24/28/32°), every ADAS activation threshold (LDW ≥20 km/h,
+FCW/PCW ≥8 km/h, HMW ≥28 km/h), the four per-haul-type recommendation tables, and the
+troubleshooting Q&A.
+
+Three things in it change what Jerry should say: **FCW and PCW sensitivity are fixed and
+non-adjustable** by design, not a missing feature; **PCW detects to ~25 m on AD Plus
+wide-angle and is not recommended above 60 km/h**, so it must not be sold as a highway
+feature; and the manual's own premise is that **most false positives come from parameter
+settings, not the algorithm** — so an alarm-quality complaint is a tuning conversation first.
+It also gives 非直道抑制 a probable mapping (see `21_known_gaps_and_routing.md`).
+
+**Jerry's chat UI renders GFM tables (`templates/jerry.html`).** `md()` is a hand-rolled
+regex renderer, and it had no table support — markdown tables rendered as pipe-separated
+lines, which was very visible once the KB filled with spec tables. `mdTables()` now parses
+pipe tables **before** newlines become `<br>` (otherwise rows are shredded) and **after** the
+inline replacements (so bold/code/links inside cells still work). Alignment markers are
+honoured. Each table is wrapped in `.tblwrap` which owns the horizontal scroll, so a wide
+table never widens the chat column. The parser is streaming-safe — a half-arrived table
+renders what it has and never throws.
+
 **Dashcam specs come from a workbook, via a generator.** `jerry_gpt_knowledge/` also holds
 `Dashcam_Series_Comparison_EN_New_Models.xlsx`, and **the loader globs `*.md` only — an
 .xlsx dropped in that folder is invisible to Jerry.** `scripts/build_dashcam_kb.py` turns it

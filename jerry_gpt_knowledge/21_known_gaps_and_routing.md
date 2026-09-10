@@ -80,11 +80,15 @@ interface and channel rules automatically.
 
 ## 3. Terminology awaiting confirmation
 
-- **非直道抑制 (non-straight-road suppression)** — asked once, unanswered.
-  Industry-general meaning: suppressing ADAS warnings such as LDW/FCW while
-  the vehicle is cornering or off a straight path, to cut false alarms.
-  **The Streamax-specific implementation and thresholds are not documented
-  here** — confirm with the product line before quoting it to a customer.
+- **非直道抑制 (non-straight-road suppression)** — **probably resolved
+  (Sep-2026).** The DMS/ADAS parameter manual documents three distinct
+  turn-suppression controls, and one of them is almost certainly this term:
+  **Lane Departure Suppression** on distraction (suppresses distraction alerts
+  during intentional lane changes), turn-signal suppression on LDW (the left
+  signal suppresses only left departure warnings), and **"Discard the Speed
+  Limit when turning"** on over-speed. Full detail in
+  `25_dms_adas_parameter_tuning.md`. Name the specific control rather than the
+  Chinese phrase, and confirm which one the customer means.
 
 ## 4. Internal systems Jerry has no documentation for
 
