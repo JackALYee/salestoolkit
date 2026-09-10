@@ -226,14 +226,32 @@ feature; and the manual's own premise is that **most false positives come from p
 settings, not the algorithm** — so an alarm-quality complaint is a tuning conversation first.
 It also gives 非直道抑制 a probable mapping (see `21_known_gaps_and_routing.md`).
 
-**Jerry's chat UI renders GFM tables (`templates/jerry.html`).** `md()` is a hand-rolled
-regex renderer, and it had no table support — markdown tables rendered as pipe-separated
-lines, which was very visible once the KB filled with spec tables. `mdTables()` now parses
-pipe tables **before** newlines become `<br>` (otherwise rows are shredded) and **after** the
-inline replacements (so bold/code/links inside cells still work). Alignment markers are
-honoured. Each table is wrapped in `.tblwrap` which owns the horizontal scroll, so a wide
-table never widens the chat column. The parser is streaming-safe — a half-arrived table
-renders what it has and never throws.
+**Jerry's chat renders real markdown (`templates/jerry.html`) — marked + DOMPurify,
+vendored.** The renderer *is* the output format, because every answer is markdown. The
+original hand-rolled `md()` understood only ```` ```code``` ````, `code`, `###`, bold, em,
+links and `-` bullets; **`#`, `##`, `####`, ordered lists, blockquotes, horizontal rules,
+nested lists, strikethrough and tables all reached the user as raw markup.** Adding regexes
+one construct at a time was a losing game, so it now uses **marked** (gfm, breaks) with
+**DOMPurify** sanitising the result — model output is untrusted, and the browser suite
+verifies `<script>`, `onerror` and `javascript:` hrefs are stripped.
+
+**Both libraries are vendored under `assets/vendor/` and loaded from our own origin — not a
+CDN — because most users are in China, where cdnjs/jsdelivr are unreliable.** Do not
+"simplify" this back to a CDN tag.
+
+`mdLegacy()` (the old regex renderer, table support included) is retained and used if the
+scripts fail to load or marked throws, so a bad asset request degrades instead of dumping raw
+markup. marked emits a bare `<table>`; `md()` wraps it in `.tblwrap`, which owns the
+horizontal scroll so a wide table never widens the chat column. Streaming-safe: `md()` is
+called on every chunk and a half-arrived document never throws.
+
+`scripts/test_chat_markdown.py` guards the wiring, the vendored files and the fallback (26
+assertions). The marked path itself needs a DOM and was verified in a browser — 20
+assertions covering every construct above, XSS, and streaming.
+
+**Download buttons are deliberately quiet.** `.dl` was a full-width neon green→blue gradient
+that read as the call to action and dominated the answer it hung off. It is now a subdued
+outline that brightens on hover — a download is an offer, not the point of the message.
 
 **Dashcam specs come from a workbook, via a generator.** `jerry_gpt_knowledge/` also holds
 `Dashcam_Series_Comparison_EN_New_Models.xlsx`, and **the loader globs `*.md` only — an
