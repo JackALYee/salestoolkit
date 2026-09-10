@@ -2,6 +2,11 @@ import re
 import itertools
 
 # --- 1. EXISTING TERMINOLOGY DATABASE ---
+_WALLEY = (
+    "睿哥，狼人杀推推乐咆哮上将军，企业管理学格局打开大师，"
+    "锐明产品发展中心副总经理。<br><br>名言：“哎哟，我烂完了呀....”"
+)
+
 TERMINOLOGY_DB = [
     # Hardware
     { 
@@ -384,6 +389,11 @@ TERMINOLOGY_DB = [
     { "term": "Jerry", "category": "TEAM", "desc": "J总/6哥，商务环球飞行大师，羽毛球网前搞心态国家健将，锐明产品市场总监。<br><br>名言：“我有点爆炸...”", "exact": True },
     { "term": "Ryan", "category": "TEAM", "desc": "堃哥，南山智园爆肝王，全国熬夜加班总冠军，锐明货运产品线总监。<br><br>名言：“干就完了！”", "related": ["Jerry"], "exact": True },
     { "term": "Jack", "category": "TEAM", "desc": "杰克，理工科市场推广练习生，为爱发电型上班族，尽量别找他写PPT，也别带他吃椰子鸡。<br><br>名言：“左边是市场的风，右边是研发的火，把我在中间烤成产品味的串。”", "related": ["Jerry"], "exact": True },
+    # Two spellings are in circulation for the same person. There is no alias
+    # field — a term is matched by its own string — so both get an entry and
+    # share one description, defined once above so the two can never drift.
+    { "term": "Walley", "category": "TEAM", "desc": _WALLEY, "related": ["Jerry", "Worry"], "exact": True },
+    { "term": "Worry",  "category": "TEAM", "desc": _WALLEY, "related": ["Jerry", "Walley"], "exact": True },
 ]
 
 

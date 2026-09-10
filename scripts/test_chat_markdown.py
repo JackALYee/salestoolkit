@@ -65,9 +65,35 @@ for sel in (".body h1", ".body h2", ".body ol", ".body blockquote",
             ".body hr", ".body del", ".body table", ".body .tblwrap"):
     check(f"{sel} styled", sel in html)
 
+print("\ninternal markers never reach the user")
+check("md() strips the ecosystem marker unconditionally",
+      "MARKER_RE" in html and "replace(MARKER_RE, '')" in html)
+check("the marker regex covers the bare and :named forms",
+      r"\[\[ECOSYSTEM_MAP(?::[^\]]*)?\]\]" in html)
+
+print("\ncopy-ready drafts get a copy box")
+check("fenced blocks become copy boxes", 'class="copybox' in html)
+check("email/message fences are labelled", "'Email draft'" in html)
+check("copy button is delegated, not per-render",
+      "document.addEventListener('click'" in html and "copybtn" in html)
+check("clipboard has a non-secure-context fallback", "function fallback()" in html)
+check(".copybox styled", ".body .copybox{" in html)
+jg = (ROOT / "jerry_gpt.py").read_text(encoding="utf-8")
+check("Jerry is told to fence sendable text", "COPY-READY DRAFTS" in jg)
+check("  and to keep commentary outside the fence",
+      "Keep your own commentary OUTSIDE the fence" in jg)
+
+print("\nextras degrade safely (server)")
+srv = (ROOT / "server.py").read_text(encoding="utf-8")
+check("the ecosystem block is guarded", "[extras] ecosystem:" in srv)
+check("a total extras failure still ships a usable clean",
+      '"clean": answer}' in srv and "FAILED, falling back" in srv)
+
 print("\nthe legacy fallback still works on its own (node)")
 start = html.index("  /* GFM pipe tables.")
-end = html.index("  /* ---------- modals ---------- */")
+# stop before the delegated copy-button listener — it touches `document`,
+# which does not exist in plain node
+end = html.index("  /* Copy buttons are delegated")
 js = (
     "function esc(s){return String(s).replace(/&/g,'&amp;')"
     ".replace(/</g,'&lt;').replace(/>/g,'&gt;');}\n"

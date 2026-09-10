@@ -86,6 +86,25 @@
   .body blockquote p{margin:4px 0}
   .body hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   .body del{opacity:.6}
+  /* Copy boxes — a fenced block is something the reader is meant to take. */
+  .body .copybox{margin:12px 0;border:1px solid var(--line);border-radius:8px;
+                 overflow:hidden;background:rgba(0,0,0,.4)}
+  .body .copybox pre{margin:0;border:none;border-radius:0;background:transparent}
+  .body .copyhead{display:flex;align-items:center;justify-content:space-between;
+                  gap:12px;padding:6px 10px 6px 12px;
+                  background:rgba(255,255,255,.04);
+                  border-bottom:1px solid var(--line);
+                  font-size:.71rem;text-transform:uppercase;letter-spacing:.7px;
+                  color:var(--grey)}
+  .body .copybox.msgbox{border-color:rgba(42,245,152,.32)}
+  .body .copybox.msgbox .copyhead{background:rgba(42,245,152,.08);color:var(--green);
+                                  border-bottom-color:rgba(42,245,152,.25)}
+  .body .copybtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+                 color:var(--white);border-radius:5px;padding:3px 10px;cursor:pointer;
+                 font-family:inherit;font-size:.71rem;letter-spacing:.4px;
+                 text-transform:none;width:auto}
+  .body .copybtn:hover{border-color:rgba(42,245,152,.5);color:var(--green)}
+  .body .copybtn.ok{color:var(--green);border-color:rgba(42,245,152,.6)}
   .body strong{color:#F2F6FB}
   .body code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;font-size:.87em}
   .body pre{background:rgba(0,0,0,.4);border:1px solid var(--line);padding:12px;border-radius:8px;
@@ -418,7 +437,16 @@
     });
   }
 
+  /* Internal markers the server normally strips before the text reaches us.
+     Stripped here too, unconditionally: during streaming the raw answer IS
+     rendered (the clean copy only arrives with the final message), and if the
+     server's extras step ever fails the marker would otherwise sit in the
+     answer as literal text. Losing the button is acceptable; showing
+     [[ECOSYSTEM_MAP:DMS]] to a salesperson is not. */
+  var MARKER_RE = /\[\[ECOSYSTEM_MAP(?::[^\]]*)?\]\]/gi;
+
   function md(t) {
+    t = String(t == null ? '' : t).replace(MARKER_RE, '');
     if (!MD_READY) return mdLegacy(t);
     try {
       var html = DOMPurify.sanitize(marked.parse(String(t || '')), {
@@ -432,6 +460,22 @@
       /* links open in a new tab, as they did before */
       html = html.replace(/<a href="(https?:)/g,
                           '<a target="_blank" rel="noopener" href="$1');
+      /* Anything fenced is something the user is meant to take away — an email
+         draft above all. Give every block a copy button, and label the ones
+         Jerry marks as ```email / ```message so a rep can see at a glance
+         which part is the sendable text. */
+      html = html.replace(
+        /<pre><code(?: class="language-([a-z]+)")?>/gi,
+        function (m, lang) {
+          var l = (lang || '').toLowerCase();
+          var isMsg = (l === 'email' || l === 'message' || l === 'reply');
+          return '<div class="copybox' + (isMsg ? ' msgbox' : '') + '">' +
+                 '<div class="copyhead"><span>' +
+                 (isMsg ? (l === 'email' ? 'Email draft' : 'Message draft') : (l || 'text')) +
+                 '</span><button class="copybtn" type="button">Copy</button></div>' +
+                 '<pre><code>';
+        });
+      html = html.replace(/<\/code><\/pre>/gi, '</code></pre></div>');
       return html;
     } catch (e) {
       return mdLegacy(t);
@@ -456,6 +500,32 @@
     s = s.replace(/(<\/table><\/div>)(\s*<br>)+/g, '$1');
     return s;
   }
+
+  /* Copy buttons are delegated: message bodies are rebuilt on every streamed
+     chunk, so per-button listeners would be re-attached hundreds of times. */
+  document.addEventListener('click', function (e) {
+    if (!e.target.classList || !e.target.classList.contains('copybtn')) return;
+    var box = e.target.closest('.copybox');
+    var code = box && box.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function () {
+      e.target.textContent = 'Copied';
+      e.target.classList.add('ok');
+      setTimeout(function () {
+        e.target.textContent = 'Copy'; e.target.classList.remove('ok');
+      }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      /* clipboard API needs a secure context; select the text so Ctrl-C works */
+      var r = document.createRange(); r.selectNodeContents(code);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      done();
+    }
+  });
 
   /* ---------- modals ---------- */
   function open_(id) { $(id).classList.add('show'); }

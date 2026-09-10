@@ -249,6 +249,28 @@ called on every chunk and a half-arrived document never throws.
 assertions). The marked path itself needs a DOM and was verified in a browser — 20
 assertions covering every construct above, XSS, and streaming.
 
+**Response extras fail as a unit, so guard every part.** `_response_extras()` builds images,
+downloads, artifacts and the ecosystem map, and the caller wraps the whole call in ONE
+try/except. The ecosystem block was the only section without its own guard — a throw there
+cost the user *everything*: the `[[ECOSYSTEM_MAP:…]]` marker left visible as literal text
+**and** every download button gone. Each section is now individually guarded, and the
+failure path ships `{"clean": answer, …}` rather than `{}` — a bare `{}` is **truthy in JS**,
+so the client accepted it as real extras, fell back to the unstripped answer and rendered no
+buttons.
+
+**`md()` strips internal markers unconditionally, client-side.** Belt and braces: during
+streaming the client renders the *raw* answer (the cleaned copy only arrives with the final
+`done` message), so the marker would flash regardless; and if the server's extras step ever
+fails again, losing the button is acceptable but showing `[[ECOSYSTEM_MAP:DMS]]` to a
+salesperson is not.
+
+**Copy boxes for sendable text.** Any fenced block becomes a bordered box with a Copy button;
+` ```email `, ` ```message ` and ` ```reply ` are labelled and given the green accent.
+`jerry_gpt.py` instructs Jerry to fence email/chat drafts that way and to keep commentary
+outside the fence. The click handler is **delegated** — message bodies are rebuilt on every
+streamed chunk, so per-button listeners would be re-attached hundreds of times — and there is
+a text-selection fallback for non-secure contexts where the clipboard API is unavailable.
+
 **Download buttons are deliberately quiet.** `.dl` was a full-width neon green→blue gradient
 that read as the call to action and dominated the answer it hung off. It is now a subdued
 outline that brightens on hover — a download is an offer, not the point of the message.

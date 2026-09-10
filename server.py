@@ -845,11 +845,18 @@ def _response_extras(answer: str, question: str) -> dict:
         except Exception as exc:
             print(f"[extras] artifacts: {exc}", file=sys.stderr, flush=True)
 
+    # Guarded like every other section. It used to be bare, and because the
+    # caller wraps this whole function in one try/except, a throw here cost the
+    # user *all* extras at once — the ecosystem marker left visible in the text
+    # AND every download button gone.
     if _topology is not None:
-        m = _jerry._ECO_RE.search(answer or "") if hasattr(_jerry, "_ECO_RE") else None
-        if m:
-            out["ecosystem"] = (m.group(1) or "").strip()
-            out["clean"] = _jerry._ECO_RE.sub("", out["clean"]).strip()
+        try:
+            m = _jerry._ECO_RE.search(answer or "") if hasattr(_jerry, "_ECO_RE") else None
+            if m:
+                out["ecosystem"] = (m.group(1) or "").strip()
+                out["clean"] = _jerry._ECO_RE.sub("", out["clean"]).strip()
+        except Exception as exc:                                     # noqa: BLE001
+            print(f"[extras] ecosystem: {exc}", file=sys.stderr, flush=True)
 
     return out
 
@@ -1149,11 +1156,21 @@ async def api_chat(request: Request):
                         }
                     except Exception:
                         pass
-            extras = {}
+            # A bare {} here is TRUTHY in JS, so the client would take it as
+            # real extras, fall back to the unstripped answer and render no
+            # buttons. Always ship a usable `clean` so a failure costs the
+            # buttons, never the readability of the answer.
+            extras = {"images": [], "downloads": [], "artifacts": [],
+                      "ecosystem": None, "clean": answer}
             try:
                 extras = _response_extras(answer, question_text)
             except Exception as exc:
-                print(f"[extras] {exc}", file=sys.stderr, flush=True)
+                print(f"[extras] FAILED, falling back: {exc}",
+                      file=sys.stderr, flush=True)
+                try:
+                    extras["clean"] = _jerry._ECO_RE.sub("", answer).strip()
+                except Exception:                                    # noqa: BLE001
+                    pass
             yield _sse({"done": True, "model": model, "session_id": session_id,
                         "usage": usage, "extras": extras})
         except Exception as exc:
