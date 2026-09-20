@@ -148,6 +148,33 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
+**Jerry can recommend the division's web resources (`26_trucking_hub_and_links.md`,
+Sep-2026).** Distilled from `~/Desktop/Streamax/Trucking Website` — the internal hub at
+**https://www.streamax-trucking.com/**, whose `tools/shell.py` → `SECTIONS` is the single
+source of truth for its four doors: the **Sales Toolkit**
+(`https://streamax-salestoolkit.com`, Streamax sign-in — the site Jerry runs on), the **eSIM**
+page (`/esim/`, open, with the live pool calculator and 189-country coverage), the **Customer
+Onboarding Portal** (`/customer/`, customer sign-in), and **Sentinel** (`/sentinel/`, open,
+also at `streamax-sentinel.com`). Jerry previously knew all four *topics* and none of the
+*addresses* — the KB had zero mentions of `streamax-trucking.com`.
+
+Rules encoded in both the KB file and `jerry_gpt.py`'s `<interface_capabilities>`: use the
+URLs verbatim, **keep the trailing slash** on `/esim/`, `/customer/` and `/sentinel/`, flag the
+two that need a sign-in, and **never invent a streamax.com deep link** — that host answers
+unknown paths with **HTTP 200 and its own 404 page**, so a fabricated URL passes a naive status
+check and only fails in front of a customer. For anything customer-facing, quote
+`streamax-sentinel.com` rather than the internal `/sentinel/` path.
+
+**The hub prints a shared demo sign-in for the Customer Portal; the password is deliberately
+NOT in the KB.** This repo is on GitHub and has needed a credential clean-up before, so Jerry
+points people at the hub page to read it instead. `scripts/test_resource_links.py` asserts that
+(and `--live` fetches every URL, checking content type as well as status, because a .docx that
+returns HTML is a 404 wearing a 200).
+
+**"The Loop"** — a self-contained 50 MB HTML file with interactive 3D models of mounted
+products — lives in that repo too. It is `noindex` and has **no URL**; Jerry is told it is a
+local file, not a link.
+
 **GDPR roles & contracting (`24_gdpr_roles_and_contracting.md`, Sep-2026)** is the legal
 and commercial half of the pair — `23_...` is the technical architecture. Distilled from
 `GDPR.pdf` (7-page EU regulatory briefing) and the deck
