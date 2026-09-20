@@ -105,6 +105,14 @@ def _init_schema(conn) -> None:
                 created_at TIMESTAMPTZ DEFAULT NOW()
             );
         """)
+        # Carried over from the retired Google Sheet, which recorded both and
+        # Postgres did not. ADD COLUMN IF NOT EXISTS so an existing table is
+        # upgraded in place on the next connect — no migration step to forget.
+        cur.execute("""
+            ALTER TABLE jerry_gpt_chats
+                ADD COLUMN IF NOT EXISTS is_leadership BOOLEAN DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS sensitive_flagged BOOLEAN DEFAULT FALSE;
+        """)
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_jerry_user_session
                 ON jerry_gpt_chats(user_email, session_id, created_at);
@@ -208,6 +216,8 @@ def save_turn(
     cache_read_tokens: int = 0,
     cache_creation_tokens: int = 0,
     cost_usd: float = 0.0,
+    is_leadership: bool = False,
+    sensitive_flagged: bool = False,
 ) -> bool:
     """Persist a user message + assistant response pair. Returns True on success.
 
@@ -226,6 +236,7 @@ def save_turn(
             user_message, assistant_message, model, length,
             input_tokens, output_tokens, cache_read_tokens,
             cache_creation_tokens, cost_usd,
+            is_leadership, sensitive_flagged,
         )
     except psycopg2.OperationalError:
         conn = _retry_get_connection()
@@ -237,6 +248,7 @@ def save_turn(
                 user_message, assistant_message, model, length,
                 input_tokens, output_tokens, cache_read_tokens,
                 cache_creation_tokens, cost_usd,
+                is_leadership, sensitive_flagged,
             )
         except Exception as e:
             print(f"[JERRY_GPT_DB_ERROR] save (retry) failed: "
@@ -253,6 +265,7 @@ def _save_turn_inner(
     user_message, assistant_message, model, length,
     input_tokens, output_tokens, cache_read_tokens,
     cache_creation_tokens, cost_usd,
+    is_leadership=False, sensitive_flagged=False,
 ) -> bool:
     with conn.cursor() as cur:
         cur.execute(
@@ -260,18 +273,21 @@ def _save_turn_inner(
             INSERT INTO jerry_gpt_chats
                 (user_email, user_name, role, content, model, length,
                  input_tokens, output_tokens, cache_read_tokens,
-                 cache_creation_tokens, cost_usd, session_id)
+                 cache_creation_tokens, cost_usd, session_id,
+                 is_leadership, sensitive_flagged)
             VALUES
                 (%s, %s, 'user', %s, NULL, %s,
-                 0, 0, 0, 0, 0, %s),
+                 0, 0, 0, 0, 0, %s, %s, %s),
                 (%s, %s, 'assistant', %s, %s, %s,
-                 %s, %s, %s, %s, %s, %s)
+                 %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 user_email, user_name, user_message, length, session_id,
+                is_leadership, sensitive_flagged,
                 user_email, user_name, assistant_message, model, length,
                 input_tokens, output_tokens, cache_read_tokens,
                 cache_creation_tokens, cost_usd, session_id,
+                is_leadership, sensitive_flagged,
             ),
         )
     return True
@@ -426,3 +442,150 @@ def list_past_sessions(user_email: str, limit: int = 20) -> list[dict]:
         print(f"[JERRY_GPT_DB_ERROR] list_past_sessions failed: "
               f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
         return []
+
+
+# ---------------------------------------------------------------------------
+# Jerry log portal (/jerrylog)
+#
+# Read-only, admin-wide queries. Everything above is scoped to one user's own
+# history; these deliberately are not, which is why the route that calls them
+# is gated to the LEADERSHIP list.
+# ---------------------------------------------------------------------------
+
+def _portal_conn():
+    conn = _get_connection()
+    if conn is None:
+        return None
+    try:                                   # cheap liveness probe
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+        return conn
+    except psycopg2.OperationalError:
+        return _retry_get_connection()
+
+
+def log_stats() -> dict:
+    """Headline numbers for the portal."""
+    conn = _portal_conn()
+    if conn is None:
+        return {}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*) FILTER (WHERE role='user'),
+                       COUNT(DISTINCT session_id),
+                       COUNT(DISTINCT user_email),
+                       MIN(created_at), MAX(created_at),
+                       COALESCE(SUM(cost_usd), 0),
+                       COUNT(*) FILTER (WHERE role='user' AND sensitive_flagged)
+                FROM jerry_gpt_chats
+            """)
+            q, s, u, lo, hi, cost, sens = cur.fetchone()
+            cur.execute("""SELECT user_email, COUNT(*) FROM jerry_gpt_chats
+                           WHERE role='user' GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
+            top = [{"user": e, "n": n} for e, n in cur.fetchall()]
+            cur.execute("""SELECT model, COUNT(*) FROM jerry_gpt_chats
+                           WHERE role='assistant' AND model <> ''
+                           GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
+            models = [{"model": m, "n": n} for m, n in cur.fetchall()]
+            cur.execute("""
+                SELECT to_char(date_trunc('week', created_at), 'YYYY-MM-DD') wk,
+                       COUNT(*) FILTER (WHERE role='user')
+                FROM jerry_gpt_chats
+                WHERE created_at > NOW() - INTERVAL '120 days'
+                GROUP BY 1 ORDER BY 1
+            """)
+            weekly = [{"week": w, "n": n} for w, n in cur.fetchall()]
+        return {
+            "questions": q or 0, "sessions": s or 0, "users": u or 0,
+            "first": str(lo)[:19] if lo else "", "last": str(hi)[:19] if hi else "",
+            "cost_usd": float(cost or 0), "sensitive": sens or 0,
+            "top_users": top, "models": models, "weekly": weekly,
+        }
+    except Exception as e:                                           # noqa: BLE001
+        print(f"[JERRY_GPT_DB_ERROR] log_stats: {e}", file=sys.stderr, flush=True)
+        return {}
+
+
+def log_search(q: str = "", user: str = "", model: str = "",
+               since: str = "", until: str = "",
+               only_sensitive: bool = False, only_leadership: bool = False,
+               limit: int = 50, offset: int = 0) -> dict:
+    """A page of question/answer pairs, newest first.
+
+    The assistant row is joined on (session_id, id) rather than matched by
+    position: a turn writes both rows in one statement, so the answer is always
+    the next id in the same session.
+    """
+    conn = _portal_conn()
+    if conn is None:
+        return {"total": 0, "rows": []}
+    where, args = ["u.role = 'user'"], []
+    if q:
+        where.append("(u.content ILIKE %s OR a.content ILIKE %s)")
+        args += [f"%{q}%", f"%{q}%"]
+    if user:
+        where.append("u.user_email = %s"); args.append(user)
+    if model:
+        where.append("a.model = %s"); args.append(model)
+    if since:
+        where.append("u.created_at >= %s"); args.append(since)
+    if until:
+        where.append("u.created_at < (%s::date + 1)"); args.append(until)
+    if only_sensitive:
+        where.append("u.sensitive_flagged")
+    if only_leadership:
+        where.append("u.is_leadership")
+    sql_where = " AND ".join(where)
+
+    base = f"""
+        FROM jerry_gpt_chats u
+        LEFT JOIN LATERAL (
+            SELECT content, model FROM jerry_gpt_chats a2
+            WHERE a2.session_id = u.session_id AND a2.role = 'assistant'
+              AND a2.id > u.id
+            ORDER BY a2.id LIMIT 1
+        ) a ON TRUE
+        WHERE {sql_where}
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT COUNT(*) {base}", args)
+            total = cur.fetchone()[0]
+            cur.execute(f"""
+                SELECT u.id, u.created_at, u.user_email, u.session_id,
+                       u.content, a.content, a.model,
+                       u.is_leadership, u.sensitive_flagged, u.cost_usd
+                {base}
+                ORDER BY u.created_at DESC, u.id DESC
+                LIMIT %s OFFSET %s
+            """, args + [max(1, min(200, limit)), max(0, offset)])
+            rows = [{
+                "id": r[0], "at": str(r[1])[:19], "user": r[2], "session": r[3],
+                "question": r[4] or "", "answer": r[5] or "", "model": r[6] or "",
+                "leadership": bool(r[7]), "sensitive": bool(r[8]),
+                "cost": float(r[9] or 0),
+            } for r in cur.fetchall()]
+        return {"total": total, "rows": rows}
+    except Exception as e:                                           # noqa: BLE001
+        print(f"[JERRY_GPT_DB_ERROR] log_search: {e}", file=sys.stderr, flush=True)
+        return {"total": 0, "rows": []}
+
+
+def log_filters() -> dict:
+    """Distinct values for the filter dropdowns."""
+    conn = _portal_conn()
+    if conn is None:
+        return {"users": [], "models": []}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT DISTINCT user_email FROM jerry_gpt_chats
+                           WHERE user_email <> '' ORDER BY 1""")
+            users = [u for (u,) in cur.fetchall()]
+            cur.execute("""SELECT DISTINCT model FROM jerry_gpt_chats
+                           WHERE model IS NOT NULL AND model <> '' ORDER BY 1""")
+            models = [m for (m,) in cur.fetchall()]
+        return {"users": users, "models": models}
+    except Exception as e:                                           # noqa: BLE001
+        print(f"[JERRY_GPT_DB_ERROR] log_filters: {e}", file=sys.stderr, flush=True)
+        return {"users": [], "models": []}

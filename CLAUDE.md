@@ -324,6 +324,29 @@ When keying spec rows, note the workbook's labels are only unique by full path �
 `Type` appears under both *GPS Positioning* and *Storage*, and keying on the leaf silently
 printed the SD-card spec as the GPS type.
 
+**The Jerry log lives at `/jerrylog`, not in Google Sheets (Sep-2026).** The Sheet is
+retired: `_record_turn` no longer calls `usage_logger.log_query()`, and every turn now lands
+in Postgres carrying `is_leadership` and `sensitive_flagged` — two columns the Sheet had and
+`jerry_gpt_chats` did not. `usage_logger` is still imported for `_estimate_cost_usd` and
+`_is_pricing_sensitive`; only the destination changed. **With no `JERRY_GPT_DB_URL` there is
+now nowhere to log at all**, so that case prints `[history] NOT LOGGED` — the Sheet used to be
+a silent safety net and no longer is.
+
+**The portal is LEADERSHIP-gated, harder than anything else on the site.** It shows every
+user's questions, so `require_leadership()` demands a `resolve_leadership()` pass on top of a
+valid session — same definition Jerry uses for clearance, so there is one list. A
+non-leadership user gets a styled 403 naming their account, not a bare error. `/jerrylog`,
+`/api/jerrylog`, `/api/jerrylog/meta` and `/api/jerrylog/export` (CSV) are all behind it.
+
+**Migrating the Sheet: the tab is `queries`, not the first sheet.** Exporting without
+`&sheet=queries` returns an *empty file with HTTP 200*, which reads exactly like an access
+problem and cost a lot of time. `scripts/migrate_sheet_to_portal.py` is idempotent — it
+backfills the two new columns for existing rows and inserts only turns the Sheet has and
+Postgres lacks. The two stores had genuinely diverged: **41 turns existed only in the Sheet**
+(`save_turn` retries a stale pooled connection once; when the retry also failed the turn was
+dropped), while Postgres held ~225 questions the Sheet no longer had, because rows were
+deleted by hand and Postgres logging started earlier. Run it with `--dry-run` first.
+
 **Knowledge maintained from the usage log (Sep-2026).** The 610 logged Q&A pairs in
 `jerry_gpt_chats` are the feedback loop for the knowledge base — read them before deciding
 what to add. That review produced three files and one standing finding:

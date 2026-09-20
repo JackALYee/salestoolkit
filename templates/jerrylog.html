@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jerry Log — Streamax Sales Toolkit</title>
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--green:#2AF598;--blue:#009EFD;--bg:#050810;--panel:#0B1221;--grey:#A0AEC0;
+        --white:#E6EAF0;--line:rgba(255,255,255,.08);--warn:#FFB800}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;color:var(--white);
+       background:var(--bg);background-image:radial-gradient(circle at 50% -15%,#0B1221,#050810)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+       padding:13px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;
+       background:rgba(5,8,16,.94);backdrop-filter:blur(8px);z-index:20}
+  .top .brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:.95rem}
+  .top .brand img{height:24px}
+  .top .who{color:var(--grey);font-size:.76rem}
+  .top a{color:var(--grey);font-size:.8rem;text-decoration:none}
+  .top a:hover{color:var(--white)}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 22px 70px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:16px}
+  .stat{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .stat b{display:block;font-size:1.32rem;line-height:1.2;color:var(--green);font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.9px;color:var(--grey);margin-top:3px}
+  .stat.warn b{color:var(--warn)}
+
+  .spark{display:flex;align-items:flex-end;gap:3px;height:46px;margin:0 0 16px;
+         background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .spark i{flex:1;background:linear-gradient(180deg,var(--green),rgba(42,245,152,.25));
+           border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+  .spark i:hover{opacity:1}
+
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  input,select{background:rgba(20,25,40,.85);border:1px solid rgba(255,255,255,.1);color:var(--white);
+               border-radius:7px;padding:7px 10px;font-family:inherit;font-size:.83rem;outline:none;
+               color-scheme:dark}
+  input:focus,select:focus{border-color:var(--green)}
+  input#q{flex:1;min-width:190px}
+  .chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:var(--grey);
+        border-radius:7px;padding:7px 11px;font-size:.78rem;cursor:pointer;font-family:inherit;
+        user-select:none;white-space:nowrap}
+  .chip.on{border-color:rgba(42,245,152,.55);color:var(--green);background:rgba(42,245,152,.08)}
+  .btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);color:var(--white);
+       border-radius:7px;padding:7px 13px;font-size:.81rem;cursor:pointer;font-family:inherit;
+       text-decoration:none;display:inline-block}
+  .btn:hover{border-color:rgba(42,245,152,.5);color:var(--green)}
+
+  .count{color:var(--grey);font-size:.79rem;margin:0 0 9px}
+  .rows{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:rgba(0,0,0,.2)}
+  .row{border-bottom:1px solid var(--line);padding:11px 14px;cursor:pointer;transition:background .12s}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:rgba(255,255,255,.028)}
+  .row-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .row-at{color:var(--grey);font-size:.73rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .row-u{color:var(--blue);font-size:.76rem;white-space:nowrap}
+  .row-q{flex:1;min-width:220px;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row.open .row-q{white-space:normal}
+  .tag{font-size:.63rem;text-transform:uppercase;letter-spacing:.7px;padding:2px 6px;border-radius:4px;
+       border:1px solid;white-space:nowrap}
+  .tag.lead{color:var(--green);border-color:rgba(42,245,152,.4);background:rgba(42,245,152,.07)}
+  .tag.sens{color:var(--warn);border-color:rgba(255,184,0,.4);background:rgba(255,184,0,.07)}
+  .tag.mdl{color:var(--grey);border-color:var(--line)}
+  .detail{display:none;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .row.open .detail{display:block}
+  .detail h4{margin:0 0 4px;font-size:.68rem;text-transform:uppercase;letter-spacing:.9px;color:var(--grey)}
+  .detail pre{margin:0 0 12px;white-space:pre-wrap;word-break:break-word;font-family:inherit;
+              font-size:.86rem;line-height:1.6;color:var(--white)}
+  .detail .meta{color:var(--grey);font-size:.72rem}
+
+  .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:16px}
+  .empty,.err{padding:34px 16px;text-align:center;color:var(--grey);font-size:.88rem}
+  .err{color:#ff8b95}
+  @media(max-width:620px){.row-q{white-space:normal}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">
+      <img src="/assets/streamax%20logo.png" alt="Streamax" onerror="this.style.display='none'">
+      <span>Jerry Log</span>
+      <span class="who" id="who"></span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a class="btn" id="csv" href="#">Export CSV</a>
+      <a href="/">&larr; Toolkit</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="spark" id="spark" title="questions per week, last 120 days"></div>
+
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search questions and answers…">
+      <select id="user"><option value="">Everyone</option></select>
+      <select id="model"><option value="">Any model</option></select>
+      <input id="since" type="date" title="From">
+      <input id="until" type="date" title="To">
+      <button class="chip" id="fSens" type="button">Pricing-sensitive</button>
+      <button class="chip" id="fLead" type="button">Leadership</button>
+      <button class="chip" id="reset" type="button">Reset</button>
+    </div>
+
+    <p class="count" id="count"></p>
+    <div class="rows" id="rows"></div>
+    <div class="pager">
+      <button class="btn" id="prev" type="button">&larr; Newer</button>
+      <span class="count" id="page" style="margin:0"></span>
+      <button class="btn" id="next" type="button">Older &rarr;</button>
+    </div>
+  </div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var LIMIT = 50, offset = 0, total = 0, sens = false, lead = false, timer = null;
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function params() {
+  var p = new URLSearchParams();
+  if ($('q').value.trim())     p.set('q', $('q').value.trim());
+  if ($('user').value)         p.set('user', $('user').value);
+  if ($('model').value)        p.set('model', $('model').value);
+  if ($('since').value)        p.set('since', $('since').value);
+  if ($('until').value)        p.set('until', $('until').value);
+  if (sens)                    p.set('sensitive', '1');
+  if (lead)                    p.set('leadership', '1');
+  return p;
+}
+function money(n) { return '$' + (Math.round(n * 100) / 100).toFixed(2); }
+
+function paintMeta(m) {
+  var s = m.stats || {};
+  $('who').textContent = s.first ? (s.first.slice(0, 10) + ' → ' + s.last.slice(0, 10)) : '';
+  $('stats').innerHTML =
+    stat(s.questions, 'questions') + stat(s.users, 'people') +
+    stat(s.sessions, 'sessions') +
+    stat(s.sensitive, 'pricing-sensitive', 'warn') +
+    stat(money(s.cost_usd || 0), 'est. API cost');
+  var w = s.weekly || [], max = 1;
+  w.forEach(function (x) { if (x.n > max) max = x.n; });
+  $('spark').innerHTML = w.map(function (x) {
+    return '<i style="height:' + Math.max(2, Math.round(x.n / max * 100)) + '%" title="' +
+           x.week + ': ' + x.n + '"></i>';
+  }).join('') || '';
+  var f = m.filters || {};
+  (f.users || []).forEach(function (u) {
+    $('user').insertAdjacentHTML('beforeend', '<option>' + esc(u) + '</option>');
+  });
+  (f.models || []).forEach(function (u) {
+    $('model').insertAdjacentHTML('beforeend', '<option>' + esc(u) + '</option>');
+  });
+}
+function stat(v, label, cls) {
+  return '<div class="stat ' + (cls || '') + '"><b>' + esc(v) + '</b><span>' + label + '</span></div>';
+}
+
+function load() {
+  var p = params(); p.set('limit', LIMIT); p.set('offset', offset);
+  $('csv').href = '/api/jerrylog/export?' + params().toString();
+  fetch('/api/jerrylog?' + p.toString(), {credentials: 'same-origin'})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.error) { $('rows').innerHTML = '<div class="err">' + esc(d.error) + '</div>'; return; }
+      total = d.total || 0;
+      $('count').textContent = total
+        ? (total.toLocaleString() + ' question' + (total === 1 ? '' : 's') + ' match')
+        : '';
+      if (!d.rows.length) {
+        $('rows').innerHTML = '<div class="empty">Nothing matches these filters.</div>';
+      } else {
+        $('rows').innerHTML = d.rows.map(function (r) {
+          return '<div class="row" data-id="' + r.id + '">' +
+            '<div class="row-h">' +
+              '<span class="row-at">' + esc(r.at) + '</span>' +
+              '<span class="row-u">' + esc(r.user) + '</span>' +
+              '<span class="row-q">' + esc(r.question) + '</span>' +
+              (r.leadership ? '<span class="tag lead">leadership</span>' : '') +
+              (r.sensitive ? '<span class="tag sens">sensitive</span>' : '') +
+              (r.model ? '<span class="tag mdl">' + esc(r.model) + '</span>' : '') +
+            '</div>' +
+            '<div class="detail">' +
+              '<h4>Question</h4><pre>' + esc(r.question) + '</pre>' +
+              '<h4>Answer</h4><pre>' + esc(r.answer || '(no answer recorded)') + '</pre>' +
+              '<p class="meta">session ' + esc(r.session) +
+                (r.cost ? ' · est. ' + money(r.cost) : '') + '</p>' +
+            '</div></div>';
+        }).join('');
+      }
+      var from = total ? offset + 1 : 0, to = Math.min(offset + LIMIT, total);
+      $('page').textContent = total ? (from + '–' + to + ' of ' + total.toLocaleString()) : '';
+      $('prev').disabled = offset <= 0;
+      $('next').disabled = offset + LIMIT >= total;
+    })
+    .catch(function () {
+      $('rows').innerHTML = '<div class="err">Could not reach the server.</div>';
+    });
+}
+
+$('rows').addEventListener('click', function (e) {
+  var row = e.target.closest ? e.target.closest('.row') : null;
+  if (row) row.classList.toggle('open');
+});
+function rerun() { offset = 0; load(); }
+$('q').addEventListener('input', function () {
+  clearTimeout(timer); timer = setTimeout(rerun, 280);
+});
+['user', 'model', 'since', 'until'].forEach(function (id) {
+  $(id).addEventListener('change', rerun);
+});
+$('fSens').addEventListener('click', function () {
+  sens = !sens; this.classList.toggle('on', sens); rerun();
+});
+$('fLead').addEventListener('click', function () {
+  lead = !lead; this.classList.toggle('on', lead); rerun();
+});
+$('reset').addEventListener('click', function () {
+  $('q').value = ''; $('user').value = ''; $('model').value = '';
+  $('since').value = ''; $('until').value = '';
+  sens = lead = false;
+  $('fSens').classList.remove('on'); $('fLead').classList.remove('on');
+  rerun();
+});
+$('prev').addEventListener('click', function () {
+  offset = Math.max(0, offset - LIMIT); load(); window.scrollTo(0, 0);
+});
+$('next').addEventListener('click', function () {
+  if (offset + LIMIT < total) { offset += LIMIT; load(); window.scrollTo(0, 0); }
+});
+
+fetch('/api/jerrylog/meta', {credentials: 'same-origin'})
+  .then(function (r) { return r.json(); })
+  .then(function (m) { if (!m.error) paintMeta(m); })
+  .catch(function () {});
+load();
+</script>
+</body>
+</html>

@@ -168,8 +168,14 @@ rec = logged()
 check("omitting them still falls back (Streamlit path)", rec["user_email"] == "")
 
 src = pathlib.Path(__file__).resolve().parent.parent.joinpath("server.py").read_text()
-check("server.py passes user_email to log_query", "user_email=(user if" in src)
-check("server.py passes user_name to log_query", "user_name=user," in src)
+# The Google Sheet was retired on 2026-09-20: server.py no longer calls
+# log_query at all. usage_logger keeps its explicit-identity behaviour (tested
+# above) because the Streamlit app still uses it, but the website's identity
+# now flows into Postgres and is read at /jerrylog.
+check("server.py no longer calls log_query", "_usage.log_query(" not in src)
+check("server.py passes the identity to chat history", "user_email=user," in src)
+check("server.py records is_leadership on the turn",
+      "is_leadership=bool(is_leadership)" in src)
 check("log_query no longer reads session_state for identity",
       "st.session_state.get(\"user_email\")" not in
       pathlib.Path(__file__).resolve().parent.parent.joinpath("usage_logger.py").read_text())

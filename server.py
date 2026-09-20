@@ -29,6 +29,9 @@ import os
 import sys
 import time
 import types
+import csv
+import io
+from html import escape as html_escape
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -138,7 +141,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "9.7.7 (2026)"
+APP_VERSION = "9.8.8 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -498,6 +501,102 @@ def account_page(request: Request):
     if not current_user(request):
         return RedirectResponse("/login?next=/account", status_code=302)
     return HTMLResponse(_page("account.html"))
+
+
+_DENIED_HTML = """<!doctype html><html><head><meta charset="utf-8">
+<title>Jerry Log — leadership only</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      font-family:Inter,system-ui,sans-serif;background:#050810;color:#E6EAF0;padding:24px}
+ .c{max-width:440px;text-align:center}
+ h1{font-size:1.35rem;margin:0 0 10px}
+ p{color:#A0AEC0;font-size:.92rem;line-height:1.65;margin:0 0 8px}
+ code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:4px;font-size:.86em}
+ a{display:inline-block;margin-top:18px;color:#2AF598;text-decoration:none;font-size:.88rem}
+</style></head><body><div class="c">
+ <h1>This page is for the leadership team</h1>
+ <p>The Jerry log holds every question the company has asked, including other
+    people's conversations, so access is limited to the LEADERSHIP list.</p>
+ <p>You are signed in as <code>__USER__</code>.</p>
+ <a href="/">&larr; Back to the Sales Toolkit</a>
+</div></body></html>"""
+
+
+# ── Jerry log portal — LEADERSHIP only ──────────────────────────────────────
+# This is the whole company's question history, including other people's
+# conversations, so it is gated harder than anything else on the site: being
+# signed in is not enough, the address must be on the LEADERSHIP list.
+# `resolve_leadership` is the same check Jerry uses for clearance, so there is
+# one definition of who counts.
+
+def require_leadership(request: Request) -> str:
+    user = require_user(request)
+    if not _login.resolve_leadership(user):
+        print(f"[JERRYLOG] denied for {user}", file=sys.stderr, flush=True)
+        raise HTTPException(status_code=403, detail="leadership only")
+    return user
+
+
+@app.get("/jerrylog", response_class=HTMLResponse)
+def page_jerrylog(request: Request):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/login?next=/jerrylog", status_code=302)
+    if not _login.resolve_leadership(user):
+        # A plain 403 body reads like a broken page. Say who it is for and
+        # give a way back, and name the account so a wrong-account sign-in is
+        # obvious rather than mystifying.
+        return HTMLResponse(_DENIED_HTML.replace("__USER__", html_escape(user)),
+                            status_code=403)
+    return HTMLResponse(_page("jerrylog.html"))
+
+
+@app.get("/api/jerrylog")
+def api_jerrylog(request: Request, q: str = "", user: str = "", model: str = "",
+                 since: str = "", until: str = "", sensitive: int = 0,
+                 leadership: int = 0, limit: int = 50, offset: int = 0):
+    require_leadership(request)
+    if _history is None or not _history_on():
+        return JSONResponse({"error": "No database configured — set JERRY_GPT_DB_URL."}, 503)
+    return _history.log_search(
+        q=q.strip(), user=user.strip(), model=model.strip(),
+        since=since.strip(), until=until.strip(),
+        only_sensitive=bool(sensitive), only_leadership=bool(leadership),
+        limit=limit, offset=offset)
+
+
+@app.get("/api/jerrylog/meta")
+def api_jerrylog_meta(request: Request):
+    require_leadership(request)
+    if _history is None or not _history_on():
+        return JSONResponse({"error": "No database configured — set JERRY_GPT_DB_URL."}, 503)
+    return {"stats": _history.log_stats(), "filters": _history.log_filters()}
+
+
+@app.get("/api/jerrylog/export")
+def api_jerrylog_export(request: Request, q: str = "", user: str = "",
+                        model: str = "", since: str = "", until: str = "",
+                        sensitive: int = 0, leadership: int = 0):
+    """CSV of the current filter — the one thing the Google Sheet was good at."""
+    require_leadership(request)
+    if _history is None or not _history_on():
+        return JSONResponse({"error": "No database configured."}, 503)
+    data = _history.log_search(
+        q=q.strip(), user=user.strip(), model=model.strip(),
+        since=since.strip(), until=until.strip(),
+        only_sensitive=bool(sensitive), only_leadership=bool(leadership),
+        limit=200, offset=0)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["timestamp", "user_email", "is_leadership", "sensitive_flagged",
+                "model", "session_id", "question", "answer", "cost_usd"])
+    for r in data["rows"]:
+        w.writerow([r["at"], r["user"], r["leadership"], r["sensitive"],
+                    r["model"], r["session"], r["question"], r["answer"], r["cost"]])
+    return Response(
+        content=buf.getvalue(), media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="jerry-log.csv"'})
 
 
 @app.get("/mailer", response_class=HTMLResponse)
@@ -923,6 +1022,14 @@ def _record_turn(user, session_id, question, answer, model, length,
                 usage["cache_read"], usage["cache_creation"])
         except Exception:                                            # noqa: BLE001
             pass
+    # The pricing-keyword heuristic still runs; only its destination changed.
+    sensitive = False
+    if _usage is not None:
+        try:
+            sensitive = bool(_usage._is_pricing_sensitive(question or ""))
+        except Exception:                                            # noqa: BLE001
+            pass
+
     if _history_on() and session_id:
         try:
             _history.save_turn(
@@ -933,24 +1040,21 @@ def _record_turn(user, session_id, question, answer, model, length,
                 cache_read_tokens=usage["cache_read"],
                 cache_creation_tokens=usage["cache_creation"],
                 cost_usd=cost,
+                is_leadership=bool(is_leadership),
+                sensitive_flagged=sensitive,
             )
         except Exception as exc:                                     # noqa: BLE001
             print(f"[history] save failed: {exc}", file=sys.stderr, flush=True)
-    if _usage is not None:
-        try:
-            _usage.log_query(
-                question=question, model=model, length=length,
-                answer=answer, is_leadership=is_leadership,
-                input_tokens=usage["input"], output_tokens=usage["output"],
-                cache_read_tokens=usage["cache_read"],
-                cache_creation_tokens=usage["cache_creation"],
-                # Explicit: there is no Streamlit session here, so the logger
-                # cannot look the user up itself.
-                user_email=(user if "@" in user else ""),
-                user_name=user,
-            )
-        except Exception as exc:                                     # noqa: BLE001
-            print(f"[usage] log failed: {exc}", file=sys.stderr, flush=True)
+    else:
+        # Without a database there is now nowhere to log. Say so loudly — the
+        # Google Sheet used to be the silent safety net and no longer is.
+        print("[history] NOT LOGGED — no JERRY_GPT_DB_URL configured",
+              file=sys.stderr, flush=True)
+
+    # The Google Sheet was retired on 2026-09-20. The log lives in Postgres and
+    # is read at /jerrylog. usage_logger is still imported for its cost
+    # estimator and the pricing heuristic above; log_query() is no longer
+    # called from anywhere, deliberately.
 
 
 def _sse(obj: dict) -> str:
