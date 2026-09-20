@@ -136,6 +136,10 @@ ROOT = Path(__file__).parent
 SITE = ROOT / "site"
 TEMPLATES = ROOT / "templates"
 
+# Kept in step with the banner string in app.py by
+# scripts/test_resource_links.py, which fails if they drift.
+APP_VERSION = "9.7.7 (2026)"
+
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
 
@@ -455,7 +459,20 @@ def _page(name: str) -> str:
 
 @app.get("/healthz")
 def healthz() -> dict:
-    return {"ok": True}
+    """Liveness, and the identity of what is actually running.
+
+    Deploys are a git push away, but until this carried a version there was no
+    way to tell from outside whether one had landed — the login page looks
+    identical before and after. None of this is sensitive: a version number and
+    a commit hash say nothing an attacker can use, and they turn "did it
+    deploy?" into one curl.
+    """
+    return {
+        "ok": True,
+        "version": APP_VERSION,
+        "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "local",
+        "login_mode": _login.login_mode(),
+    }
 
 
 @app.get("/", response_class=HTMLResponse)

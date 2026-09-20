@@ -72,6 +72,18 @@ check("warned off inventing streamax.com paths",
 check("told to flag sign-in walls", "login wall" in jg)
 check("told not to quote the demo password", "demo password" in jg)
 
+print("\nthe deployed version is observable")
+srv = (ROOT / "server.py").read_text(encoding="utf-8")
+app = (ROOT / "app.py").read_text(encoding="utf-8")
+m_srv = re.search(r'APP_VERSION = "([^"]+)"', srv)
+m_app = re.search(r"Version (\d+\.\d+\.\d+ \(\d+\))", app)
+check("server.py declares APP_VERSION", bool(m_srv))
+check("app.py declares a version banner", bool(m_app))
+if m_srv and m_app:
+    check(f"they agree ({m_srv.group(1)})", m_srv.group(1), m_app.group(1))
+check("/healthz reports the version", '"version": APP_VERSION' in srv)
+check("/healthz reports the deployed commit", "RENDER_GIT_COMMIT" in srv)
+
 print("\nno guessed streamax.com deep links anywhere in the KB")
 deep = sorted(set(re.findall(r"https?://(?:www\.)?streamax\.com/\S+", kb_all)))
 check("none present", deep, [])
