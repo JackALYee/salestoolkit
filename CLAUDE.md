@@ -149,31 +149,44 @@ Important: the cookie manager has an async-cookie quirk. `extra_streamlit_compon
 **File I/O** (`file_io.py`): bidirectional. **Uploads** — a `st.file_uploader` under the composer accepts images/PDF/Word/Excel/PowerPoint; `build_user_content()` turns them into Anthropic content blocks (images→image, PDF→document both native; docx/xlsx/pptx→extracted text via python-docx/openpyxl/python-pptx). Attachments are sent **only on the turn they're uploaded** — stored history keeps a text-only "attached: …" note, so they aren't re-sent every turn. **Generation** — when the user asks for a document, Jerry emits a fenced ```artifact``` JSON block (schema in `file_io.ARTIFACT_HINT`, injected into the system prompt); `extract_artifacts()` parses it and `render_artifact()` builds a real .docx/.pptx/.xlsx/.pdf (python-docx / python-pptx / openpyxl / reportlab). PDF uses reportlab's built-in `STSong-Light` CID font so Chinese renders without bundling a TTF. `strip_artifacts()` hides the JSON from the displayed answer; a `st.download_button` replaces it (live + replay). Requires `python-docx`, `python-pptx`, `openpyxl`, `reportlab` in requirements.
 
 **Jerry can recommend the division's web resources (`26_trucking_hub_and_links.md`,
-Sep-2026).** Distilled from `~/Desktop/Streamax/Trucking Website` — the internal hub at
+re-verified 2026-09-21).** Distilled from `~/Desktop/Streamax/Trucking Website` — the hub at
 **https://www.streamax-trucking.com/**, whose `tools/shell.py` → `SECTIONS` is the single
 source of truth for its four doors: the **Sales Toolkit**
 (`https://streamax-salestoolkit.com`, Streamax sign-in — the site Jerry runs on), the **eSIM**
-page (`/esim/`, open, with the live pool calculator and 189-country coverage), the **Customer
-Onboarding Portal** (`/customer/`, customer sign-in), and **Sentinel** (`/sentinel/`, open,
-also at `streamax-sentinel.com`). Jerry previously knew all four *topics* and none of the
-*addresses* — the KB had zero mentions of `streamax-trucking.com`.
+page (`/esim/`, open, with the live pool calculator and the published 189 countries / 388
+networks / from $1.50/GB), the **Customer Onboarding Portal** (`/customer/`, customer sign-in),
+and **Sentinel** (`/sentinel/`, open, also at `streamax-sentinel.com`).
 
 Rules encoded in both the KB file and `jerry_gpt.py`'s `<interface_capabilities>`: use the
 URLs verbatim, **keep the trailing slash** on `/esim/`, `/customer/` and `/sentinel/`, flag the
 two that need a sign-in, and **never invent a streamax.com deep link** — that host answers
 unknown paths with **HTTP 200 and its own 404 page**, so a fabricated URL passes a naive status
 check and only fails in front of a customer. For anything customer-facing, quote
-`streamax-sentinel.com` rather than the internal `/sentinel/` path.
+`streamax-sentinel.com` rather than the `/sentinel/` path.
 
-**The hub prints a shared demo sign-in for the Customer Portal; the password is deliberately
-NOT in the KB.** This repo is on GitHub and has needed a credential clean-up before, so Jerry
-points people at the hub page to read it instead. `scripts/test_resource_links.py` asserts that
-(and `--live` fetches every URL, checking content type as well as status, because a .docx that
-returns HTML is a 404 wearing a 200).
+### What changed on 2026-09-21, and why the old guidance was dangerous
 
-**"The Loop"** — a self-contained 50 MB HTML file with interactive 3D models of mounted
-products — lives in that repo too. It is `noindex` and has **no URL**; Jerry is told it is a
-local file, not a link.
+The trucking site **went public and indexed** that day, and three things Jerry had been told
+became wrong. All three are corrected in the KB file, in `jerry_gpt.py`, and in the checks.
+
+- **The hub is no longer internal.** It is `index, follow` and safe to send to a customer.
+  Three addresses are customer-safe (hub, `/esim/`, `streamax-sentinel.com`); the other two
+  are sign-in only.
+- **The shared demo sign-in came off the hub.** Jerry used to be told *"point the person at
+  the hub page, which prints it"* — which, after the credential came off, sent people to read
+  something that is not there. There is now no credential to hand out: the answer is *"ask
+  your Streamax contact for an account."* `test_resource_links.py --live` inverted with it and
+  now asserts **no** credential block has reappeared on the public page.
+- **"The Loop" is published.** It used to be a local 62 MB double-click file with no URL, and
+  Jerry was told to say exactly that. It is the hub's front-page story now. **Link the hub
+  root for it, never a `/loop` path** — the loop had its own address for one afternoon and is
+  being folded back into the front page, so that path will redirect.
+
+Two rules the loop carries into Jerry's customer-facing copy: the ADAS + DMS dashcam is called
+**"Dashcam"**, never its model name (the model is on the pre-release list, and that page is
+public — the C46, C53L/R, M1N 2.0, Z5 and Sentinel are shipping and keep their names); and the
+detection areas drawn on the loop are **illustrative, not datasheet figures**, so coverage
+questions get answered from the spec knowledge instead.
 
 **GDPR roles & contracting (`24_gdpr_roles_and_contracting.md`, Sep-2026)** is the legal
 and commercial half of the pair — `23_...` is the technical architecture. Distilled from
@@ -661,9 +674,13 @@ Browser test: `.scrape_venv/bin/python` + the Playwright check used when this sh
 
 ## Marketing Resources (`marketing_resources.py`)
 
-The **Marketing Materials** subsection: public product microsites (Sentinel at `streamax-sentinel.com`) and the downloadable decks, each with a badge saying whether it is customer-safe or partner-only.
+The **Marketing Materials** subsection: the division's open product pages and the downloadable decks, each with a badge saying whether it is customer-safe or internal/partner-only.
+
+`SITES` holds the three addresses a rep may forward as-is — the trucking hub, the eSIM page and `streamax-sentinel.com`. The two **gated** resources (Customer Onboarding Portal, this toolkit) are deliberately absent: they are on the hub, and a login wall is not collateral.
 
 The deck list is **generated from `downloads.ASSETS`**, so this tab and Jerry GPT can never disagree about what exists — add a file there and it appears in both. Files are served from `/assets/downloads/`.
+
+⚠️ **The green badge is a promise to a customer, so it reads an explicit flag.** `customer_safe` is declared beside each file in `downloads.ASSETS` and a missing flag counts as unsafe. It used to be inferred from `"Partner Enablement" in filename`, which badged **both** GDPR documents whose own blurb says *"INTERNAL — do not forward outside Streamax"* as cleared for external sharing. The format shown on a card comes from the file's extension for the same reason — it was hardcoded to `PPTX` and printed that over a ZIP and a PDF.
 
 ⚠️ The section carries `class="tex2jax_ignore"`. MathJax is configured with `inlineMath: [['$','$']]` for the TCO calculator, so a blurb mentioning "the $20 license vs. $60 tracker" gets typeset as maths and rendered twice. `app.py`'s MathJax config sets `options.ignoreHtmlClass` explicitly — MathJax does not honour the class without it. Any future prose section quoting two dollar amounts needs the same class.
 

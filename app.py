@@ -1348,7 +1348,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 9.8.8 (2026) • 货运产品线 Trucking BU • September 2026</div>
+            <div class="header-meta fade-up">Version 9.9.9 (2026) • 货运产品线 Trucking BU • September 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>
@@ -1369,8 +1369,32 @@ __I18N_SWITCHER__
                 .intro-content ul { margin-left: 5px; list-style-type: disc; margin-bottom: 15px; }
                 .intro-content li { margin-bottom: 6px; }
                 .intro-content strong { color: var(--primary-green); font-weight: 600; }
+                .hub-link { display:flex; align-items:center; gap:14px; padding:14px 22px; margin-bottom:14px;
+                    background: var(--glass-bg); border: var(--glass-border); border-radius:12px;
+                    text-decoration:none; transition: all 0.25s ease; }
+                .hub-link:hover { border-color: rgba(42,245,152,0.35); transform: translateY(-2px);
+                    box-shadow: 0 8px 22px rgba(0,0,0,0.28); }
+                .hub-link > i[data-lucide="truck"] { width:20px; height:20px; color: var(--primary-green); flex:none; }
+                .hub-link-text { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+                .hub-link-text strong { color: var(--text-white); font-size:0.95rem; font-weight:600; }
+                .hub-link-text span { color: var(--text-grey); font-size:0.8rem; line-height:1.45; }
+                .hub-link-url { color: var(--secondary-blue); font-size:0.76rem; flex:none;
+                    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+                .hub-link-go { width:15px; height:15px; color: var(--text-grey); flex:none; }
+                @media (max-width: 640px) { .hub-link-url { display:none; } }
             </style>
             
+            <a class="hub-link" href="https://www.streamax-trucking.com"
+               target="_blank" rel="noopener noreferrer">
+                <i data-lucide="truck"></i>
+                <span class="hub-link-text">
+                    <strong>Streamax Trucking — the division's main page</strong>
+                    <span>The safety loop, the eSIM and Sentinel solution pages, and the way back to this toolkit.</span>
+                </span>
+                <span class="hub-link-url">www.streamax-trucking.com</span>
+                <i data-lucide="arrow-up-right" class="hub-link-go"></i>
+            </a>
+
             <details class="intro-details">
                 <summary class="intro-summary">
                     <div class="flex items-center justify-between w-full pr-4">

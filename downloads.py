@@ -21,6 +21,10 @@ _DOWNLOADS_DIR = Path(__file__).parent / "assets" / "downloads"
 ASSETS = [
     {
         "id": "esim_deck",
+        # customer_safe drives the badge in marketing_resources.py.
+        # Mirrors the public eSIM page at www.streamax-trucking.com/esim/ —
+        # same coverage and rate-card figures, already published.
+        "customer_safe": True,
         "triggers": ["esim", "e-sim", "euicc", "mff2"],
         "filename": "Streamax-eSIM-Solutions-v2.pptx",
         "label": "Download · Streamax eSIM Solutions (PPTX)",
@@ -29,6 +33,10 @@ ASSETS = [
     },
     {
         "id": "can_deck",
+        # customer_safe drives the badge in marketing_resources.py.
+        # Channel economics: the $20 license against a $60 tracker. Partner
+        # material, not customer material.
+        "customer_safe": False,
         # Distinctive multi-char tokens only — never bare "can" (the English word).
         "triggers": ["can bus", "canbus", "can-bus", "inherent can",
                      "can license", "j1939", "obd"],
@@ -44,6 +52,10 @@ ASSETS = [
     # subject instead.
     {
         "id": "gdpr_data_boundary_deck",
+        # customer_safe drives the badge in marketing_resources.py.
+        # Product functions mapped to articles; no legal advice, no internal
+        # positioning. Safe to send.
+        "customer_safe": True,
         "triggers": ["privacy by design", "data boundary", "masking",
                      "mosaic", "privacy masking", "geofence recording",
                      "alert tolerance", "tiered retention", "打码", "数据边界"],
@@ -54,6 +66,9 @@ ASSETS = [
     },
     {
         "id": "gdpr_roles_deck",
+        # customer_safe drives the badge in marketing_resources.py.
+        # Carries DMS design red lines and internal contracting posture.
+        "customer_safe": False,
         "triggers": ["controller", "processor", "dpa", "data processing agreement",
                      "dpia", "ropa", "legitimate interests", "works council",
                      "betriebsvereinbarung", "article 28", "art. 28",
@@ -65,6 +80,9 @@ ASSETS = [
     },
     {
         "id": "gdpr_regulatory_briefing",
+        # customer_safe drives the badge in marketing_resources.py.
+        # Enforcement precedents and China-transfer posture. Internal.
+        "customer_safe": False,
         "triggers": ["cra", "cyber resilience act", "eu ai act", "nis2",
                      "itxpt", "vdv 301", "ibis-ip", "sccs", "scc + tia",
                      "transfer impact assessment", "cross-border transfer",

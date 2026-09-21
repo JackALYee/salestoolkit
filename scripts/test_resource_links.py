@@ -52,14 +52,18 @@ for path in ("/esim/", "/customer/", "/sentinel/"):
     stray = re.findall(re.escape(bare) + r"(?![/\w])", reg)
     check(f"{path:12s} never written without its slash", stray, [])
 
-print("\nno credentials in the knowledge base")
+print("\nno credentials anywhere")
 kb_all = "\n".join(p.read_text(encoding="utf-8") for p in KB.glob("*.md"))
-# The hub page prints a shared demo sign-in. Deliberately NOT hardcoded here:
-# writing the password into this file would commit it to the very repo the
-# check exists to keep it out of, and it would go stale the moment it rotates.
-# --live reads the live credential from the hub and asserts the KB lacks it.
-check("registry points at the hub rather than quoting credentials",
-      "prints it" in reg or "read it" in reg)
+# The hub used to print a shared demo sign-in for the Customer Portal, and the
+# registry used to send people there to read it. That credential came off the
+# page when it went public on 2026-09-21, so the old contract ("point at the
+# hub, do not quote") is now actively wrong: it sends people to read something
+# that is not there. The contract is now simply that no credential exists to
+# hand out. --live asserts none has come back onto the public page.
+check("registry sends people to a human for an account",
+      "ask your Streamax contact" in reg)
+check("registry does not send anyone to a page to read a credential",
+      "prints it" in reg or "which prints" in reg, False)
 check("no 'Demo' credential block copied into the registry",
       bool(re.search(r"(?i)\bpassword\s*[:=]", reg)), False)
 
@@ -70,7 +74,30 @@ check("told to use the URL exactly", "exactly as written" in jg)
 check("warned off inventing streamax.com paths",
       "its own 404" in jg)
 check("told to flag sign-in walls", "login wall" in jg)
-check("told not to quote the demo password", "demo password" in jg)
+check("told there is no credential to hand out", "NO shared demo password" in jg)
+check("told which links a customer may have", "safe to send to a CUSTOMER" in jg)
+check("told to link the hub root, not a /loop path", "never a /loop path" in jg)
+
+print("\nthe loop is linked at the root, not at a path that will redirect")
+check("registry says to link the hub root for the loop",
+      "never `/loop`" in reg or "never a /loop" in reg)
+stray_loop = re.findall(r"streamax-trucking\.com/loop", reg)
+check("no /loop URL written out", stray_loop, [])
+
+print("\ncustomer-safe is stated, not left to be guessed")
+for url in ("https://www.streamax-trucking.com/",
+            "https://www.streamax-trucking.com/esim/",
+            "https://streamax-sentinel.com"):
+    check(f"{url[:44]:46s} marked customer-safe", "Customer-safe" in reg)
+
+print("\nthe public naming rule for the pre-release ADAS+DMS unit")
+# The trucking site labels it "Dashcam" on purpose — the model name is on the
+# pre-release list and that page is public now. Jerry writes customer copy, so
+# the rule has to reach him too.
+check("registry carries the dashcam naming rule",
+      "Call it a dashcam, not a model number" in reg)
+check("registry warns the loop's coverage shapes are illustrative",
+      "illustrative, not datasheet" in reg)
 
 print("\nthe deployed version is observable")
 srv = (ROOT / "server.py").read_text(encoding="utf-8")
@@ -91,19 +118,23 @@ check("none present", deep, [])
 if "--live" in sys.argv:
     import urllib.request
 
-    print("\nthe live demo credential has not leaked into the KB")
+    print("\nthe public hub still prints no credential")
+    # It went public on 2026-09-21 and the demo sign-in came off with it. This
+    # used to check that the KB had not copied the hub's credential; now that
+    # there is none, the useful check is the other direction — that one has not
+    # reappeared on a page anyone can read.
     try:
         req = urllib.request.Request("https://www.streamax-trucking.com/",
                                      headers={"User-Agent": "link-check"})
         hub = urllib.request.urlopen(req, timeout=45).read().decode("utf-8", "replace")
-        # the hub renders it as <code>user</code><code>password</code>
         creds = re.findall(r"<code>([^<]{4,64})</code>", hub)
+        check(f"no credential block on the public hub ({len(creds)} <code> found)",
+              creds, [])
+        check("hub is the public, indexed page the KB describes",
+              'content="index, follow"' in hub)
         if creds:
-            leaked = [c for c in creds if c in kb_all]
-            check(f"none of the {len(creds)} hub credential(s) appear in the KB",
-                  leaked, [])
-        else:
-            print("  skip could not find a credential block on the hub")
+            check("and none of it has leaked into the KB",
+                  [c for c in creds if c in kb_all], [])
     except Exception as exc:                                         # noqa: BLE001
         print(f"  skip hub unreachable: {type(exc).__name__}")
 
