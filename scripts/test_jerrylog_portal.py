@@ -4,7 +4,7 @@
     JERRY_GPT_DB_URL=... python3 scripts/test_jerrylog_portal.py --db
 
 The portal exposes EVERY user's questions, so the gate is the thing most worth
-pinning: signed in is not enough, the address must be on the LEADERSHIP list.
+pinning: signed in is not enough, the address must be leadership or an explicitly approved log reviewer.
 """
 import os
 import sys
@@ -47,19 +47,19 @@ assert L.resolve_leadership(LEAD) and not L.resolve_leadership(NORM)
 
 print("\nthe gate")
 try:
-    S.require_leadership(Req())
+    S.require_jerry_log_access(Req())
     check("anonymous is refused", False)
 except HTTPException as e:
     check(f"anonymous is refused ({e.status_code})", e.status_code, 401)
 
 try:
-    S.require_leadership(Req(S.make_token(NORM)))
+    S.require_jerry_log_access(Req(S.make_token(NORM)))
     check("signed in but not leadership is refused", False)
 except HTTPException as e:
     check(f"signed in but not leadership is refused ({e.status_code})",
           e.status_code, 403)
 
-check("leadership passes", S.require_leadership(Req(S.make_token(LEAD))), LEAD)
+check("leadership passes", S.require_jerry_log_access(Req(S.make_token(LEAD))), LEAD)
 
 print("\nthe page route")
 r = S.page_jerrylog(Req())
@@ -67,8 +67,35 @@ check("anonymous redirects to the login", getattr(r, "status_code", 0), 302)
 r = S.page_jerrylog(Req(S.make_token(NORM)))
 check("non-leadership gets 403, not a redirect", r.status_code, 403)
 body = bytes(r.body).decode("utf-8", "replace")
-check("  and is told who it is for", "leadership team" in body)
+check("  and is told who it is for", "approved log reviewers" in body)
 check("  and which account they are on", NORM in body)
+
+print("\nJimmy gets VIP and explicit log access, independently of pricing clearance")
+JIMMY = "jimmy@streamax.com"
+check("Jimmy is VIP", L.resolve_vip(JIMMY))
+check("Jimmy remains outside leadership pricing clearance", L.resolve_leadership(JIMMY), False)
+for who in (JIMMY, " JIMMY@STREAMAX.COM "):
+    check("Jimmy's log permission normalizes case/whitespace", L.resolve_jerry_log_access(who))
+check("Jimmy can load the portal", S.page_jerrylog(Req(S.make_token(JIMMY))).status_code, 200)
+for who in ("caojun@streamax.com", "wangrui@streamax.com", "Jimmy", "jimmy@example.com", "Jerry (demo)"):
+    check(f"{who} has no added log permission", L.resolve_jerry_log_access(who), False)
+
+# Exercise every HTTP gate, rather than only the shared helper.
+from fastapi.testclient import TestClient
+from unittest.mock import patch
+client = TestClient(S.app)
+with patch.object(S, "_history_on", return_value=True), \
+     patch.object(S._history, "log_search", return_value={"total": 0, "rows": []}), \
+     patch.object(S._history, "log_stats", return_value={"questions": 0}), \
+     patch.object(S._history, "log_filters", return_value={"users": [], "models": []}):
+    for identity, expected in ((None, 401), (NORM, 403), ("caojun@streamax.com", 403),
+                               ("Jerry (demo)", 403), (LEAD, 200), (JIMMY, 200)):
+        client.cookies.clear()
+        if identity:
+            client.cookies.set(S.COOKIE_NAME, S.make_token(identity))
+        for path in ("/api/jerrylog", "/api/jerrylog/meta", "/api/jerrylog/export"):
+            check(f"{identity or 'anonymous'} {path}", client.get(path).status_code, expected)
+client.close()
 
 print("\nthe Google Sheet is retired")
 srv = (ROOT / "server.py").read_text(encoding="utf-8")

@@ -25,6 +25,7 @@ from __future__ import annotations
 import os
 import sys
 import uuid
+from functools import wraps
 
 import streamlit as st
 
@@ -449,65 +450,79 @@ def list_past_sessions(user_email: str, limit: int = 20) -> list[dict]:
 #
 # Read-only, admin-wide queries. Everything above is scoped to one user's own
 # history; these deliberately are not, which is why the route that calls them
-# is gated to the LEADERSHIP list.
+# is gated to leadership and explicitly approved log reviewers.
 # ---------------------------------------------------------------------------
 
-def _portal_conn():
-    conn = _get_connection()
-    if conn is None:
-        return None
-    try:                                   # cheap liveness probe
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
-        return conn
-    except psycopg2.OperationalError:
-        return _retry_get_connection()
+class LogUnavailable(RuntimeError):
+    """The portal could not read its database; never represent this as no rows."""
 
 
-def log_stats() -> dict:
+def _portal_read(query):
+    """Retry read-only portal queries once after reconnecting a stale session.
+
+    psycopg2 raises InterfaceError for an already-closed cached connection and
+    OperationalError when an open connection drops. Both need recovery. A
+    failed initial connect may also be cached as None, so clear it on retry.
+    """
+    @wraps(query)
+    def read(*args, **kwargs):
+        for attempt in range(2):
+            try:
+                conn = _get_connection() if attempt == 0 else _retry_get_connection()
+                if conn is None:
+                    continue
+                return query(conn, *args, **kwargs)
+            except (psycopg2.InterfaceError, psycopg2.OperationalError) as exc:
+                print(f"[JERRY_GPT_DB_ERROR] {query.__name__}: "
+                      f"{type(exc).__name__}; attempt {attempt + 1}/2",
+                      file=sys.stderr, flush=True)
+            except Exception as exc:
+                print(f"[JERRY_GPT_DB_ERROR] {query.__name__}: "
+                      f"{type(exc).__name__}", file=sys.stderr, flush=True)
+                raise LogUnavailable("Jerry Log database is temporarily unavailable.") from exc
+        raise LogUnavailable("Jerry Log database is temporarily unavailable.")
+    return read
+
+
+@_portal_read
+def log_stats(conn) -> dict:
     """Headline numbers for the portal."""
-    conn = _portal_conn()
-    if conn is None:
-        return {}
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT COUNT(*) FILTER (WHERE role='user'),
-                       COUNT(DISTINCT session_id),
-                       COUNT(DISTINCT user_email),
-                       MIN(created_at), MAX(created_at),
-                       COALESCE(SUM(cost_usd), 0),
-                       COUNT(*) FILTER (WHERE role='user' AND sensitive_flagged)
-                FROM jerry_gpt_chats
-            """)
-            q, s, u, lo, hi, cost, sens = cur.fetchone()
-            cur.execute("""SELECT user_email, COUNT(*) FROM jerry_gpt_chats
-                           WHERE role='user' GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
-            top = [{"user": e, "n": n} for e, n in cur.fetchall()]
-            cur.execute("""SELECT model, COUNT(*) FROM jerry_gpt_chats
-                           WHERE role='assistant' AND model <> ''
-                           GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
-            models = [{"model": m, "n": n} for m, n in cur.fetchall()]
-            cur.execute("""
-                SELECT to_char(date_trunc('week', created_at), 'YYYY-MM-DD') wk,
-                       COUNT(*) FILTER (WHERE role='user')
-                FROM jerry_gpt_chats
-                WHERE created_at > NOW() - INTERVAL '120 days'
-                GROUP BY 1 ORDER BY 1
-            """)
-            weekly = [{"week": w, "n": n} for w, n in cur.fetchall()]
-        return {
-            "questions": q or 0, "sessions": s or 0, "users": u or 0,
-            "first": str(lo)[:19] if lo else "", "last": str(hi)[:19] if hi else "",
-            "cost_usd": float(cost or 0), "sensitive": sens or 0,
-            "top_users": top, "models": models, "weekly": weekly,
-        }
-    except Exception as e:                                           # noqa: BLE001
-        print(f"[JERRY_GPT_DB_ERROR] log_stats: {e}", file=sys.stderr, flush=True)
-        return {}
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT COUNT(*) FILTER (WHERE role='user'),
+                   COUNT(DISTINCT session_id),
+                   COUNT(DISTINCT user_email),
+                   MIN(created_at), MAX(created_at),
+                   COALESCE(SUM(cost_usd), 0),
+                   COUNT(*) FILTER (WHERE role='user' AND sensitive_flagged)
+            FROM jerry_gpt_chats
+        """)
+        q, s, u, lo, hi, cost, sens = cur.fetchone()
+        cur.execute("""SELECT user_email, COUNT(*) FROM jerry_gpt_chats
+                       WHERE role='user' GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
+        top = [{"user": e, "n": n} for e, n in cur.fetchall()]
+        cur.execute("""SELECT model, COUNT(*) FROM jerry_gpt_chats
+                       WHERE role='assistant' AND model <> ''
+                       GROUP BY 1 ORDER BY 2 DESC LIMIT 8""")
+        models = [{"model": m, "n": n} for m, n in cur.fetchall()]
+        cur.execute("""
+            SELECT to_char(date_trunc('week', created_at), 'YYYY-MM-DD') wk,
+                   COUNT(*) FILTER (WHERE role='user')
+            FROM jerry_gpt_chats
+            WHERE created_at > NOW() - INTERVAL '120 days'
+            GROUP BY 1 ORDER BY 1
+        """)
+        weekly = [{"week": w, "n": n} for w, n in cur.fetchall()]
+    return {
+        "questions": q or 0, "sessions": s or 0, "users": u or 0,
+        "first": str(lo)[:19] if lo else "", "last": str(hi)[:19] if hi else "",
+        "cost_usd": float(cost or 0), "sensitive": sens or 0,
+        "top_users": top, "models": models, "weekly": weekly,
+    }
 
 
-def log_search(q: str = "", user: str = "", model: str = "",
+@_portal_read
+def log_search(conn, q: str = "", user: str = "", model: str = "",
                since: str = "", until: str = "",
                only_sensitive: bool = False, only_leadership: bool = False,
                limit: int = 50, offset: int = 0) -> dict:
@@ -517,9 +532,6 @@ def log_search(q: str = "", user: str = "", model: str = "",
     position: a turn writes both rows in one statement, so the answer is always
     the next id in the same session.
     """
-    conn = _portal_conn()
-    if conn is None:
-        return {"total": 0, "rows": []}
     where, args = ["u.role = 'user'"], []
     if q:
         where.append("(u.content ILIKE %s OR a.content ILIKE %s)")
@@ -548,44 +560,34 @@ def log_search(q: str = "", user: str = "", model: str = "",
         ) a ON TRUE
         WHERE {sql_where}
     """
-    try:
-        with conn.cursor() as cur:
-            cur.execute(f"SELECT COUNT(*) {base}", args)
-            total = cur.fetchone()[0]
-            cur.execute(f"""
-                SELECT u.id, u.created_at, u.user_email, u.session_id,
-                       u.content, a.content, a.model,
-                       u.is_leadership, u.sensitive_flagged, u.cost_usd
-                {base}
-                ORDER BY u.created_at DESC, u.id DESC
-                LIMIT %s OFFSET %s
-            """, args + [max(1, min(200, limit)), max(0, offset)])
-            rows = [{
-                "id": r[0], "at": str(r[1])[:19], "user": r[2], "session": r[3],
-                "question": r[4] or "", "answer": r[5] or "", "model": r[6] or "",
-                "leadership": bool(r[7]), "sensitive": bool(r[8]),
-                "cost": float(r[9] or 0),
-            } for r in cur.fetchall()]
-        return {"total": total, "rows": rows}
-    except Exception as e:                                           # noqa: BLE001
-        print(f"[JERRY_GPT_DB_ERROR] log_search: {e}", file=sys.stderr, flush=True)
-        return {"total": 0, "rows": []}
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT COUNT(*) {base}", args)
+        total = cur.fetchone()[0]
+        cur.execute(f"""
+            SELECT u.id, u.created_at, u.user_email, u.session_id,
+                   u.content, a.content, a.model,
+                   u.is_leadership, u.sensitive_flagged, u.cost_usd
+            {base}
+            ORDER BY u.created_at DESC, u.id DESC
+            LIMIT %s OFFSET %s
+        """, args + [max(1, min(200, limit)), max(0, offset)])
+        rows = [{
+            "id": r[0], "at": str(r[1])[:19], "user": r[2], "session": r[3],
+            "question": r[4] or "", "answer": r[5] or "", "model": r[6] or "",
+            "leadership": bool(r[7]), "sensitive": bool(r[8]),
+            "cost": float(r[9] or 0),
+        } for r in cur.fetchall()]
+    return {"total": total, "rows": rows}
 
 
-def log_filters() -> dict:
+@_portal_read
+def log_filters(conn) -> dict:
     """Distinct values for the filter dropdowns."""
-    conn = _portal_conn()
-    if conn is None:
-        return {"users": [], "models": []}
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""SELECT DISTINCT user_email FROM jerry_gpt_chats
-                           WHERE user_email <> '' ORDER BY 1""")
-            users = [u for (u,) in cur.fetchall()]
-            cur.execute("""SELECT DISTINCT model FROM jerry_gpt_chats
-                           WHERE model IS NOT NULL AND model <> '' ORDER BY 1""")
-            models = [m for (m,) in cur.fetchall()]
-        return {"users": users, "models": models}
-    except Exception as e:                                           # noqa: BLE001
-        print(f"[JERRY_GPT_DB_ERROR] log_filters: {e}", file=sys.stderr, flush=True)
-        return {"users": [], "models": []}
+    with conn.cursor() as cur:
+        cur.execute("""SELECT DISTINCT user_email FROM jerry_gpt_chats
+                       WHERE user_email <> '' ORDER BY 1""")
+        users = [u for (u,) in cur.fetchall()]
+        cur.execute("""SELECT DISTINCT model FROM jerry_gpt_chats
+                       WHERE model IS NOT NULL AND model <> '' ORDER BY 1""")
+        models = [m for (m,) in cur.fetchall()]
+    return {"users": users, "models": models}

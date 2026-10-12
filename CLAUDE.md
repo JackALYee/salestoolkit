@@ -345,11 +345,22 @@ in Postgres carrying `is_leadership` and `sensitive_flagged` — two columns the
 now nowhere to log at all**, so that case prints `[history] NOT LOGGED` — the Sheet used to be
 a silent safety net and no longer is.
 
-**The portal is LEADERSHIP-gated, harder than anything else on the site.** It shows every
-user's questions, so `require_leadership()` demands a `resolve_leadership()` pass on top of a
-valid session — same definition Jerry uses for clearance, so there is one list. A
-non-leadership user gets a styled 403 naming their account, not a bare error. `/jerrylog`,
-`/api/jerrylog`, `/api/jerrylog/meta` and `/api/jerrylog/export` (CSV) are all behind it.
+**The portal is restricted to leadership and explicitly approved log reviewers.**
+`require_jerry_log_access()` checks `resolve_jerry_log_access()` for `/jerrylog`,
+`/api/jerrylog`, `/api/jerrylog/meta`, and `/api/jerrylog/export`. Leadership retains
+access; `EXTRA_JERRY_LOG_EMAILS` adds individual reviewers (currently Jimmy).
+VIP status only unlocks models: it does not automatically grant company-wide log
+access or leadership pricing clearance. Jimmy is explicitly in both extra lists.
+
+**Portal reads recover stale database connections (Oct-2026).** `_portal_read`
+retries once for both `psycopg2.InterfaceError` (already closed) and
+`OperationalError` (connection dropped), and clears a cached failed connection.
+Persistent failures raise `LogUnavailable`, returned as JSON HTTP 503 by the API,
+instead of uncaught HTTP 500 or a misleading empty result. The page distinguishes
+expired sessions, denied access, server/database outages, and network failures,
+with sign-in or retry actions. Regression tests:
+`python3 scripts/test_jerrylog_portal.py` and
+`python3 scripts/test_jerrylog_recovery.py`.
 
 **Migrating the Sheet: the tab is `queries`, not the first sheet.** Exporting without
 `&sheet=queries` returns an *empty file with HTTP 200*, which reads exactly like an access

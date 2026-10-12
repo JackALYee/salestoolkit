@@ -155,6 +155,13 @@ _POST_WORK = ThreadPoolExecutor(max_workers=4, thread_name_prefix="jerry-post")
 
 app = FastAPI(title="Streamax Sales Toolkit", docs_url=None, redoc_url=None)
 
+if _history is not None:
+    @app.exception_handler(_history.LogUnavailable)
+    async def jerry_log_unavailable(request: Request, exc: Exception):
+        return JSONResponse(
+            {"error": "Jerry Log's database is temporarily unavailable. Please try again shortly."},
+            status_code=503, headers={"Retry-After": "5"})
+
 # Say which sign-in policy this deploy is running, so the mode is answerable
 # from the Render log alone rather than by guessing at the env.
 try:
@@ -504,7 +511,7 @@ def account_page(request: Request):
 
 
 _DENIED_HTML = """<!doctype html><html><head><meta charset="utf-8">
-<title>Jerry Log — leadership only</title>
+<title>Jerry Log — restricted access</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -515,26 +522,22 @@ _DENIED_HTML = """<!doctype html><html><head><meta charset="utf-8">
  code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:4px;font-size:.86em}
  a{display:inline-block;margin-top:18px;color:#2AF598;text-decoration:none;font-size:.88rem}
 </style></head><body><div class="c">
- <h1>This page is for the leadership team</h1>
+ <h1>This page is for approved log reviewers</h1>
  <p>The Jerry log holds every question the company has asked, including other
-    people's conversations, so access is limited to the LEADERSHIP list.</p>
+    people's conversations, so access is limited to leadership and approved log reviewers.</p>
  <p>You are signed in as <code>__USER__</code>.</p>
  <a href="/">&larr; Back to the Sales Toolkit</a>
 </div></body></html>"""
 
 
-# ── Jerry log portal — LEADERSHIP only ──────────────────────────────────────
-# This is the whole company's question history, including other people's
-# conversations, so it is gated harder than anything else on the site: being
-# signed in is not enough, the address must be on the LEADERSHIP list.
-# `resolve_leadership` is the same check Jerry uses for clearance, so there is
-# one definition of who counts.
+# ── Jerry log portal — leadership and approved reviewers ───────────────────
+# VIP model access alone does not grant access to company-wide conversations.
 
-def require_leadership(request: Request) -> str:
+def require_jerry_log_access(request: Request) -> str:
     user = require_user(request)
-    if not _login.resolve_leadership(user):
+    if not _login.resolve_jerry_log_access(user):
         print(f"[JERRYLOG] denied for {user}", file=sys.stderr, flush=True)
-        raise HTTPException(status_code=403, detail="leadership only")
+        raise HTTPException(status_code=403, detail="Jerry Log access is restricted to approved reviewers.")
     return user
 
 
@@ -543,7 +546,7 @@ def page_jerrylog(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/login?next=/jerrylog", status_code=302)
-    if not _login.resolve_leadership(user):
+    if not _login.resolve_jerry_log_access(user):
         # A plain 403 body reads like a broken page. Say who it is for and
         # give a way back, and name the account so a wrong-account sign-in is
         # obvious rather than mystifying.
@@ -556,9 +559,9 @@ def page_jerrylog(request: Request):
 def api_jerrylog(request: Request, q: str = "", user: str = "", model: str = "",
                  since: str = "", until: str = "", sensitive: int = 0,
                  leadership: int = 0, limit: int = 50, offset: int = 0):
-    require_leadership(request)
+    require_jerry_log_access(request)
     if _history is None or not _history_on():
-        return JSONResponse({"error": "No database configured — set JERRY_GPT_DB_URL."}, 503)
+        return JSONResponse({"error": "Jerry Log's database is not configured. Please contact the site administrator."}, 503)
     return _history.log_search(
         q=q.strip(), user=user.strip(), model=model.strip(),
         since=since.strip(), until=until.strip(),
@@ -568,9 +571,9 @@ def api_jerrylog(request: Request, q: str = "", user: str = "", model: str = "",
 
 @app.get("/api/jerrylog/meta")
 def api_jerrylog_meta(request: Request):
-    require_leadership(request)
+    require_jerry_log_access(request)
     if _history is None or not _history_on():
-        return JSONResponse({"error": "No database configured — set JERRY_GPT_DB_URL."}, 503)
+        return JSONResponse({"error": "Jerry Log's database is not configured. Please contact the site administrator."}, 503)
     return {"stats": _history.log_stats(), "filters": _history.log_filters()}
 
 
@@ -579,9 +582,9 @@ def api_jerrylog_export(request: Request, q: str = "", user: str = "",
                         model: str = "", since: str = "", until: str = "",
                         sensitive: int = 0, leadership: int = 0):
     """CSV of the current filter — the one thing the Google Sheet was good at."""
-    require_leadership(request)
+    require_jerry_log_access(request)
     if _history is None or not _history_on():
-        return JSONResponse({"error": "No database configured."}, 503)
+        return JSONResponse({"error": "Jerry Log's database is not configured. Please contact the site administrator."}, 503)
     data = _history.log_search(
         q=q.strip(), user=user.strip(), model=model.strip(),
         since=since.strip(), until=until.strip(),

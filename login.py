@@ -53,10 +53,15 @@ LEADERSHIP_EMAILS = frozenset({
 EXTRA_VIP_EMAILS = frozenset({
     "caojun@streamax.com",     # Cao Jun
     "wangrui@streamax.com",    # Wang Rui — Jerry's real-life good friend (SPECIAL)
+    "jimmy@streamax.com",      # Jimmy — also explicitly approved for Jerry Log
 })
 
 # Computed at module load: every user with VIP privileges.
 VIP_EMAILS = LEADERSHIP_EMAILS | EXTRA_VIP_EMAILS
+
+# Log review is separate from model access and leadership pricing clearance.
+# Adding a VIP does not automatically expose other people's conversations.
+EXTRA_JERRY_LOG_EMAILS = frozenset({"jimmy@streamax.com"})
 
 # Easter-egg auth shortcuts (jerry_test, hekun_test, etc.) authenticate as a
 # display name. Map the display name back to the canonical streamax.com email
@@ -97,6 +102,12 @@ def resolve_vip(name_or_email: str) -> bool:
     val = name_or_email.strip().lower()
     val = _EASTER_EGG_TO_EMAIL.get(val, val)
     return val in VIP_EMAILS
+
+
+def resolve_jerry_log_access(name_or_email: str) -> bool:
+    """Leadership and explicitly approved log reviewers may open Jerry Log."""
+    val = (name_or_email or "").strip().lower()
+    return resolve_leadership(val) or val in EXTRA_JERRY_LOG_EMAILS
 
 
 def resolve_user_email(name_or_email: str) -> str:

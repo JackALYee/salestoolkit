@@ -94,6 +94,7 @@
   <div class="wrap">
     <div class="stats" id="stats"></div>
     <div class="spark" id="spark" title="questions per week, last 120 days"></div>
+    <div id="metaError" role="status" hidden></div>
 
     <div class="filters">
       <input id="q" type="search" placeholder="Search questions and answers…">
@@ -118,6 +119,33 @@
 <script>
 var $ = function (id) { return document.getElementById(id); };
 var LIMIT = 50, offset = 0, total = 0, sens = false, lead = false, timer = null;
+var loadId = 0;
+
+async function fetchJSON(url) {
+  var r;
+  try {
+    r = await fetch(url, {credentials: 'same-origin'});
+  } catch (e) {
+    throw new Error('Could not connect. Check your connection and try again.');
+  }
+  var d = null;
+  try { d = await r.json(); } catch (e) {}
+  var message = r.status === 401 ? 'Your session has expired. Please sign in again.' :
+    r.status === 403 ? 'Your account does not have access to Jerry Log.' :
+    !r.ok ? ((d && d.error) || 'Jerry Log is temporarily unavailable. Please try again shortly.') :
+    !d ? 'Jerry Log returned an unexpected response. Please try again.' : d.error;
+  if (message) {
+    var err = new Error(message); err.status = r.status; throw err;
+  }
+  return d;
+}
+
+function errorHTML(err) {
+  var action = err.status === 401
+    ? '<a class="btn" href="/login?next=/jerrylog">Sign in</a>'
+    : err.status === 403 ? '' : '<button class="btn" type="button" data-retry>Try again</button>';
+  return '<div class="err">' + esc(err.message) + ' ' + action + '</div>';
+}
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -151,24 +179,31 @@ function paintMeta(m) {
            x.week + ': ' + x.n + '"></i>';
   }).join('') || '';
   var f = m.filters || {};
+  var selectedUser = $('user').value, selectedModel = $('model').value;
+  $('user').innerHTML = '<option value="">Everyone</option>';
+  $('model').innerHTML = '<option value="">Any model</option>';
   (f.users || []).forEach(function (u) {
     $('user').insertAdjacentHTML('beforeend', '<option>' + esc(u) + '</option>');
   });
   (f.models || []).forEach(function (u) {
     $('model').insertAdjacentHTML('beforeend', '<option>' + esc(u) + '</option>');
   });
+  $('user').value = selectedUser;
+  $('model').value = selectedModel;
 }
 function stat(v, label, cls) {
   return '<div class="stat ' + (cls || '') + '"><b>' + esc(v) + '</b><span>' + label + '</span></div>';
 }
 
 function load() {
+  var requestId = ++loadId;
   var p = params(); p.set('limit', LIMIT); p.set('offset', offset);
   $('csv').href = '/api/jerrylog/export?' + params().toString();
-  fetch('/api/jerrylog?' + p.toString(), {credentials: 'same-origin'})
-    .then(function (r) { return r.json(); })
+  $('prev').disabled = $('next').disabled = true;
+  fetchJSON('/api/jerrylog?' + p.toString())
     .then(function (d) {
-      if (d.error) { $('rows').innerHTML = '<div class="err">' + esc(d.error) + '</div>'; return; }
+      if (requestId !== loadId) return;
+      if (!Array.isArray(d.rows)) throw new Error('Jerry Log returned an unexpected response. Please try again.');
       total = d.total || 0;
       $('count').textContent = total
         ? (total.toLocaleString() + ' question' + (total === 1 ? '' : 's') + ' match')
@@ -199,14 +234,20 @@ function load() {
       $('prev').disabled = offset <= 0;
       $('next').disabled = offset + LIMIT >= total;
     })
-    .catch(function () {
-      $('rows').innerHTML = '<div class="err">Could not reach the server.</div>';
+    .catch(function (err) {
+      if (requestId !== loadId) return;
+      $('count').textContent = $('page').textContent = '';
+      $('rows').innerHTML = errorHTML(err);
     });
 }
 
 $('rows').addEventListener('click', function (e) {
+  if (e.target.closest('[data-retry]')) { loadMeta(); load(); return; }
   var row = e.target.closest ? e.target.closest('.row') : null;
   if (row) row.classList.toggle('open');
+});
+$('metaError').addEventListener('click', function (e) {
+  if (e.target.closest('[data-retry]')) loadMeta();
 });
 function rerun() { offset = 0; load(); }
 $('q').addEventListener('input', function () {
@@ -235,10 +276,16 @@ $('next').addEventListener('click', function () {
   if (offset + LIMIT < total) { offset += LIMIT; load(); window.scrollTo(0, 0); }
 });
 
-fetch('/api/jerrylog/meta', {credentials: 'same-origin'})
-  .then(function (r) { return r.json(); })
-  .then(function (m) { if (!m.error) paintMeta(m); })
-  .catch(function () {});
+function loadMeta() {
+  $('metaError').hidden = true;
+  fetchJSON('/api/jerrylog/meta')
+    .then(paintMeta)
+    .catch(function (err) {
+      $('metaError').innerHTML = errorHTML(err);
+      $('metaError').hidden = false;
+    });
+}
+loadMeta();
 load();
 </script>
 </body>
