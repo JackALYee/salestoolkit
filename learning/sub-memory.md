@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | deploy | resuming review comments | Hosted 5ce406b / 10.2.3 verified: a live comment was distilled into active source-backed knowledge with confidentiality preserved; final receipt-copy follow-up deploying | README.md; ../scripts/test_learning.py | volatile |
+| W1 | state | deploy | resuming review comments | Hosted accc6f2 / 10.2.3 verified: a live comment was distilled into active source-backed knowledge with confidentiality preserved; screenshot saved | README.md; ../scripts/test_learning.py | volatile |
 
 ## Long-term memory
 
@@ -117,5 +117,10 @@ The comment thread displays "Distilled into knowledge" and the evidence rational
 The original 808-question catch-up is complete (145 active / 265 pending before
 this comment); a subsequent new question awaits the next daily review.
 
-A follow-up changes the save receipt to timeless wording, so it does not keep saying
+Follow-up `accc6f2` is live (health endpoint verified). It changes the save receipt
+to timeless wording, so it does not keep saying
 "queued" after review completes. Local preview and disposable database are stopped.
+
+Live result screenshot: `../../jerry-review-comments-live.jpg`. The verification
+comment is explicitly labelled as Codex verification and retains its signed-in
+author, timestamp, source reference and AI outcome.
