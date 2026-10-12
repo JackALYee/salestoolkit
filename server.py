@@ -141,7 +141,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "9.9.9 (2026)"
+APP_VERSION = "10.1.1 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
