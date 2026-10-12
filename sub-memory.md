@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry Log and online learning | Log recovery and Jimmy access completed; online learning 0d963d3 / 10.2.2 has verified cloud wakes, saved knowledge and commercial-privacy migration; historical catch-up continues online | learning/sub-memory.md | volatile |
+| W1 | state | platform | resuming Jerry learning comments | Pending-entry commenting and hosted re-distillation are implemented and locally verified; deployment 10.2.3 pending | learning/sub-memory.md | volatile |
 
 ## Long-term memory
 

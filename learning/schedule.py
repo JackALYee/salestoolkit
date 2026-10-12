@@ -70,6 +70,11 @@ def install():
                      WHERE (status='queued' AND retry_at<=now()) OR (status='running' AND lease_until<now()))
               OR NOT EXISTS(SELECT 1 FROM jerry_learning.runs
                  WHERE slot='daily-'||to_char((now() AT TIME ZONE 'Asia/Shanghai' - interval '2 hours')::date,'YYYY-MM-DD'))
+              OR (EXISTS(SELECT 1 FROM jerry_learning.comments cm JOIN jerry_learning.knowledge k ON k.id=cm.knowledge_id
+                    WHERE cm.processed_at IS NULL AND k.status='pending')
+                  AND NOT EXISTS(SELECT 1 FROM jerry_learning.runs
+                    WHERE slot='feedback-'||to_char((now() AT TIME ZONE 'Asia/Shanghai' - interval '2 hours')::date,'YYYY-MM-DD')
+                      AND status IN ('queued','running','failed','budget_limit')))
             ''',))
         c.execute("SELECT jobname,schedule,active FROM cron.job WHERE jobname IN ('jerry-learning-daily','jerry-learning-resume') ORDER BY jobname")
         jobs=[dict(r) for r in c.fetchall()]
@@ -79,6 +84,7 @@ def install():
 
 def tick():
     store.enqueue('daily')
+    store.enqueue_feedback()
     engine.work()
 
 

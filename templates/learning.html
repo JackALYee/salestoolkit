@@ -6,6 +6,8 @@
 <style>
 :root{color-scheme:dark;--bg:#050810;--panel:#0b1221;--ink:#e6eaf0;--muted:#a0aec0;--line:#283142;--green:#2af598}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,sans-serif}header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}header strong{font-size:18px}a{color:#8acfff;text-decoration:none}a:hover{text-decoration:underline}nav{display:flex;gap:22px}main{max-width:1180px;margin:auto;padding:30px 24px 60px}h1{font-size:30px;line-height:1.2;margin:0 0 12px}h2{font-size:20px;margin:28px 0 12px}p{margin:8px 0}.muted,small{color:var(--muted)}.notice{border-left:3px solid var(--green);padding:10px 16px;background:var(--panel);margin:20px 0}.error{color:#ffabab;border-color:#ffabab}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}.stat{border:1px solid var(--line);padding:16px;border-radius:8px}.stat b{display:block;font-size:27px;color:var(--green)}.stat span{font-size:13px;color:var(--muted)}button,input,select{font:inherit;color:var(--ink);background:#141b29;border:1px solid #394258;border-radius:6px;padding:8px 12px}button{cursor:pointer}button:hover{border-color:var(--green)}button:disabled{opacity:.5;cursor:wait}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:3px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}input{flex:1;min-width:180px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.card{border:1px solid var(--line);border-radius:8px;padding:20px;overflow-wrap:anywhere}.card h3{font-size:17px;margin:10px 0}.card p{white-space:pre-wrap}.meta{font-size:12px;color:var(--muted)}.badge{font-size:11px;letter-spacing:.6px;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:3px 6px;display:inline-block;margin:0 6px 5px 0}.active{color:var(--green)}.pending{color:#ffcb74}.sources{padding-left:18px;font-size:13px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left;white-space:nowrap;font-size:13px}td,th{border-bottom:1px solid var(--line);padding:10px}td:last-child{white-space:normal;min-width:160px}.retire{padding:3px 8px;font-size:12px;margin-top:10px}.empty{color:var(--muted);padding:22px;border:1px dashed var(--line);border-radius:8px}#message:empty{display:none}[hidden]{display:none!important}
+
+.feedback{border-top:1px solid var(--line);margin-top:18px;padding-top:12px}.feedback summary{cursor:pointer;font-weight:600;color:#8acfff}.feedback summary:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:3px}.comment-list{list-style:none;padding:0;margin:14px 0;max-height:400px;overflow:auto}.comment-list li{padding:12px 0;border-bottom:1px solid var(--line)}.comment-state{font-size:12px;color:#b8cfff}.comment-form{margin-top:16px}.comment-form>label:first-child{display:block;font-weight:600}textarea{display:block;width:100%;min-width:0;resize:vertical;font:inherit;color:var(--ink);background:#141b29;border:1px solid #394258;border-radius:6px;padding:10px;margin:8px 0}.privacy-choice{display:flex;gap:8px;align-items:flex-start;font-size:13px}.privacy-choice input{flex:none;min-width:0;margin:5px 0}#feedback-message:empty,.comment-error:empty{display:none}@media(max-width:420px){main{padding:24px 16px}.cards{grid-template-columns:minmax(0,1fr)}}
 </style></head>
 <body><header><strong>Jerry Knowledge</strong><nav><a href="/jerry">Ask Jerry</a><a href="/jerrylog">Jerry Log</a><a href="/">Toolkit</a></nav></header>
 <main><h1>A reservoir that learns from daily questions</h1><p class="muted">Jerry reviews all users’ Q&A, checks reusable claims against evidence, and recalls supported knowledge in future answers.</p>
@@ -14,23 +16,93 @@
 <div class="stats"><div class="stat"><b id="reviewed">—</b><span>Questions reviewed</span></div><div class="stat"><b id="remaining">—</b><span>Awaiting daily review</span></div><div class="stat"><b id="active">—</b><span>Available to Jerry</span></div><div class="stat"><b id="pending">—</b><span>Needs evidence or review</span></div></div>
 <h2>Online review activity</h2><p class="muted">The first review works through the existing log. Later reviews process new questions at 02:00 China time. Interrupted work resumes online.</p>
 <div class="toolbar"><button id="refresh" type="button">Refresh</button><button id="retry" type="button" hidden>Retry failed reviews</button><span id="updated" class="meta"></span></div>
-<div class="table-wrap"><table><thead><tr><th>Review</th><th>State</th><th>Questions</th><th>Learned</th><th>Pending</th><th>Estimated cost</th><th>Details</th></tr></thead><tbody id="runs"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Review</th><th>State</th><th>Reviewed</th><th>Learned</th><th>Pending</th><th>Estimated cost</th><th>Details</th></tr></thead><tbody id="runs"></tbody></table></div>
 <h2>Learned entries</h2><p class="muted">Only supported, unexpired entries are used in answers. Confidential entries stay within their original access restrictions. This updates Jerry’s reference knowledge, not the underlying model’s weights.</p>
 <div class="toolbar"><input id="search" aria-label="Search learned entries" placeholder="Search learned entries…"><select id="filter" aria-label="Entry state"><option value="">All states</option><option value="active">Available to Jerry</option><option value="pending">Needs review</option><option value="expired">Expired</option><option value="retired">Removed</option></select></div>
+<div id="feedback-message" class="notice" role="status"></div>
 <p id="card-count" class="meta"></p><div id="cards" class="cards"></div>
 </main>
 <script>
 'use strict';
-const el=id=>document.getElementById(id);let data=null,busy=false,timer=null;
+const el=id=>document.getElementById(id);
+let data=null,busy=false,timer=null;
+const drafts=new Map(),threads=new Map(),opened=new Set(),posting=new Set(),loading=new Set();
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString(undefined,{timeZone:'Asia/Shanghai',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+' CST':'—';
-const state={queued:'Queued',running:'Reviewing',complete:'Complete',failed:'Needs retry',budget_limit:'Spending limit reached'};
-async function request(path,options){const r=await fetch(path,options);let body;try{body=await r.json()}catch{throw Error('The server returned an unexpected response. Please retry.')}if(!r.ok){if(r.status===401)throw Error('Your session expired. Sign in again through the Toolkit link.');throw Error(body.detail||body.error||'The request failed.')}return body;}
-function cards(){if(!data)return;const q=el('search').value.toLowerCase(),status=el('filter').value;const rows=data.cards.filter(c=>(!status||c.status===status)&&(!q||(c.title+' '+c.content).toLowerCase().includes(q)));
-el('card-count').textContent=`Showing ${rows.length} of the latest ${data.cards.length} entries visible to you.`;
-el('cards').innerHTML=rows.length?rows.map(c=>{const links=c.sources.map(s=>{let valid=false;try{valid=new URL(s.url).protocol==='https:'}catch{}return `<li>${valid?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`:esc(s.locator||s.title||'Curated knowledge')}</li>`}).join('');return `<article class="card"><span class="badge ${esc(c.status)}">${esc(c.status==='active'?'Available to Jerry':c.status==='pending'?'Needs review':c.status)}</span><span class="badge">${esc(c.scope==='internal'?'Company knowledge':c.scope==='owner'?'Individual restriction':'Leadership only')}</span><h3>${esc(c.title)}</h3><p>${esc(c.content)}</p><p class="meta">Reviewed ${esc(date(c.created_at))}<br>Expires ${esc(date(c.expires_at))} · Evidence confidence ${Math.round(c.confidence*100)}%</p><p class="meta">${esc(c.reason)}</p>${links?`<ul class="sources">${links}</ul>`:'<p class="meta">No independently verified source yet.</p>'}${data.can_manage&&c.status!=='retired'?`<button class="retire" data-id="${Number(c.id)}">Remove from use</button>`:''}</article>`}).join(''):'<div class="empty">No matching learned entries yet. New entries appear as the online review progresses.</div>';}
-async function load(){if(busy)return;busy=true;el('refresh').disabled=true;clearTimeout(timer);try{data=await request('/api/learning');el('message').textContent='';const s=data.settings.scheduler||{};el('schedule').textContent=s.installed?'Daily review scheduled online · 02:00 China time · Runs without your computer.':'The hosted worker is available, but its independent daily wake schedule needs attention. '+(s.error||'Setup is in progress.');if(s.installed&&data.settings.last_wake)el('schedule').textContent+=' Last cloud wake: '+date(data.settings.last_wake.received_at*1000);el('schedule').classList.toggle('error',!s.installed);el('reviewed').textContent=data.reviewed;el('remaining').textContent=Math.max(0,data.questions-data.reviewed);el('active').textContent=data.counts.active||0;el('pending').textContent=data.counts.pending||0;el('retry').hidden=!data.can_manage||!data.runs.some(r=>r.status==='failed');el('runs').innerHTML=data.runs.map(r=>`<tr><td>${esc(r.kind==='backfill'?'Existing log':r.slot.replace('daily-',''))}</td><td>${esc(state[r.status]||r.status)}</td><td>${r.reviewed}</td><td>${r.accepted}</td><td>${r.pending}</td><td>$${Number(r.spent_usd).toFixed(2)} / $${Number(r.budget_usd).toFixed(2)}</td><td>${esc(r.error||(r.status==='complete'?'Finished '+date(r.finished_at):'Updated '+date(r.updated_at)))}</td></tr>`).join('');el('updated').textContent='Last checked '+new Date().toLocaleTimeString();cards();if(data.runs.some(r=>['running','queued'].includes(r.status)))timer=setTimeout(load,30000)}catch(e){el('message').textContent=e.message;timer=setTimeout(load,30000)}finally{busy=false;el('refresh').disabled=false}}
-el('refresh').onclick=load;el('search').oninput=cards;el('filter').onchange=cards;
+const state={queued:'Queued',running:'Reviewing',complete:'Complete',failed:'Needs retry',budget_limit:'Daily spending limit reached'};
+async function request(path,options){
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),25000);
+  try{
+    const r=await fetch(path,{...options,signal:controller.signal});let body;
+    try{body=await r.json()}catch{throw Error('The server returned an unexpected response. Please retry.')}
+    if(!r.ok){if(r.status===401)throw Error('Your session expired. Sign in again through the Toolkit link.');throw Error(body.detail||body.error||'The request failed.')}
+    return body;
+  }catch(e){if(e.name==='AbortError')throw Error('The request timed out. Your comment draft is kept; retrying will not submit it twice.');throw e}
+  finally{clearTimeout(timeout)}
+}
+function draft(id){if(!drafts.has(id))drafts.set(id,{content:'',confidential:true,request_id:null});return drafts.get(id)}
+function commentState(c){
+  if(c.processed_at)return {learned:'Distilled into knowledge',needs_review:'AI reviewed · more evidence needed',withdrawn:'Review cancelled'}[c.state]||c.state;
+  if(c.run_status==='budget_limit')return 'Waiting for the next daily allowance';
+  if(c.run_status==='failed')return 'Review needs a leadership retry';
+  if(c.run_status==='queued'&&c.state==='reviewing')return 'Waiting to retry online';
+  return c.state==='reviewing'?'AI review in progress':'Queued for online AI review';
+}
+function renderThread(id,payload){
+  const target=el('thread-'+id);if(!target)return;
+  target.innerHTML=payload.comments.length?'<ol class="comment-list">'+payload.comments.map(c=>`<li><p class="meta">${esc(c.author)} · ${esc(date(c.created_at))}</p><p>${esc(c.body)}</p><p class="comment-state">${esc(commentState(c))}</p>${c.result?`<p class="meta">AI: ${esc(c.result)}</p>`:''}</li>`).join('')+'</ol><p class="meta">Showing the latest 50 comments at most.</p>':'<p class="meta">No comments yet. Add a correction, context, or a source to help Jerry recheck this entry.</p>';
+}
+async function loadThread(id){
+  if(loading.has(id))return;loading.add(id);
+  try{const payload=await request('/api/learning/knowledge/'+id+'/comments');threads.set(id,payload);renderThread(id,payload)}
+  catch(e){const target=el('thread-'+id);if(target)target.textContent=e.message}
+  finally{loading.delete(id)}
+}
+function commentsPanel(c){
+  if(c.status!=='pending'&&!c.comment_count)return '';
+  const id=Number(c.id),d=draft(id);
+  return `<details class="feedback" data-entry="${id}" ${opened.has(id)?'open':''}><summary>Comments &amp; AI review${c.comment_count?' ('+Number(c.comment_count)+')':''}${c.comments_waiting?' · feedback queued':''}</summary><div id="thread-${id}" aria-live="polite">Loading comments…</div>${c.status==='pending'?`<form class="comment-form" data-entry="${id}"><label for="comment-${id}">Help Jerry improve this entry</label><textarea id="comment-${id}" name="content" maxlength="2000" minlength="3" required rows="4" placeholder="What should change? Add the correction, why it matters, and a source if available.">${esc(d.content)}</textarea>${c.scope==='internal'?`<label class="privacy-choice"><input type="checkbox" name="confidential" ${d.confidential?'checked':''}> Restrict this entry and feedback to leadership</label><p class="meta">Checked by default. Uncheck only for feedback safe to share with every reviewer. Pricing and confidential information remain restricted automatically.</p>`:'<p class="meta">Comments inherit this entry’s access restrictions.</p>'}<p class="meta">Jerry will distill your feedback and check the revised claim against evidence. Unsupported claims stay in review. Comments share the daily review allowance.</p><button type="submit" ${posting.has(id)?'disabled':''}>${posting.has(id)?'Sending…':'Send for AI review'}</button><p class="comment-error error" role="alert"></p></form>`:''}</details>`;
+}
+function cards(){
+  if(!data)return;
+  const q=el('search').value.toLowerCase(),status=el('filter').value;
+  const rows=data.cards.filter(c=>(!status||c.status===status)&&(!q||(c.title+' '+c.content).toLowerCase().includes(q)));
+  el('card-count').textContent=`Showing ${rows.length} of the latest ${data.cards.length} entries visible to you.`;
+  el('cards').innerHTML=rows.length?rows.map(c=>{
+    const links=c.sources.map(s=>{let valid=false;try{valid=new URL(s.url).protocol==='https:'}catch{}return `<li>${valid?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`:esc(s.locator||s.title||'Curated knowledge')}</li>`}).join('');
+    return `<article class="card"><span class="badge ${esc(c.status)}">${esc(c.status==='active'?'Available to Jerry':c.status==='pending'?'Needs review':c.status)}</span><span class="badge">${esc(c.scope==='internal'?'Company knowledge':c.scope==='owner'?'Individual restriction':'Leadership only')}</span><h3>${esc(c.title)}</h3><p>${esc(c.content)}</p><p class="meta">Reviewed ${esc(date(c.updated_at||c.created_at))}<br>Expires ${esc(date(c.expires_at))} · Evidence confidence ${Math.round(c.confidence*100)}%</p><p class="meta">${esc(c.reason)}</p>${links?`<ul class="sources">${links}</ul>`:'<p class="meta">No independently verified source yet.</p>'}${commentsPanel(c)}${data.can_manage&&c.status!=='retired'?`<button class="retire" data-id="${Number(c.id)}">Remove from use</button>`:''}</article>`;
+  }).join(''):'<div class="empty">No matching learned entries yet. New entries appear as the online review progresses.</div>';
+  for(const d of el('cards').querySelectorAll('details[open]')){const id=Number(d.dataset.entry);if(threads.has(id))renderThread(id,threads.get(id));loadThread(id)}
+}
+async function load(){
+  if(busy)return;busy=true;el('refresh').disabled=true;clearTimeout(timer);
+  try{
+    data=await request('/api/learning');el('message').textContent='';const s=data.settings.scheduler||{};
+    el('schedule').textContent=s.installed?'Daily review scheduled online · 02:00 China time · Runs without your computer.':'The hosted worker is available, but its independent daily wake schedule needs attention. '+(s.error||'Setup is in progress.');
+    if(s.installed&&data.settings.last_wake)el('schedule').textContent+=' Last cloud wake: '+date(data.settings.last_wake.received_at*1000);
+    el('schedule').classList.toggle('error',!s.installed);el('reviewed').textContent=data.reviewed;el('remaining').textContent=Math.max(0,data.questions-data.reviewed);el('active').textContent=data.counts.active||0;el('pending').textContent=data.counts.pending||0;
+    el('retry').hidden=!data.can_manage||!data.runs.some(r=>r.status==='failed');
+    el('runs').innerHTML=data.runs.map(r=>`<tr><td>${esc(r.kind==='backfill'?'Existing log':r.kind==='feedback'?'Comment review · '+r.slot.replace('feedback-',''):r.slot.replace('daily-',''))}</td><td>${esc(state[r.status]||r.status)}</td><td>${r.reviewed}</td><td>${r.accepted}</td><td>${r.pending}</td><td>$${Number(r.spent_usd).toFixed(2)} / $${Number(r.budget_usd).toFixed(2)}${r.kind==='backfill'?'':' shared'}</td><td>${esc(r.error||(r.status==='complete'?'Finished '+date(r.finished_at):'Updated '+date(r.updated_at)))}</td></tr>`).join('');
+    el('updated').textContent='Last checked '+new Date().toLocaleTimeString();
+    if(!posting.size&&!(el('cards').contains(document.activeElement)&&document.activeElement.matches('textarea,input')))cards();
+    if(data.runs.some(r=>['running','queued'].includes(r.status))||data.cards.some(c=>c.comments_waiting))timer=setTimeout(load,30000);
+  }catch(e){el('message').textContent=e.message;timer=setTimeout(load,30000)}finally{busy=false;el('refresh').disabled=false}
+}
+el('refresh').onclick=async()=>{await load();cards()};el('search').oninput=cards;el('filter').onchange=cards;
 el('retry').onclick=async()=>{el('retry').disabled=true;try{await request('/api/learning/retry',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await load()}catch(e){el('message').textContent=e.message}finally{el('retry').disabled=false}};
-el('cards').onclick=async e=>{const b=e.target.closest('button[data-id]');if(!b)return;b.disabled=true;try{await request('/api/learning/knowledge/'+b.dataset.id+'/retire',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await load()}catch(err){el('message').textContent=err.message;b.disabled=false}};load();
+el('cards').addEventListener('toggle',e=>{const d=e.target;if(!d.matches('details[data-entry]'))return;const id=Number(d.dataset.entry);if(d.open){opened.add(id);loadThread(id)}else opened.delete(id)},true);
+el('cards').addEventListener('input',e=>{const form=e.target.closest('.comment-form');if(!form)return;const d=draft(Number(form.dataset.entry));d.content=form.elements.content.value;d.confidential=form.elements.confidential?.checked??true;d.request_id=null});
+el('cards').addEventListener('submit',async e=>{
+  const form=e.target.closest('.comment-form');if(!form)return;e.preventDefault();const id=Number(form.dataset.entry);if(posting.has(id))return;
+  const d=draft(id);d.content=form.elements.content.value;d.confidential=form.elements.confidential?.checked??true;d.request_id=d.request_id||crypto.randomUUID();
+  const button=form.querySelector('button[type=submit]'),error=form.querySelector('.comment-error');posting.add(id);button.disabled=true;button.textContent='Sending…';error.textContent='';
+  try{
+    const result=await request('/api/learning/knowledge/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+    drafts.delete(id);threads.delete(id);el('feedback-message').textContent=result.restricted?'Comment saved. This entry is now restricted to leadership and is queued for online AI review.':'Comment saved and queued for online AI review. Jerry will pick it up after the current batch; you can close this page.';
+    posting.delete(id);await load();cards();
+  }catch(err){error.textContent=err.message}finally{posting.delete(id);button.disabled=false;button.textContent='Send for AI review'}
+});
+el('cards').onclick=async e=>{const b=e.target.closest('button[data-id]');if(!b)return;b.disabled=true;try{await request('/api/learning/knowledge/'+b.dataset.id+'/retire',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await load();cards()}catch(err){el('message').textContent=err.message;b.disabled=false}};
+load();
+
 </script></body></html>

@@ -62,6 +62,35 @@ knowledge page reports installation failure rather than claiming a schedule exis
   provider calls and survive uncertain outcomes; a stopped run leaves questions
   unreviewed. Usage estimates use Sonnet's configured rates, not billing invoices.
 
+## Reviewer comments
+
+Pending entries have a comment thread and a **Send for AI review** form. Approved
+Jerry Log reviewers can comment only on entries they can already read. Comments
+and subsequent revisions inherit the entry's access restrictions. The form defaults
+to leadership-only feedback; opting out is explicit. Monetary/confidential terms
+also tighten visibility before saving. Credentials and contact identifiers are
+redacted. Comments are durable in the private database with an author and timestamp.
+
+The hosted worker gives feedback priority after its current batch group. It distills
+one revised atomic claim from the proposal and comments, then independently checks
+fresh curated/web evidence. Comments are guidance, not factual proof or permission
+to change Jerry's instructions. Supported revisions update the same entry, retaining
+its original question IDs, comment history and audited prior contents. Unsupported
+revisions stay pending with the reason shown in the thread. Active entries retain
+the thread for provenance; new comments are limited to pending entries.
+
+Feedback and daily Q&A reviews share the existing US$5 estimated daily allowance;
+they do not each get a separate US$5 budget. Unprocessed feedback carries forward
+to the next daily allowance. The cloud resume job also wakes for newly saved
+comments. Failed model calls leave comments unprocessed and use the existing retry
+controls. Requests have per-author idempotency keys, a 2,000-character limit,
+20 comments per author per hour, and at most 20 unprocessed comments per entry.
+
+If another comment arrives during AI review, the stale revision is discarded and
+the complete feedback is rechecked. Removing an entry cancels waiting feedback and
+an in-flight review cannot restore it. Browser refresh preserves drafts and expanded
+threads. No model call or worker is enabled by running the local preview.
+
 ## Configuration and operation
 
 Existing hosted variables: `JERRY_GPT_DB_URL`, `ANTHROPIC_API_KEY`, `AUTH_SECRET`.

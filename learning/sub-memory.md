@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | deploy | resuming daily learning rollout | Hosted 0d963d3 / 10.2.2 is live; cloud wakes and commercial-privacy migration verified; latest snapshot: 140 questions, 13 active entries and 57 pending proposals; full 808-question catch-up continues online | ../scripts/test_learning.py | volatile |
+| W1 | state | deploy | resuming review comments | Comment threads, independent re-distillation and shared daily budget implemented; 34 learning tests plus portal/resource checks passed; local browser flow verified; deployment pending | ../scripts/test_learning.py; README.md | volatile |
 
 ## Long-term memory
 
@@ -17,12 +17,14 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 | R3 | rule | deploy,verification | claiming that daily learning works online | Verify saved cards and completed runs plus installed cloud Cron jobs; a daemon or health endpoint alone is insufficient | README.md | stable |
 | R4 | rule | platform | resuming an interrupted review | Use durable question checkpoints, transaction-scoped claims, expiring row leases and spending reservations; never mark failed batches reviewed | store.py | stable |
 | R5 | rule | privacy | classifying learned monetary or confidential information | Model labels are insufficient; deterministic storage, migration and retrieval restrictions cover facts, titles, review notes and evidence | store.py; engine.py; ../scripts/test_learning.py | stable |
+| R6 | rule | platform,privacy | learning from reviewer feedback | Comments guide revisions but are not independent evidence; preserve visibility, discard revisions when newer comments arrive, and never reactivate retired entries | store.py; engine.py; ../scripts/test_learning.py | stable |
 | F1 | fact | platform | explaining how Jerry improves | The reservoir improves retrieval and answer grounding, not provider model weights or program code | README.md | stable |
 
 ## Short-term memory
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
+| E4 | episode | platform | resuming comment-driven learning | User requested comments on Needs review entries so Jerry can distill feedback; use the hosted worker and shared daily allowance | README.md | consolidating |
 | E1 | episode | platform | reviewing the first daily learning implementation | User selected all users' Q&A with confidential entries restricted; schedule is 02:00 Asia/Shanghai and initial log catch-up is automatic | README.md | consolidating |
 
 ### E1 — Deployment verification in progress
@@ -91,3 +93,18 @@ reviewed, 11 active entries and 49 pending proposals, estimated cost US$2.87.
 Final snapshot at 17:27 China: **140 / 808 questions reviewed, 13 active entries,
 57 pending proposals, US$3.07 estimated spend**. Remaining catch-up continues online.
 Screenshot: `../../jerry-learning-live.jpg`. Last cloud wake shown: 17:25 China.
+
+### E4 — Comments that feed hosted learning
+
+Added authenticated, same-origin comment endpoints and a comment form on pending
+entries. Feedback is persisted in private Postgres and independently reverified by
+the hosted learner. Comments do not count as proof; verified revisions update the
+same entry and retain history. Confidential feedback tightens visibility immediately.
+Feedback shares the daily allowance and continues through the cloud resume job.
+
+34 tests passed, including comment identity/access checks, duplicate submissions,
+privacy, shared budgets, carryover, interrupted leases, newer-comment races and
+retirement during review. Existing portal (45) and resource/version (33) checks passed.
+Local browser testing verified draft preservation, escaped HTML, saved comments, and
+transition to active knowledge using synthetic evidence with no real model call.
+Production verification is pending. Version 10.2.3.

@@ -147,7 +147,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "10.2.2 (2026)"
+APP_VERSION = "10.2.3 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -645,6 +645,11 @@ def _learning_manager(request):
     user = require_user(request)
     if not _login.resolve_leadership(user):
         raise HTTPException(403, "Only leadership can manage learning reviews.")
+    _learning_write_guard(request)
+    return user
+
+
+def _learning_write_guard(request):
     # Cookie-authenticated mutations require a same-origin JSON request.
     origin = request.headers.get("origin", "").rstrip("/")
     if origin != "https://streamax-salestoolkit.com" and origin != str(request.base_url).rstrip("/"):
@@ -653,7 +658,47 @@ def _learning_manager(request):
         raise HTTPException(415, "A JSON request is required.")
     if _learn_store is None:
         raise HTTPException(503, "Learning is unavailable.")
-    return user
+
+
+@app.get("/api/learning/knowledge/{knowledge_id}/comments")
+def learning_comments(knowledge_id: int, request: Request):
+    user = require_jerry_log_access(request)
+    if _learn_store is None:
+        raise HTTPException(503, "Learning is unavailable.")
+    try:
+        return _learn_store.comments(knowledge_id, bool(_login.resolve_leadership(user)), user)
+    except _learn_store.FeedbackError as exc:
+        raise HTTPException(exc.status_code, str(exc))
+    except Exception:
+        raise HTTPException(503, "Comments are temporarily unavailable. Please retry.")
+
+
+@app.post("/api/learning/knowledge/{knowledge_id}/comments", status_code=202)
+async def learning_comment(knowledge_id: int, request: Request):
+    import uuid
+    user = require_jerry_log_access(request)
+    _learning_write_guard(request)
+    raw = await request.body()
+    if len(raw) > 12000:
+        raise HTTPException(413, "The comment is too long.")
+    try:
+        body = json.loads(raw)
+        if not isinstance(body, dict) or not isinstance(body.get("content"), str):
+            raise ValueError()
+        if not 3 <= len(body["content"].strip()) <= 2000 or type(body.get("confidential")) is not bool:
+            raise ValueError()
+        request_id = str(uuid.UUID(body.get("request_id", "")))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(400, "Provide a comment of 3–2,000 characters and its visibility choice.")
+    try:
+        result = await asyncio.to_thread(_learn_store.add_comment, knowledge_id, user,
+            bool(_login.resolve_leadership(user)), body["content"], request_id, body["confidential"])
+    except _learn_store.FeedbackError as exc:
+        raise HTTPException(exc.status_code, str(exc))
+    except Exception:
+        raise HTTPException(503, "The comment could not be confirmed. Retry with the same text; duplicate submissions are prevented.")
+    _learn_schedule.start()
+    return result
 
 
 @app.post("/api/learning/retry")

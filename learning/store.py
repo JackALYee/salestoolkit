@@ -69,6 +69,16 @@ def initialize():
             user_email TEXT NOT NULL, session_id TEXT NOT NULL, question_hash TEXT NOT NULL, web_enabled BOOLEAN NOT NULL,
             sources JSONB NOT NULL DEFAULT '[]', created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             PRIMARY KEY(user_email, session_id, question_hash));
+        CREATE TABLE IF NOT EXISTS jerry_learning.comments (
+            id BIGSERIAL PRIMARY KEY, knowledge_id BIGINT NOT NULL REFERENCES jerry_learning.knowledge(id),
+            author TEXT NOT NULL, body TEXT NOT NULL, request_id UUID NOT NULL,
+            state TEXT NOT NULL DEFAULT 'queued', run_id UUID,
+            result TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            processed_at TIMESTAMPTZ, UNIQUE(author, request_id));
+        CREATE INDEX IF NOT EXISTS jerry_learning_comments_pending
+            ON jerry_learning.comments(knowledge_id, id) WHERE processed_at IS NULL;
+        CREATE INDEX IF NOT EXISTS jerry_learning_comments_entry ON jerry_learning.comments(knowledge_id, id);
+        CREATE INDEX IF NOT EXISTS jerry_learning_comments_author ON jerry_learning.comments(author, created_at);
         REVOKE ALL ON ALL TABLES IN SCHEMA jerry_learning FROM PUBLIC;
         ''')
         # Repair any older overly broad classification without removing evidence.
@@ -121,7 +131,7 @@ def claim():
             return None
         c.execute('''SELECT * FROM jerry_learning.runs
                      WHERE (status='queued' AND retry_at<=now()) OR (status='running' AND lease_until<now())
-                     ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED''')
+                     ORDER BY (kind='feedback') DESC,created_at LIMIT 1 FOR UPDATE SKIP LOCKED''')
         run = c.fetchone()
         if not run:
             return None
@@ -160,6 +170,14 @@ def batch(run, size=20):
 
 def reserve(run, amount):
     with db() as c:
+        if run.get('kind') in ('daily','feedback'):
+            # Comments share the existing daily allowance, not a second budget.
+            c.execute('SELECT pg_advisory_xact_lock(739231402)')
+            c.execute('''SELECT COALESCE(sum(spent_usd+reserved_usd),0) AS used
+                         FROM jerry_learning.runs WHERE kind IN ('daily','feedback') AND cutoff=%s''',
+                      (run['cutoff'],))
+            if float(c.fetchone()['used']) + amount > float(run['budget_usd']):
+                return False
         c.execute('''UPDATE jerry_learning.runs SET reserved_usd=reserved_usd+%s,
                      lease_until=now()+interval '10 minutes',updated_at=now()
                      WHERE id=%s AND owner=%s AND status='running'
@@ -244,7 +262,9 @@ def status(is_leadership=False, user=''):
         reviewed = c.fetchone()['n']
         c.execute("SELECT COUNT(*) AS n FROM public.jerry_gpt_chats WHERE role='user'")
         questions = c.fetchone()['n']
-        c.execute('''SELECT id,title,content,kind,scope,status,sources,confidence,reason,created_at,expires_at
+        c.execute('''SELECT id,title,content,kind,scope,status,sources,confidence,reason,created_at,updated_at,expires_at,
+                     (SELECT count(*) FROM jerry_learning.comments cm WHERE cm.knowledge_id=knowledge.id) AS comment_count,
+                     (SELECT count(*) FROM jerry_learning.comments cm WHERE cm.knowledge_id=knowledge.id AND cm.processed_at IS NULL) AS comments_waiting
                      FROM jerry_learning.knowledge WHERE (scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s)) OR %s OR (scope='owner' AND owner_email=%s)
                      ORDER BY created_at DESC LIMIT 200''', (COMMERCIAL_PATTERN,is_leadership,user))
         cards=[dict(r) for r in c.fetchall()]
@@ -299,5 +319,152 @@ def retire(knowledge_id, actor):
         c.execute("UPDATE jerry_learning.knowledge SET status='retired',updated_at=now() WHERE id=%s RETURNING id", (knowledge_id,))
         if not c.fetchone():
             return False
+        c.execute("""UPDATE jerry_learning.comments SET state='withdrawn',processed_at=now(),
+                     result='Entry removed from use before feedback was applied.'
+                     WHERE knowledge_id=%s AND processed_at IS NULL""", (knowledge_id,))
         c.execute("INSERT INTO jerry_learning.audit(knowledge_id,action,actor) VALUES(%s,'retired',%s)",(knowledge_id,actor))
+        return True
+
+
+class FeedbackError(ValueError):
+    def __init__(self, status_code, message):
+        self.status_code = status_code
+        super().__init__(message)
+
+
+def visible_entry(c, knowledge_id, is_leadership, user, lock=False):
+    c.execute("""SELECT * FROM jerry_learning.knowledge WHERE id=%s AND (
+        (scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s))
+        OR %s OR (scope='owner' AND owner_email=%s))""" + (' FOR UPDATE' if lock else ''),
+        (knowledge_id, COMMERCIAL_PATTERN, is_leadership, user))
+    entry = c.fetchone()
+    if not entry:
+        raise FeedbackError(404, 'Knowledge entry not found or not available to you.')
+    return dict(entry)
+
+
+def add_comment(knowledge_id, user, is_leadership, body, request_id, confidential=False):
+    from .engine import redact, SENSITIVE
+    body = redact(body).strip()
+    if not 3 <= len(body) <= 2000:
+        raise FeedbackError(400, 'Write a comment between 3 and 2,000 characters.')
+    with db() as c:
+        # Serialize per-author rate limits; entry lock serializes revisions with AI saves.
+        c.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,739231403))', (user,))
+        c.execute('SELECT id,knowledge_id FROM jerry_learning.comments WHERE author=%s AND request_id=%s',
+                  (user, request_id))
+        previous = c.fetchone()
+        if previous:
+            if previous['knowledge_id'] != knowledge_id:
+                raise FeedbackError(409, 'This submission identifier was already used for another entry.')
+            return {'ok': True, 'id': previous['id'], 'duplicate': True}
+        entry = visible_entry(c, knowledge_id, is_leadership, user, lock=True)
+        if entry['status'] != 'pending':
+            raise FeedbackError(409, 'This entry is no longer awaiting review. Refresh to see its latest state.')
+        c.execute("SELECT count(*) AS n FROM jerry_learning.comments WHERE author=%s AND created_at>now()-interval '1 hour'", (user,))
+        if c.fetchone()['n'] >= 20:
+            raise FeedbackError(429, 'You have sent 20 comments this hour. Please try again later.')
+        c.execute('SELECT count(*) AS n FROM jerry_learning.comments WHERE knowledge_id=%s AND processed_at IS NULL', (knowledge_id,))
+        if c.fetchone()['n'] >= 20:
+            raise FeedbackError(429, 'This entry has 20 comments waiting for AI review. Please wait for the review to finish.')
+        # Privacy only tightens, and happens before feedback can be read or searched.
+        restricted = bool(confidential or SENSITIVE.search(body))
+        if restricted and entry['scope'] == 'internal':
+            c.execute("UPDATE jerry_learning.knowledge SET scope='leadership',updated_at=now() WHERE id=%s", (knowledge_id,))
+        c.execute("""INSERT INTO jerry_learning.comments(knowledge_id,author,body,request_id)
+                     VALUES(%s,%s,%s,%s) RETURNING id""", (knowledge_id,user,body,request_id))
+        comment_id = c.fetchone()['id']
+        c.execute("INSERT INTO jerry_learning.audit(knowledge_id,action,actor,detail) VALUES(%s,'comment-added',%s,%s)",
+                  (knowledge_id,user,Json({'comment_id':comment_id,'restricted':restricted})))
+        return {'ok':True,'id':comment_id,'restricted':restricted and entry['scope']=='internal' and not is_leadership}
+
+
+def comments(knowledge_id, is_leadership, user):
+    with db() as c:
+        entry = visible_entry(c, knowledge_id, is_leadership, user)
+        c.execute("""SELECT cm.id,cm.author,cm.body,cm.state,cm.result,cm.created_at,cm.processed_at,
+                     r.status AS run_status FROM jerry_learning.comments cm
+                     LEFT JOIN jerry_learning.runs r ON r.id=cm.run_id
+                     WHERE cm.knowledge_id=%s ORDER BY cm.id DESC LIMIT 50""", (knowledge_id,))
+        return {'comments':list(reversed([dict(r) for r in c.fetchall()])),
+                'can_comment':entry['status']=='pending','scope':entry['scope']}
+
+
+def enqueue_feedback(now=None):
+    cutoff = due_cutoff(now)
+    budget = max(0,min(100,float(os.environ.get('JERRY_LEARN_DAILY_BUDGET','5'))))
+    with db() as c:
+        c.execute("""INSERT INTO jerry_learning.runs(id,slot,kind,cutoff,budget_usd)
+            SELECT %s,%s,'feedback',%s,%s WHERE EXISTS(
+                SELECT 1 FROM jerry_learning.comments cm JOIN jerry_learning.knowledge k ON k.id=cm.knowledge_id
+                WHERE cm.processed_at IS NULL AND k.status='pending')
+            ON CONFLICT(slot) DO UPDATE SET status='queued',finished_at=NULL,updated_at=now()
+                WHERE jerry_learning.runs.status='complete'""",
+            (str(uuid.uuid4()),'feedback-'+cutoff.date().isoformat(),cutoff,budget))
+
+
+def feedback_batch(run):
+    with db() as c:
+        c.execute("""SELECT k.* FROM jerry_learning.knowledge k WHERE k.status='pending'
+            AND EXISTS(SELECT 1 FROM jerry_learning.comments cm WHERE cm.knowledge_id=k.id AND cm.processed_at IS NULL)
+            ORDER BY (SELECT min(id) FROM jerry_learning.comments cm WHERE cm.knowledge_id=k.id AND cm.processed_at IS NULL)
+            LIMIT 1 FOR UPDATE""")
+        entry = c.fetchone()
+        if not entry:
+            return None
+        c.execute("""UPDATE jerry_learning.comments SET state='reviewing',run_id=%s
+            WHERE knowledge_id=%s AND processed_at IS NULL RETURNING *""", (run['id'],entry['id']))
+        pending = sorted([dict(r) for r in c.fetchall()], key=lambda r:r['id'])
+        c.execute("""SELECT * FROM jerry_learning.comments WHERE knowledge_id=%s AND processed_at IS NOT NULL
+                     ORDER BY id DESC LIMIT 10""", (entry['id'],))
+        history = list(reversed([dict(r) for r in c.fetchall()]))
+        return {'entry':dict(entry),'comments':history+pending,'pending_ids':[r['id'] for r in pending]}
+
+
+def finish_feedback(run, batch, card):
+    entry_id = batch['entry']['id']
+    ids = batch['pending_ids']
+    with db() as c:
+        c.execute("SELECT id FROM jerry_learning.runs WHERE id=%s AND owner=%s AND status='running' FOR UPDATE", (run['id'],run['owner']))
+        if not c.fetchone():
+            raise RuntimeError('Learning lease lost')
+        c.execute('SELECT * FROM jerry_learning.knowledge WHERE id=%s FOR UPDATE', (entry_id,))
+        before = dict(c.fetchone())
+        if before['status'] != 'pending':
+            return False  # Removed while the model was running; never resurrect it.
+        c.execute('SELECT id FROM jerry_learning.comments WHERE knowledge_id=%s AND processed_at IS NULL ORDER BY id', (entry_id,))
+        if [r['id'] for r in c.fetchall()] != ids:
+            c.execute("UPDATE jerry_learning.comments SET state='queued' WHERE knowledge_id=%s AND processed_at IS NULL", (entry_id,))
+            return False  # A newer correction arrived. Recheck the complete feedback.
+        # Source and comment restrictions cannot be downgraded by the model.
+        if before['scope'] != 'internal':
+            card['scope'],card['owner_email'] = before['scope'],before['owner_email']
+        if card['scope'] == 'owner':
+            card['status'] = 'pending'
+        fingerprint = hashlib.sha256((card['scope']+'|'+card['owner_email']+'|'+card['content'].casefold()).encode()).hexdigest()
+        topic = re.sub(r'\W+',' ',card['title'].casefold()).strip()
+        c.execute('SELECT id FROM jerry_learning.knowledge WHERE fingerprint=%s AND id<>%s LIMIT 1', (fingerprint,entry_id))
+        duplicate = c.fetchone()
+        if duplicate:
+            # Retain the proposal/history without violating the unique fact index.
+            card = {**before,'status':'pending','reason':'The revised fact already exists in another entry. This proposal remains for review.','ttl_days':30}
+            fingerprint,topic = before['fingerprint'],before['topic']
+        else:
+            c.execute("""SELECT id FROM jerry_learning.knowledge WHERE topic=%s AND scope=%s
+                         AND owner_email=%s AND status='active' AND id<>%s LIMIT 1""", (topic,card['scope'],card['owner_email'],entry_id))
+            if c.fetchone():
+                card.update(status='pending',reason='A different active entry covers this topic; review the conflict.')
+        c.execute("""UPDATE jerry_learning.knowledge SET fingerprint=%s,topic=%s,title=%s,content=%s,kind=%s,
+            scope=%s,owner_email=%s,status=%s,sources=%s,confidence=%s,reason=%s,run_id=%s,
+            expires_at=now()+%s*interval '1 day',updated_at=now() WHERE id=%s""",
+            (fingerprint,topic,card['title'],card['content'],card['kind'],card['scope'],card['owner_email'],card['status'],
+             Json(card['sources']),card['confidence'],card['reason'],run['id'],card['ttl_days'],entry_id))
+        c.execute("""UPDATE jerry_learning.comments SET state=%s,result=%s,processed_at=now()
+                     WHERE id=ANY(%s)""", ('learned' if card['status']=='active' else 'needs_review',card['reason'],ids))
+        snapshot={k:before[k] for k in ('title','content','kind','scope','owner_email','status','sources','confidence','reason')}
+        c.execute("INSERT INTO jerry_learning.audit(knowledge_id,action,actor,detail) VALUES(%s,'feedback-distilled','feedback-learner',%s)",
+            (entry_id,Json({'run_id':str(run['id']),'comment_ids':ids,'before':snapshot,'after_status':card['status']})))
+        c.execute("""UPDATE jerry_learning.runs SET reviewed=reviewed+1,accepted=accepted+%s,pending=pending+%s,
+            failures=0,error='',lease_until=now()+interval '10 minutes',updated_at=now() WHERE id=%s AND owner=%s""",
+            (int(card['status']=='active'),int(card['status']=='pending'),run['id'],run['owner']))
         return True
