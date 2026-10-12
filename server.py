@@ -677,6 +677,7 @@ def learning_wake(request: Request):
     if _learn_schedule is None or not _learn_schedule.valid_wake(
             request.headers.get("x-learning-time"), request.headers.get("x-learning-signature")):
         raise HTTPException(403, "Invalid learning wake request.")
+    _learn_store.setting("last_wake", {"received_at": time.time(), "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7]})
     _learn_schedule.start()
     return {"ok": True}
 
