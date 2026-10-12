@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | deploy | resuming daily learning rollout | Hosted 4c61e36 / 10.2.2 is live; cloud wakes verified; first 40 questions yielded 1 active and 19 pending entries; full 808-question catch-up continues online | ../scripts/test_learning.py | volatile |
+| W1 | state | deploy | resuming daily learning rollout | Hosted 4c61e36 / 10.2.2 is live; cloud wakes verified; latest verified snapshot: 80 questions, 4 active entries and 36 pending proposals; full 808-question catch-up continues online | ../scripts/test_learning.py | volatile |
 
 ## Long-term memory
 
@@ -63,3 +63,8 @@ learning locally. Production uses the existing hosted database and AI provider.
 
 For docs/test-only follow-ups, `[skip render]` in the commit message avoids restarting
 the ongoing review; official support is documented at https://render.com/docs/deploys.
+
+Final live check at 17:18 China time: **80 / 808 questions reviewed, 4 active entries,
+36 pending proposals, estimated spend US$1.80**. The refined algorithm has therefore
+completed additional batches in production. The full historical review continues
+online; it is not complete yet. Last visible cloud wake was 17:15 China time.
