@@ -42,6 +42,10 @@ knowledge page reports installation failure rather than claiming a schedule exis
   Individual material remains owner-restricted and cannot activate automatically.
   Confidential curated evidence also raises the floor. Jimmy's log-review access
   does not grant leadership access to learned entries or management controls.
+- Monetary and confidential material has an additional deterministic restriction
+  across titles, facts, review notes and evidence. Database retrieval excludes
+  misclassified entries for ordinary users, and startup repairs older labels with
+  an audit record.
 - Restricted claims are never sent to public web search. Their external claims
   remain pending unless independently verified evidence is available. All logs are
   reviewed with the same organization AI provider already used by Jerry.

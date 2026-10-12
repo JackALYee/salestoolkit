@@ -57,6 +57,16 @@ class LearningTests(unittest.TestCase):
             self.assertEqual(E.verified_cards([candidate()],v,evidence)[0]['status'],'pending')
         self.assertEqual(E.verified_cards([candidate()],verdict(),[WEB])[0]['status'],'active')
 
+    def test_monetary_facts_and_evidence_are_always_restricted(self):
+        for content in ('The CAN license costs $20 per vehicle.', 'Licence price: EUR 20 for each vehicle.', '许可费用为¥20每车。', '每车20美元。'):
+            card=E.verified_cards([candidate(kind='internal')],verdict(content=content),[{**WEB,'type':'curated'}])[0]
+            self.assertEqual(card['scope'],'leadership')
+        for field in ('title','reason'):
+            card=E.verified_cards([candidate(kind='internal')],verdict(**{field:'CAN pricing'}),[{**WEB,'type':'curated'}])[0]
+            self.assertEqual(card['scope'],'leadership')
+        card=E.verified_cards([candidate(kind='internal')],verdict(),[{**WEB,'type':'curated','text':'The CAN licence is $20 per vehicle.'}])[0]
+        self.assertEqual(card['scope'],'leadership')
+
     def test_internal_claim_requires_curated_evidence(self):
         c=candidate(kind='internal')
         self.assertEqual(E.verified_cards([c],verdict(),[WEB])[0]['status'],'pending')
@@ -242,6 +252,19 @@ class DatabaseTests(unittest.TestCase):
         self.assertTrue(D.retire(visible['id'],'leader'));self.assertEqual(D.retrieve('LTE',False),[])
         with D.db() as c:c.execute("UPDATE jerry_learning.knowledge SET expires_at=now()-interval '1 second'")
         self.assertEqual(D.retrieve('LTE',True),[])
+    def test_legacy_monetary_misclassification_is_blocked_and_repaired(self):
+        q=self.insert('user','CAN licence');self.insert('assistant','Draft')
+        D.enqueue('backfill');r=D.claim();rows=D.batch(r)
+        cards=E.verified_cards([candidate(kind='internal',question_ids=[q])],verdict(content='The CAN licence costs $20 per vehicle.'),[{**WEB,'type':'curated'}])
+        D.finish_batch(r,rows,cards)
+        with D.db() as c:c.execute("UPDATE jerry_learning.knowledge SET scope='internal'")
+        self.assertEqual(D.retrieve('CAN',False),[])
+        self.assertEqual(D.status(False)['cards'],[])
+        self.assertEqual(D.status(False)['counts'],{})
+        self.assertEqual(len(D.retrieve('CAN',True)),1)
+        D.initialize()
+        self.assertEqual(D.status(True)['cards'][0]['scope'],'leadership')
+
     def test_lease_recovery_and_failed_retry(self):
         D.enqueue('backfill');r=D.claim()
         with D.db() as c:c.execute("UPDATE jerry_learning.runs SET lease_until=now()-interval '1 second'")

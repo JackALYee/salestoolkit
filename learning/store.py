@@ -12,6 +12,10 @@ import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
 CHINA = timezone(timedelta(hours=8))
+# Fail closed for monetary/commercial material even if a model or old worker
+# labelled it as general company knowledge. Shared by status and retrieval.
+COMMERCIAL_PATTERN = r'(\$|€|£|¥)[[:space:]]*[0-9]|(^|[^a-z])(usd|eur|gbp|cny|rmb|prices?|pricing|costs?|margin|discount|confidential|roadmap|profit)([^a-z]|$)|报价|价格|定价|成本|费用|美元|欧元|人民币|毛利|机密|保密|底价|客户名|未发布'
+
 
 @contextmanager
 def db(timeout=20000):
@@ -67,6 +71,12 @@ def initialize():
             PRIMARY KEY(user_email, session_id, question_hash));
         REVOKE ALL ON ALL TABLES IN SCHEMA jerry_learning FROM PUBLIC;
         ''')
+        # Repair any older overly broad classification without removing evidence.
+        c.execute("""WITH hardened AS (
+            UPDATE jerry_learning.knowledge SET scope='leadership',updated_at=now()
+            WHERE scope='internal' AND (title||' '||content||' '||reason||' '||sources::text) ~* %s RETURNING id)
+            INSERT INTO jerry_learning.audit(knowledge_id,action,actor)
+            SELECT id,'restrict-commercial','privacy-migration' FROM hardened""", (COMMERCIAL_PATTERN,))
         # Explicitly block browser-facing Supabase roles, including future default grants.
         for role in ('anon', 'authenticated'):
             c.execute('SELECT 1 FROM pg_roles WHERE rolname=%s', (role,))
@@ -235,13 +245,13 @@ def status(is_leadership=False, user=''):
         c.execute("SELECT COUNT(*) AS n FROM public.jerry_gpt_chats WHERE role='user'")
         questions = c.fetchone()['n']
         c.execute('''SELECT id,title,content,kind,scope,status,sources,confidence,reason,created_at,expires_at
-                     FROM jerry_learning.knowledge WHERE scope='internal' OR %s OR (scope='owner' AND owner_email=%s)
-                     ORDER BY created_at DESC LIMIT 200''', (is_leadership,user))
+                     FROM jerry_learning.knowledge WHERE (scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s)) OR %s OR (scope='owner' AND owner_email=%s)
+                     ORDER BY created_at DESC LIMIT 200''', (COMMERCIAL_PATTERN,is_leadership,user))
         cards=[dict(r) for r in c.fetchall()]
         for card in cards:
             card['sources']=[{k:v for k,v in source.items() if k!='text'} for source in card['sources']]
         c.execute('''SELECT status,COUNT(*) AS n FROM jerry_learning.knowledge
-                     WHERE scope='internal' OR %s OR (scope='owner' AND owner_email=%s) GROUP BY status''', (is_leadership,user))
+                     WHERE (scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s)) OR %s OR (scope='owner' AND owner_email=%s) GROUP BY status''', (COMMERCIAL_PATTERN,is_leadership,user))
         counts={r['status']:r['n'] for r in c.fetchall()}
     return {'settings':settings,'runs':runs,'reviewed':reviewed,'questions':questions,
             'counts':counts,'cards':cards,'can_manage':is_leadership}
@@ -261,10 +271,10 @@ def retrieve(query, is_leadership=False, user='', limit=8):
                      (SELECT COUNT(*) FROM unnest(%s::text[]) t WHERE title ILIKE '%%'||t||'%%'
                        OR content ILIKE '%%'||t||'%%') AS relevance
                      FROM jerry_learning.knowledge WHERE status='active' AND expires_at>now()
-                       AND (scope='internal' OR (scope='leadership' AND %s) OR (scope='owner' AND owner_email=%s))
+                       AND ((scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s)) OR (scope IN ('internal','leadership') AND %s) OR (scope='owner' AND owner_email=%s))
                        AND EXISTS(SELECT 1 FROM unnest(%s::text[]) t WHERE title ILIKE '%%'||t||'%%' OR content ILIKE '%%'||t||'%%')
                      ORDER BY relevance DESC,confidence DESC,updated_at DESC LIMIT %s''',
-                  (terms,is_leadership,user,terms,limit))
+                  (terms,COMMERCIAL_PATTERN,is_leadership,user,terms,limit))
         return [dict(r) for r in c.fetchall()]
 
 

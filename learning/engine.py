@@ -18,7 +18,7 @@ BATCH_SIZE = 20
 MAX_CARDS = 10
 EMAIL = re.compile(r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', re.I)
 SECRET = re.compile(r'(?i)(sk-(?:ant-)?[a-z0-9_-]{12,}|bearer\s+[a-z0-9._-]{12,}|(?:password|api[_ -]?key|access[_ -]?token)\s*[:=]\s*\S+)')
-SENSITIVE = re.compile(r'(?i)(confidential|margin|discount|internal.{0,20}pric|customer.{0,20}(?:price|name)|roadmap|profit|底价|报价|毛利|机密|保密|客户名|未发布)')
+SENSITIVE = re.compile(r'(?i)([$€£¥]\s*\d|\b(?:usd|eur|gbp|cny|rmb|prices?|pricing|costs?)\b|confidential|margin|discount|internal.{0,20}pric|customer.{0,20}(?:price|name)|roadmap|profit|底价|报价|价格|定价|成本|费用|美元|欧元|人民币|毛利|机密|保密|客户名|未发布)')
 CONTROL = re.compile(r'(?i)(ignore (?:all |previous |the )*instructions|system prompt|developer message|disable (?:auth|safety)|bypass (?:auth|permission)|系统提示词|忽略.{0,8}指令|绕过.{0,6}权限)')
 
 class BudgetLimit(RuntimeError):
@@ -237,7 +237,7 @@ def verified_cards(candidates, verdicts, evidence):
         v=by_index.get(candidate['index'],{})
         sources=[by_source[x] for x in v.get('source_ids',[]) if x in by_source]
         scope=candidate['scope']
-        if scope=='internal' and any(e.get('scope')=='leadership' for e in sources):
+        if scope=='internal' and any(e.get('scope')=='leadership' or SENSITIVE.search(e.get('text','')) for e in sources):
             scope='leadership'
         if v.get('sensitivity')=='owner':
             # Never publish individual material; keep the original visibility floor.
@@ -262,11 +262,14 @@ def verified_cards(candidates, verdicts, evidence):
         # retrieval date, not merely a URL invented in generated answer text.
         stored_sources=[{k:e[k] for k in ('type','title','url','locator','digest','text','scope') if k in e} for e in sources]
         title=redact(v.get('title') or candidate['title']).strip()[:180]
+        reason=redact(v.get('reason','No independent evidence verdict.'))[:500]
+        if scope=='internal' and SENSITIVE.search(title+' '+reason):
+            scope='leadership'
         if CONTROL.search(title):
             supported=False
         cards.append({**candidate,'title':title,'content':content,'scope':scope,'status':'active' if supported else 'pending',
                       'sources':stored_sources,'confidence':confidence,'ttl_days':ttl,
-                      'reason':redact(v.get('reason','No independent evidence verdict.'))[:500]})
+                      'reason':reason})
     return cards
 
 
