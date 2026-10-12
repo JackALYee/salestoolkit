@@ -98,7 +98,7 @@ el('cards').addEventListener('submit',async e=>{
   const button=form.querySelector('button[type=submit]'),error=form.querySelector('.comment-error');posting.add(id);button.disabled=true;button.textContent='Sending…';error.textContent='';
   try{
     const result=await request('/api/learning/knowledge/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-    drafts.delete(id);threads.delete(id);el('feedback-message').textContent=result.restricted?'Comment saved. This entry is now restricted to leadership and is queued for online AI review.':'Comment saved and queued for online AI review. Jerry will pick it up after the current batch; you can close this page.';
+    drafts.delete(id);threads.delete(id);el('feedback-message').textContent=result.restricted?'Comment saved. This entry is now restricted to leadership. Reviews run online.':'Comment saved. Its AI review outcome appears in the thread. Reviews run online, so you can close this page.';
     posting.delete(id);await load();cards();
   }catch(err){error.textContent=err.message}finally{posting.delete(id);button.disabled=false;button.textContent='Send for AI review'}
 });

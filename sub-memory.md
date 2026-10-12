@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry learning comments | Pending-entry commenting and hosted re-distillation are implemented and locally verified; deployment 10.2.3 pending | learning/sub-memory.md | volatile |
+| W1 | state | platform | resuming Jerry learning comments | Comments and hosted re-distillation are live in 10.2.3; a real feedback review produced active cited knowledge with confidentiality preserved | learning/sub-memory.md | volatile |
 
 ## Long-term memory
 

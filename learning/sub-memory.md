@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | deploy | resuming review comments | Comment threads, independent re-distillation and shared daily budget implemented; 34 learning tests plus portal/resource checks passed; local browser flow verified; deployment pending | ../scripts/test_learning.py; README.md | volatile |
+| W1 | state | deploy | resuming review comments | Hosted 5ce406b / 10.2.3 verified: a live comment was distilled into active source-backed knowledge with confidentiality preserved; final receipt-copy follow-up deploying | README.md; ../scripts/test_learning.py | volatile |
 
 ## Long-term memory
 
@@ -107,4 +107,15 @@ privacy, shared budgets, carryover, interrupted leases, newer-comment races and
 retirement during review. Existing portal (45) and resource/version (33) checks passed.
 Local browser testing verified draft preservation, escaped HTML, saved comments, and
 transition to active knowledge using synthetic evidence with no real model call.
-Production verification is pending. Version 10.2.3.
+Production `5ce406b` / `10.2.3` was verified through /healthz and the authenticated
+page. A clearly labelled "Codex live verification" comment on the pending AVM/CA51
+proposal was saved at 22:32 China time. By 22:33 the hosted worker had completed its
+feedback run: one reviewed, one learned, zero pending, approximately US$0.02. The
+revised entry is "CA51 listed as thin entry with no A/D variant split documented",
+links to `21_known_gaps_and_routing.md#paragraph-15`, and retains LEADERSHIP ONLY.
+The comment thread displays "Distilled into knowledge" and the evidence rationale.
+The original 808-question catch-up is complete (145 active / 265 pending before
+this comment); a subsequent new question awaits the next daily review.
+
+A follow-up changes the save receipt to timeless wording, so it does not keep saying
+"queued" after review completes. Local preview and disposable database are stopped.
