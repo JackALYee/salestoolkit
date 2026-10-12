@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | deploy | resuming daily learning rollout | Hosted 4c61e36 / 10.2.2 is live; cloud wakes verified; latest verified snapshot: 80 questions, 4 active entries and 36 pending proposals; full 808-question catch-up continues online | ../scripts/test_learning.py | volatile |
+| W1 | state | deploy | resuming daily learning rollout | Hosted 0d963d3 / 10.2.2 is live; cloud wakes and commercial-privacy migration verified; latest snapshot: 140 questions, 13 active entries and 57 pending proposals; full 808-question catch-up continues online | ../scripts/test_learning.py | volatile |
 
 ## Long-term memory
 
@@ -16,6 +16,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 | R2 | rule | platform | learning from another user's conversation | Preserve source visibility floors in storage, UI and retrieval; reviewer access is not leadership clearance | store.py; ../scripts/test_learning.py | stable |
 | R3 | rule | deploy,verification | claiming that daily learning works online | Verify saved cards and completed runs plus installed cloud Cron jobs; a daemon or health endpoint alone is insufficient | README.md | stable |
 | R4 | rule | platform | resuming an interrupted review | Use durable question checkpoints, transaction-scoped claims, expiring row leases and spending reservations; never mark failed batches reviewed | store.py | stable |
+| R5 | rule | privacy | classifying learned monetary or confidential information | Model labels are insufficient; deterministic storage, migration and retrieval restrictions cover facts, titles, review notes and evidence | store.py; engine.py; ../scripts/test_learning.py | stable |
 | F1 | fact | platform | explaining how Jerry improves | The reservoir improves retrieval and answer grounding, not provider model weights or program code | README.md | stable |
 
 ## Short-term memory
@@ -68,3 +69,25 @@ Final live check at 17:18 China time: **80 / 808 questions reviewed, 4 active en
 36 pending proposals, estimated spend US$1.80**. The refined algorithm has therefore
 completed additional batches in production. The full historical review continues
 online; it is not complete yet. Last visible cloud wake was 17:15 China time.
+
+### E3 — Commercial confidentiality safeguard
+
+A live CAN cost-comparison card contained monetary amounts but was labelled company
+knowledge. Commit `0d963d3` adds deterministic monetary and commercial restrictions
+to the model review and database access filters. Non-leadership retrieval and the
+knowledge page exclude mislabelled entries; startup relabels older entries as
+leadership-only and records an audit event. The checks cover titles, facts, review
+notes and source evidence, including common English and Chinese pricing terms.
+
+All 26 learning tests passed, including disposable PostgreSQL checks that deliberately
+mislabel a pricing card, verify ordinary users cannot see or retrieve it, then verify
+startup repairs its visibility. Test database is stopped. Production /healthz verified `0d963d3` / `10.2.2` in strict
+login mode. The authenticated knowledge page now labels both CAN commercial
+comparison cards LEADERSHIP ONLY, confirming the migration on live records.
+
+Before this safeguard deployment, the 17:26 China snapshot showed 120 of 808 questions
+reviewed, 11 active entries and 49 pending proposals, estimated cost US$2.87.
+
+Final snapshot at 17:27 China: **140 / 808 questions reviewed, 13 active entries,
+57 pending proposals, US$3.07 estimated spend**. Remaining catch-up continues online.
+Screenshot: `../../jerry-learning-live.jpg`. Last cloud wake shown: 17:25 China.
