@@ -12,7 +12,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
 os.environ['AUTH_SECRET']='learning-test-only'
@@ -130,6 +130,31 @@ class LearningTests(unittest.TestCase):
     def test_retrieval_failure_does_not_break_chat(self):
         with patch.object(D,'retrieve',side_effect=RuntimeError('offline')):
             self.assertIsNone(E.context('LTE',False,'test@streamax.com'))
+
+    def test_chat_uses_learned_context_with_server_clearance(self):
+        shared=[{'type':'text','text':'CURATED BASE'}]
+        learned={'type':'text','text':'SUPPORTED LEARNED FACT with source'}
+        chunk=SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='Grounded answer'))])
+        provider=MagicMock()
+        provider.return_value.chat.completions.create.return_value=iter([chunk])
+        with TestClient(S.app) as client,patch('openai.OpenAI',provider),\
+             patch.object(S._jerry,'_load_system_blocks',return_value=shared),\
+             patch.object(S._jerry,'_allowed_models',return_value={'Test':'test-model'}),\
+             patch.object(S._jerry,'_provider_for',return_value='deepseek'),\
+             patch.object(S._jerry,'_resolve_provider_key',return_value=('test-key','test')),\
+             patch.object(S._jerry,'_build_clearance_block',return_value={'type':'text','text':'NON-LEADERSHIP'}),\
+             patch.object(E,'context',return_value=learned) as context,\
+             patch.object(S,'_response_extras',return_value={'clean':'Grounded answer'}),\
+             patch.object(S._POST_WORK,'submit'):
+            client.cookies.set(S.COOKIE_NAME,S.make_token('kiki@streamax.com'))
+            r=client.post('/api/chat',json={'model':'test-model','is_leadership':True,
+                'messages':[{'role':'user','content':'What does LTE mean?'}]})
+            self.assertIn('Grounded answer',r.text)
+            context.assert_called_once_with('What does LTE mean?',False,'kiki@streamax.com')
+            prompt=provider.return_value.chat.completions.create.call_args.kwargs['messages'][0]['content']
+            self.assertIn(learned['text'],prompt)
+            self.assertIn('NON-LEADERSHIP',prompt)
+            self.assertEqual(shared,[{'type':'text','text':'CURATED BASE'}])
 
     def test_api_access_and_csrf_gates(self):
         with TestClient(S.app) as client,patch.object(D,'status',return_value={'ok':True}) as status,\
