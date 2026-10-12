@@ -9,10 +9,13 @@ answer improvement, not neural-network weight training or automatic code edits.
 1. The first deployment queues the existing log. Each review claims a ten-minute
    renewable lease and processes 20 questions per batch. A question is paired with
    its own next assistant answer, bounded by the next question and user identity.
-2. Claude Sonnet 4.6 extracts up to ten reusable claims or domain answering lessons.
+2. Claude Sonnet 4.6 extracts up to ten small, independently checkable facts or domain answering lessons.
    Raw conversations are untrusted, redacted data. A separate evidence-review call
    checks claims against curated repository excerpts and actual hosted web-search
-   citations. Previous assistant answers are never treated as proof.
+   citations. Previous assistant answers are never treated as proof. Mixed proposals are narrowed to
+   supported factual subsets, with correspondingly narrow titles. Curated retrieval
+   selects evidence per claim, balances coverage, ignores common words and uses
+   Chinese bigrams as well as English terms.
 3. Supported claims with confidence at least 0.85 become active; unsupported,
    personal, or conflicting entries stay pending. Every card retains question IDs,
    evidence excerpts/digests, sources, dates, expiry, visibility and an audit event.

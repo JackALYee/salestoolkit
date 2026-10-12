@@ -131,6 +131,23 @@ class LearningTests(unittest.TestCase):
         with patch.object(D,'retrieve',side_effect=RuntimeError('offline')):
             self.assertIsNone(E.context('LTE',False,'test@streamax.com'))
 
+    def test_supported_subset_gets_a_precise_title_and_keeps_privacy(self):
+        v=verdict(title='LTE terminology',content='LTE is a cellular standard.')
+        c=E.verified_cards([candidate(title='Broad unsupported sales strategy',scope='leadership')],v,[WEB])[0]
+        self.assertEqual((c['title'],c['content'],c['scope'],c['status']),
+                         ('LTE terminology','LTE is a cellular standard.','leadership','active'))
+
+    def test_curated_retrieval_ignores_common_words_and_matches_chinese(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'jerry_gpt_knowledge';folder.mkdir()
+            (folder/'01_unrelated.md').write_text('The and for with how does this that should what can '+('common words '*20))
+            (folder/'02_dms.md').write_text('DMS 驾驶员眼睛监测 uses eye state to support a bounded driver-monitoring workflow. '+('Evidence details. '*6))
+            with patch.object(E,'ROOT',root):
+                evidence=E.curated_evidence([{'question':'How does the DMS track 驾驶员眼睛?'}])
+            self.assertEqual(evidence[0]['title'],'02_dms.md')
+            self.assertFalse(any(e['title']=='01_unrelated.md' for e in evidence))
+
     def test_chat_uses_learned_context_with_server_clearance(self):
         shared=[{'type':'text','text':'CURATED BASE'}]
         learned={'type':'text','text':'SUPPORTED LEARNED FACT with source'}

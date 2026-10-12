@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry Log recovery and Jimmy access | Completed: production de02e6e / 10.1.1 verified; authenticated portal displays 808 questions across 31 users | E1 | volatile |
+| W1 | state | platform | resuming Jerry Log and online learning | Log recovery and Jimmy access completed; online learning 4c61e36 / 10.2.2 has verified cloud wakes and saved knowledge; historical catch-up continues online | learning/sub-memory.md | volatile |
 
 ## Long-term memory
 
