@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry Log recovery and Jimmy access | Backend and browser verification pass; production deployment is next | E1 | volatile |
+| W1 | state | platform | resuming Jerry Log recovery and Jimmy access | Completed: production de02e6e / 10.1.1 verified; authenticated portal displays 808 questions across 31 users | E1 | volatile |
 
 ## Long-term memory
 
@@ -16,7 +16,7 @@ Query by trigger and domain. Working state must be verified each session.
 | R1 | rule | platform,verification | Jerry Log reports that the server cannot be reached | Check authenticated data endpoints; the sign-in redirect and health endpoint alone do not verify log data | E1 | stable |
 | R2 | rule | platform | recovering a cached Postgres connection | Handle InterfaceError as well as OperationalError and clear cached None; persistent portal failure must be HTTP 503 rather than empty success | scripts/test_jerrylog_recovery.py | stable |
 | F1 | fact | platform | granting Jerry Log access to a VIP | VIP model access and company-wide log review are separate; Jimmy is in EXTRA_VIP_EMAILS and EXTRA_JERRY_LOG_EMAILS, without leadership pricing clearance | login.py | stable |
-| F2 | fact | deploy | publishing this website | A push to origin/main triggers the Render deployment; /healthz reports version and deployed commit | CLAUDE.md | stable |
+| F2 | fact | deploy | publishing this website | Push to origin/main triggers Render; synchronize the app.py banner and server.py APP_VERSION, run scripts/test_resource_links.py, then verify /healthz | E1 | stable |
 
 ## Short-term memory
 
@@ -43,3 +43,17 @@ Verification before deployment: 45 access/portal checks passed; 7 recovery tests
 build passed. Browser checks with synthetic data verified the outage/retry path,
 recovered table and summary, expired-session sign-in link, and non-JSON HTTP 502
 message. No production log contents were exported.
+
+Production verification: bf0e4ff deployed the repair and access change. The signed-in
+Safari portal then displayed summary statistics and 808 matching questions across
+31 users. The previous “Could not reach the server” error was absent. A follow-up
+commit de02e6e synchronized the server's separate APP_VERSION constant with the
+header (the previous documentation incorrectly said there was only one version
+string); all 33 resource/version checks passed. `/healthz` then confirmed
+`10.1.1 (2026)`, commit `de02e6e`, and strict login mode. No Jimmy sign-in was
+attempted; his access is verified by the deployed resolver and local HTTP gate tests.
+
+## Subtask memory
+
+- [Jerry's online daily learning](learning/sub-memory.md) — evidence review, private
+  reservoir, visibility, hosted schedule, checkpoints and production verification.

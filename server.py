@@ -21,6 +21,7 @@ Streamlit app is finally retired, the stub and its imports can go.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -135,13 +136,18 @@ try:
 except Exception:                                                        # noqa: BLE001
     _custom = None
 
+try:
+    from learning import store as _learn_store, engine as _learn_engine, schedule as _learn_schedule
+except Exception:
+    _learn_store = _learn_engine = _learn_schedule = None
+
 ROOT = Path(__file__).parent
 SITE = ROOT / "site"
 TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "10.1.1 (2026)"
+APP_VERSION = "10.2.2 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -154,6 +160,18 @@ SESSION_DAYS = 7
 _POST_WORK = ThreadPoolExecutor(max_workers=4, thread_name_prefix="jerry-post")
 
 app = FastAPI(title="Streamax Sales Toolkit", docs_url=None, redoc_url=None)
+
+@app.on_event("startup")
+def start_online_learning():
+    if _learn_schedule:
+        _learn_schedule.start()
+
+
+@app.on_event("shutdown")
+def stop_online_learning():
+    if _learn_schedule:
+        _learn_schedule.stop()
+
 
 if _history is not None:
     @app.exception_handler(_history.LogUnavailable)
@@ -602,6 +620,67 @@ def api_jerrylog_export(request: Request, q: str = "", user: str = "",
         headers={"Content-Disposition": 'attachment; filename="jerry-log.csv"'})
 
 
+# Learning stays in the hosted database. Log reviewers can inspect only the
+# entries their clearance permits; only leadership can manage review jobs.
+@app.get("/learning", response_class=HTMLResponse)
+def learning_page(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/login?next=/learning", status_code=302)
+    require_jerry_log_access(request)
+    return HTMLResponse(_page("learning.html"))
+
+
+@app.get("/api/learning")
+def learning_status(request: Request):
+    user = require_jerry_log_access(request)
+    if _learn_store is None:
+        raise HTTPException(503, "Learning is unavailable.")
+    try:
+        return _learn_store.status(bool(_login.resolve_leadership(user)), user)
+    except Exception:
+        raise HTTPException(503, "The online learning store is starting or temporarily unavailable. Please retry shortly.")
+
+
+def _learning_manager(request):
+    user = require_user(request)
+    if not _login.resolve_leadership(user):
+        raise HTTPException(403, "Only leadership can manage learning reviews.")
+    # Cookie-authenticated mutations require a same-origin JSON request.
+    origin = request.headers.get("origin", "").rstrip("/")
+    if origin != "https://streamax-salestoolkit.com" and origin != str(request.base_url).rstrip("/"):
+        raise HTTPException(403, "Please use the knowledge page to make this change.")
+    if not request.headers.get("content-type", "").startswith("application/json"):
+        raise HTTPException(415, "A JSON request is required.")
+    if _learn_store is None:
+        raise HTTPException(503, "Learning is unavailable.")
+    return user
+
+
+@app.post("/api/learning/retry")
+def learning_retry(request: Request):
+    user = _learning_manager(request)
+    _learn_store.retry_failed(user)
+    _learn_schedule.start()
+    return {"ok": True}
+
+
+@app.post("/api/learning/knowledge/{knowledge_id}/retire")
+def learning_retire(knowledge_id: int, request: Request):
+    user = _learning_manager(request)
+    if not _learn_store.retire(knowledge_id, user):
+        raise HTTPException(404, "Knowledge entry not found.")
+    return {"ok": True}
+
+
+@app.post("/api/learning/wake", status_code=202)
+def learning_wake(request: Request):
+    if _learn_schedule is None or not _learn_schedule.valid_wake(
+            request.headers.get("x-learning-time"), request.headers.get("x-learning-signature")):
+        raise HTTPException(403, "Invalid learning wake request.")
+    _learn_schedule.start()
+    return {"ok": True}
+
+
 @app.get("/mailer", response_class=HTMLResponse)
 def mailer_page(request: Request):
     if not current_user(request):
@@ -1013,7 +1092,7 @@ MAX_TOKENS = {"Short": 1024, "Medium": 4096, "Long": 8192}
 
 
 def _record_turn(user, session_id, question, answer, model, length,
-                 usage, is_leadership) -> None:
+                 usage, is_leadership, web_enabled=False, web_sources=None) -> None:
     """Persist one turn to chat history + the usage log. Runs in _POST_WORK,
     never in the request. Each sink is isolated so one failing cannot lose the
     other, and nothing here can affect the answer the user already has."""
@@ -1035,7 +1114,7 @@ def _record_turn(user, session_id, question, answer, model, length,
 
     if _history_on() and session_id:
         try:
-            _history.save_turn(
+            saved = _history.save_turn(
                 user_email=user, user_name=user, session_id=session_id,
                 user_message=question, assistant_message=answer,
                 model=model, length=length,
@@ -1046,6 +1125,8 @@ def _record_turn(user, session_id, question, answer, model, length,
                 is_leadership=bool(is_leadership),
                 sensitive_flagged=sensitive,
             )
+            if saved and _learn_store is not None and web_enabled:
+                _learn_store.record_evidence(user, session_id, question, True, web_sources or [])
         except Exception as exc:                                     # noqa: BLE001
             print(f"[history] save failed: {exc}", file=sys.stderr, flush=True)
     else:
@@ -1170,6 +1251,14 @@ async def api_chat(request: Request):
             question_text = question_text + note
 
     system_blocks = list(_jerry._load_system_blocks())
+    if _learn_engine is not None:
+        try:
+            learned = await asyncio.wait_for(asyncio.to_thread(
+                _learn_engine.context, question_text, is_leadership, user), timeout=3.0)
+            if learned:
+                system_blocks.append(learned)
+        except Exception:
+            pass  # The learning store must never prevent a normal answer.
     try:
         # `user` is a streamax.com email for real logins, or an easter-egg
         # display name ("Jerry", "Hekun", "ZNTang"). resolve_* handle both —
@@ -1189,6 +1278,7 @@ async def api_chat(request: Request):
 
     def stream():
         answer = ""
+        web_sources = []
         usage = {"input": 0, "output": 0, "cache_read": 0, "cache_creation": 0}
         try:
             if provider == "deepseek":
@@ -1271,7 +1361,10 @@ async def api_chat(request: Request):
                         answer += piece
                         yield _sse({"delta": piece})
                     try:
-                        u = s.get_final_message().usage
+                        final_message = s.get_final_message()
+                        u = final_message.usage
+                        if _learn_engine is not None:
+                            web_sources = _learn_engine.citations(final_message)
                         usage = {
                             "input": getattr(u, "input_tokens", 0) or 0,
                             "output": getattr(u, "output_tokens", 0) or 0,
@@ -1308,7 +1401,7 @@ async def api_chat(request: Request):
             if answer:
                 _POST_WORK.submit(
                     _record_turn, user, session_id, question_text, answer,
-                    model, length, dict(usage), is_leadership,
+                    model, length, dict(usage), is_leadership, web_enabled, web_sources,
                 )
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={
