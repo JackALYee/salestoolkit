@@ -3,11 +3,11 @@
 Parent: `../memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_method.md`.
 Query by trigger and domain. Working state must be verified each session.
 
-## Working memory — 2026-10-12
+## Working memory — 2026-10-20
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry learning comments | Comments and hosted re-distillation are live in 10.2.3; a real feedback review produced active cited knowledge with confidentiality preserved | learning/sub-memory.md | volatile |
+| W1 | state | platform | resuming Jerry's neural dashboard | The owner dashboard, neural graph and hosted source queue are implemented; live deployment verification is in progress | neural/sub-memory.md | volatile |
 
 ## Long-term memory
 
@@ -57,3 +57,6 @@ attempted; his access is verified by the deployed resolver and local HTTP gate t
 
 - [Jerry's online daily learning](learning/sub-memory.md) — evidence review, private
   reservoir, visibility, hosted schedule, checkpoints and production verification.
+
+- [Jerry neural dashboard](neural/sub-memory.md) — personal evolution view, four
+  learning routes, original neural renderer and online source intake.

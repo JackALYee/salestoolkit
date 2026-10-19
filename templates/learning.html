@@ -9,7 +9,7 @@
 
 .feedback{border-top:1px solid var(--line);margin-top:18px;padding-top:12px}.feedback summary{cursor:pointer;font-weight:600;color:#8acfff}.feedback summary:focus-visible,textarea:focus-visible{outline:2px solid var(--green);outline-offset:3px}.comment-list{list-style:none;padding:0;margin:14px 0;max-height:400px;overflow:auto}.comment-list li{padding:12px 0;border-bottom:1px solid var(--line)}.comment-state{font-size:12px;color:#b8cfff}.comment-form{margin-top:16px}.comment-form>label:first-child{display:block;font-weight:600}textarea{display:block;width:100%;min-width:0;resize:vertical;font:inherit;color:var(--ink);background:#141b29;border:1px solid #394258;border-radius:6px;padding:10px;margin:8px 0}.privacy-choice{display:flex;gap:8px;align-items:flex-start;font-size:13px}.privacy-choice input{flex:none;min-width:0;margin:5px 0}#feedback-message:empty,.comment-error:empty{display:none}@media(max-width:420px){main{padding:24px 16px}.cards{grid-template-columns:minmax(0,1fr)}}
 </style></head>
-<body><header><strong>Jerry Knowledge</strong><nav><a href="/jerry">Ask Jerry</a><a href="/jerrylog">Jerry Log</a><a href="/">Toolkit</a></nav></header>
+<body><header><strong>Jerry Knowledge</strong><nav><!-- NEURAL_PERSONAL_LINK --><a href="/jerry">Ask Jerry</a><a href="/jerrylog">Jerry Log</a><a href="/">Toolkit</a></nav></header>
 <main><h1>A reservoir that learns from daily questions</h1><p class="muted">Jerry reviews all users’ Q&A, checks reusable claims against evidence, and recalls supported knowledge in future answers.</p>
 <div id="schedule" class="notice" role="status">Checking the online daily review…</div>
 <div id="message" class="notice error" role="alert"></div>
@@ -26,6 +26,7 @@
 'use strict';
 const el=id=>document.getElementById(id);
 let data=null,busy=false,timer=null;
+const focusedEntry=Number(new URLSearchParams(location.search).get("entry"))||null;
 const drafts=new Map(),threads=new Map(),opened=new Set(),posting=new Set(),loading=new Set();
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>v?new Date(v).toLocaleString(undefined,{timeZone:'Asia/Shanghai',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+' CST':'—';
@@ -66,7 +67,7 @@ function commentsPanel(c){
 function cards(){
   if(!data)return;
   const q=el('search').value.toLowerCase(),status=el('filter').value;
-  const rows=data.cards.filter(c=>(!status||c.status===status)&&(!q||(c.title+' '+c.content).toLowerCase().includes(q)));
+  const rows=data.cards.filter(c=>(!focusedEntry||c.id===focusedEntry)&&(!status||c.status===status)&&(!q||(c.title+' '+c.content).toLowerCase().includes(q)));
   el('card-count').textContent=`Showing ${rows.length} of the latest ${data.cards.length} entries visible to you.`;
   el('cards').innerHTML=rows.length?rows.map(c=>{
     const links=c.sources.map(s=>{let valid=false;try{valid=new URL(s.url).protocol==='https:'}catch{}return `<li>${valid?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`:esc(s.locator||s.title||'Curated knowledge')}</li>`}).join('');
@@ -77,12 +78,12 @@ function cards(){
 async function load(){
   if(busy)return;busy=true;el('refresh').disabled=true;clearTimeout(timer);
   try{
-    data=await request('/api/learning');el('message').textContent='';const s=data.settings.scheduler||{};
+    data=await request('/api/learning');if(focusedEntry){const item=await request('/api/learning/knowledge/'+focusedEntry);data.cards=[item];opened.add(focusedEntry);}el('message').textContent='';const s=data.settings.scheduler||{};
     el('schedule').textContent=s.installed?'Daily review scheduled online · 02:00 China time · Runs without your computer.':'The hosted worker is available, but its independent daily wake schedule needs attention. '+(s.error||'Setup is in progress.');
     if(s.installed&&data.settings.last_wake)el('schedule').textContent+=' Last cloud wake: '+date(data.settings.last_wake.received_at*1000);
     el('schedule').classList.toggle('error',!s.installed);el('reviewed').textContent=data.reviewed;el('remaining').textContent=Math.max(0,data.questions-data.reviewed);el('active').textContent=data.counts.active||0;el('pending').textContent=data.counts.pending||0;
     el('retry').hidden=!data.can_manage||!data.runs.some(r=>r.status==='failed');
-    el('runs').innerHTML=data.runs.map(r=>`<tr><td>${esc(r.kind==='backfill'?'Existing log':r.kind==='feedback'?'Comment review · '+r.slot.replace('feedback-',''):r.slot.replace('daily-',''))}</td><td>${esc(state[r.status]||r.status)}</td><td>${r.reviewed}</td><td>${r.accepted}</td><td>${r.pending}</td><td>$${Number(r.spent_usd).toFixed(2)} / $${Number(r.budget_usd).toFixed(2)}${r.kind==='backfill'?'':' shared'}</td><td>${esc(r.error||(r.status==='complete'?'Finished '+date(r.finished_at):'Updated '+date(r.updated_at)))}</td></tr>`).join('');
+    el('runs').innerHTML=data.runs.map(r=>`<tr><td>${esc(r.kind==='backfill'?'Existing log':r.kind==='feedback'?'Comment review · '+r.slot.replace('feedback-',''):r.kind==='sources'?'Submitted sources · '+r.slot.replace('sources-',''):r.slot.replace('daily-',''))}</td><td>${esc(state[r.status]||r.status)}</td><td>${r.reviewed}</td><td>${r.accepted}</td><td>${r.pending}</td><td>$${Number(r.spent_usd).toFixed(2)} / $${Number(r.budget_usd).toFixed(2)}${r.kind==='backfill'?'':' shared'}</td><td>${esc(r.error||(r.status==='complete'?'Finished '+date(r.finished_at):'Updated '+date(r.updated_at)))}</td></tr>`).join('');
     el('updated').textContent='Last checked '+new Date().toLocaleTimeString();
     if(!posting.size&&!(el('cards').contains(document.activeElement)&&document.activeElement.matches('textarea,input')))cards();
     if(data.runs.some(r=>['running','queued'].includes(r.status))||data.cards.some(c=>c.comments_waiting))timer=setTimeout(load,30000);

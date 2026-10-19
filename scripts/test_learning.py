@@ -249,7 +249,7 @@ class DatabaseTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):cls.env.stop()
     def setUp(self):
-        with D.db() as c:c.execute('TRUNCATE jerry_learning.comments,jerry_learning.runs,jerry_learning.knowledge,jerry_learning.reviews,jerry_learning.audit,jerry_learning.turn_evidence,public.jerry_gpt_chats RESTART IDENTITY')
+        with D.db() as c:c.execute('TRUNCATE jerry_learning.knowledge_inputs,jerry_learning.inputs,jerry_learning.comments,jerry_learning.runs,jerry_learning.knowledge,jerry_learning.reviews,jerry_learning.audit,jerry_learning.turn_evidence,public.jerry_gpt_chats RESTART IDENTITY')
     def insert(self,role,content,session='s',user='test@streamax.com'):
         with D.db() as c:
             c.execute('INSERT INTO public.jerry_gpt_chats(session_id,user_email,role,content,model) VALUES(%s,%s,%s,%s,%s) RETURNING id',(session,user,role,content,'test'))

@@ -250,6 +250,8 @@
       <span class="pill" id="userPill">…</span>
     </div>
     <div class="hdr-tools">
+      <a class="btn" href="/network" target="_blank">Neural network</a>
+      <a class="btn" id="neuralPersonal" href="/neural" target="_blank" style="display:none">My dashboard</a>
       <a class="btn" href="/">← Toolkit</a>
       <a class="btn" href="/api/logout">Sign out</a>
     </div>
@@ -274,7 +276,7 @@
 <div class="overlay" id="mapModal">
   <div class="modal">
     <button class="x" data-close="mapModal">&times;</button>
-    <iframe id="mapFrame" title="Streamax Ecosystem Map"></iframe>
+    <iframe id="mapFrame" title="Jerry neural knowledge network"></iframe>
   </div>
 </div>
 
@@ -667,6 +669,8 @@
     .then(function (r) { if (!r.ok) { window.location.href='/login'; throw 0; } return r.json(); })
     .then(function (me) {
       $('userPill').textContent = me.user;
+      if (me.personal_neural) $('neuralPersonal').style.display = '';
+
       var sel = $('model');
       Object.keys(me.models).forEach(function (label) {
         var o = document.createElement('option');
@@ -745,7 +749,7 @@
               esc(a.filename) + '</button></div>';
     });
     if (x.ecosystem !== null && x.ecosystem !== undefined) {
-      html += '<button class="mapbtn" data-map="' + esc(x.ecosystem) + '">Open Ecosystem Map' +
+      html += '<button class="mapbtn" data-map="' + esc(x.ecosystem) + '">Open Neural Network' +
               (x.ecosystem ? ' &middot; ' + esc(x.ecosystem) : '') + '</button>';
     }
     if (!html) return;

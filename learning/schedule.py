@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from psycopg2 import sql
 from . import store, engine
+from neural import feeds
 
 STOP=threading.Event()
 _thread=None
@@ -75,6 +76,10 @@ def install():
                   AND NOT EXISTS(SELECT 1 FROM jerry_learning.runs
                     WHERE slot='feedback-'||to_char((now() AT TIME ZONE 'Asia/Shanghai' - interval '2 hours')::date,'YYYY-MM-DD')
                       AND status IN ('queued','running','failed','budget_limit')))
+              OR (EXISTS(SELECT 1 FROM jerry_learning.inputs WHERE processed_at IS NULL)
+                  AND NOT EXISTS(SELECT 1 FROM jerry_learning.runs
+                    WHERE slot='sources-'||to_char((now() AT TIME ZONE 'Asia/Shanghai' - interval '2 hours')::date,'YYYY-MM-DD')
+                      AND status IN ('queued','running','failed','budget_limit')))
             ''',))
         c.execute("SELECT jobname,schedule,active FROM cron.job WHERE jobname IN ('jerry-learning-daily','jerry-learning-resume') ORDER BY jobname")
         jobs=[dict(r) for r in c.fetchall()]
@@ -85,6 +90,7 @@ def install():
 def tick():
     store.enqueue('daily')
     store.enqueue_feedback()
+    feeds.enqueue()
     engine.work()
 
 

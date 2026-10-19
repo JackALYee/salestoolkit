@@ -229,7 +229,7 @@ source-grounded findings, with citations. Skip any claim containing confidential
     return evidence[:24]
 
 
-def verified_cards(candidates, verdicts, evidence):
+def verified_cards(candidates, verdicts, evidence, allow_supplied=False):
     by_source={e['id']:e for e in evidence}
     by_index={v.get('index'):v for v in verdicts.get('verdicts',[]) if isinstance(v,dict)}
     cards=[]
@@ -257,7 +257,7 @@ def verified_cards(candidates, verdicts, evidence):
             supported=supported and any(e['type']=='web' for e in sources)
             ttl=min(ttl,30)
         else:
-            supported=supported and any(e['type']=='curated' for e in sources)
+            supported=supported and any(e['type']=='curated' or (allow_supplied and e['type']=='supplied') for e in sources)
         # An evidence citation must be stored with its actual excerpt/hash and
         # retrieval date, not merely a URL invented in generated answer text.
         stored_sources=[{k:e[k] for k in ('type','title','url','locator','digest','text','scope') if k in e} for e in sources]
@@ -335,6 +335,14 @@ def work(max_batches=4):
                     store.release(run,'complete')
                     return
                 store.finish_feedback(run,feedback,review_feedback(run,feedback))
+                continue
+            if run.get('kind') == 'sources':
+                from neural import feeds
+                item=feeds.batch(run)
+                if not item:
+                    store.release(run,'complete')
+                    return
+                store.finish_batch(run,[],feeds.review(run,item),input_row=item)
                 continue
             rows=store.batch(run,BATCH_SIZE)
             if not rows:

@@ -81,6 +81,9 @@ def initialize():
         CREATE INDEX IF NOT EXISTS jerry_learning_comments_author ON jerry_learning.comments(author, created_at);
         REVOKE ALL ON ALL TABLES IN SCHEMA jerry_learning FROM PUBLIC;
         ''')
+        from neural.feeds import initialize as initialize_inputs
+        initialize_inputs(c)
+        c.execute("REVOKE ALL ON ALL TABLES IN SCHEMA jerry_learning FROM PUBLIC")
         # Repair any older overly broad classification without removing evidence.
         c.execute("""WITH hardened AS (
             UPDATE jerry_learning.knowledge SET scope='leadership',updated_at=now()
@@ -170,11 +173,11 @@ def batch(run, size=20):
 
 def reserve(run, amount):
     with db() as c:
-        if run.get('kind') in ('daily','feedback'):
+        if run.get('kind') in ('daily','feedback','sources'):
             # Comments share the existing daily allowance, not a second budget.
             c.execute('SELECT pg_advisory_xact_lock(739231402)')
             c.execute('''SELECT COALESCE(sum(spent_usd+reserved_usd),0) AS used
-                         FROM jerry_learning.runs WHERE kind IN ('daily','feedback') AND cutoff=%s''',
+                         FROM jerry_learning.runs WHERE kind IN ('daily','feedback','sources') AND cutoff=%s''',
                       (run['cutoff'],))
             if float(c.fetchone()['used']) + amount > float(run['budget_usd']):
                 return False
@@ -198,7 +201,7 @@ def charge(run, reservation, usage):
                      WHERE id=%s AND owner=%s''', (reservation,cost,inp,out,search,run['id'],run['owner']))
 
 
-def finish_batch(run, rows, cards):
+def finish_batch(run, rows, cards, input_row=None):
     accepted = pending = 0
     with db() as c:
         c.execute("SELECT id FROM jerry_learning.runs WHERE id=%s AND owner=%s AND status='running' FOR UPDATE", (run['id'],run['owner']))
@@ -227,13 +230,27 @@ def finish_batch(run, rows, cards):
                 pending += card['status']=='pending'
                 c.execute('INSERT INTO jerry_learning.audit(knowledge_id,action,actor,detail) VALUES(%s,%s,%s,%s)',
                           (saved['id'],card['status'],'daily-learner',Json({'run_id':str(run['id']),'reason':card['reason']})))
+            if input_row:
+                c.execute('SELECT id FROM jerry_learning.knowledge WHERE fingerprint=%s',(fingerprint,))
+                linked=c.fetchone()
+                if linked:
+                    c.execute('INSERT INTO jerry_learning.knowledge_inputs(knowledge_id,input_id) VALUES(%s,%s) ON CONFLICT DO NOTHING',
+                              (linked['id'],input_row['id']))
+        if input_row:
+            c.execute("""UPDATE jerry_learning.inputs SET state=%s,processed_at=now(),result=%s
+                         WHERE id=%s AND processed_at IS NULL""",
+                      ('complete' if cards else 'needs_review',
+                       f'{accepted} new available entries; {pending} new entries need review.' if cards else
+                       'No supported reusable facts found. Add a more specific source or provide its text.',input_row['id']))
+            c.execute("INSERT INTO jerry_learning.audit(action,actor,detail) VALUES('source-distilled','source-learner',%s)",
+                      (Json({'input_id':input_row['id'],'accepted':accepted,'pending':pending}),))
         for row in rows:
             outcome = 'distilled' if any(row['id'] in x['question_ids'] for x in cards) else 'reviewed-no-new-supported-fact'
             c.execute('INSERT INTO jerry_learning.reviews(question_id,run_id,outcome) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',
                       (row['id'],run['id'],outcome))
         c.execute('''UPDATE jerry_learning.runs SET reviewed=reviewed+%s,accepted=accepted+%s,
                      pending=pending+%s,failures=0,error='',lease_until=now()+interval '10 minutes',updated_at=now()
-                     WHERE id=%s AND owner=%s''', (len(rows),accepted,pending,run['id'],run['owner']))
+                     WHERE id=%s AND owner=%s''', (1 if input_row else len(rows),accepted,pending,run['id'],run['owner']))
 
 
 def release(run, status='queued', error=''):

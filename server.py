@@ -91,6 +91,7 @@ from fastapi import FastAPI, Request, Response, HTTPException           # noqa: 
 from fastapi.responses import (                                          # noqa: E402
     HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse,
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.staticfiles import StaticFiles                              # noqa: E402
 
 import login as _login                                                   # noqa: E402
@@ -147,7 +148,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "10.2.3 (2026)"
+APP_VERSION = "10.2.4 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -627,7 +628,8 @@ def learning_page(request: Request):
     if not current_user(request):
         return RedirectResponse("/login?next=/learning", status_code=302)
     require_jerry_log_access(request)
-    return HTMLResponse(_page("learning.html"))
+    return HTMLResponse(_page("learning.html").replace("<!-- NEURAL_PERSONAL_LINK -->",
+        '<a href="/neural">My neural dashboard</a>' if _neural_owner(current_user(request)) else ""))
 
 
 @app.get("/api/learning")
@@ -658,6 +660,27 @@ def _learning_write_guard(request):
         raise HTTPException(415, "A JSON request is required.")
     if _learn_store is None:
         raise HTTPException(503, "Learning is unavailable.")
+
+
+@app.get("/api/learning/knowledge/{knowledge_id}")
+def learning_entry(knowledge_id: int, request: Request):
+    user = require_jerry_log_access(request)
+    try:
+        with _learn_store.db() as c:
+            entry = dict(_learn_store.visible_entry(c, knowledge_id, bool(_login.resolve_leadership(user)), user))
+            if entry['scope']=='owner' and entry['owner_email'] != _login.resolve_user_email(user):
+                raise _learn_store.FeedbackError(404, "Knowledge entry not found or not available to you.")
+            c.execute("SELECT count(*) AS n FROM jerry_learning.comments WHERE knowledge_id=%s", (knowledge_id,))
+            entry["comment_count"] = c.fetchone()["n"]
+            c.execute("SELECT count(*) AS n FROM jerry_learning.comments WHERE knowledge_id=%s AND processed_at IS NULL", (knowledge_id,))
+            entry["comments_waiting"] = c.fetchone()["n"]
+            for source in entry["sources"]:
+                source.pop("text", None)
+        return JSONResponse(jsonable_encoder(entry), headers={"Cache-Control":"private, no-store"})
+    except _learn_store.FeedbackError as exc:
+        raise HTTPException(exc.status_code, str(exc))
+    except Exception:
+        raise HTTPException(503, "The knowledge entry is temporarily unavailable.")
 
 
 @app.get("/api/learning/knowledge/{knowledge_id}/comments")
@@ -958,6 +981,7 @@ def api_me(request: Request):
         "user": user,
         "is_leadership": is_leadership,
         "is_vip": is_vip,
+        "personal_neural": _neural_owner(user),
         "models": models,
         # VIP (⊇ LEADERSHIP) defaults to Opus 5; everyone else to DeepSeek.
         "default_model": (_jerry.DEFAULT_MODEL if is_vip
@@ -1121,13 +1145,83 @@ async def api_artifact(request: Request):
     })
 
 
+def _neural_owner(user):
+    return bool(user) and _login.resolve_user_email(user) == "jcyi@streamax.com"
+
+
+def _require_neural_owner(request):
+    user = require_user(request)
+    if not _neural_owner(user):
+        raise HTTPException(403, "This is a personal dashboard.")
+    return _login.resolve_user_email(user)
+
+
+def _neural_page(personal=False):
+    return _page("neural.html").replace("__PERSONAL__", "true" if personal else "false")
+
+
+@app.get("/neural", response_class=HTMLResponse)
+def neural_page(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/login?next=/neural", status_code=302)
+    _require_neural_owner(request)
+    return HTMLResponse(_neural_page(True), headers={"Cache-Control":"private, no-store"})
+
+
+@app.get("/network", response_class=HTMLResponse)
 @app.get("/api/ecosystem", response_class=HTMLResponse)
 def api_ecosystem(request: Request, focus: str = ""):
-    """Interactive D3 ecosystem map, shown in a modal iframe."""
+    """Neural-style product and learned knowledge network; focus is read safely by JS."""
+    if not current_user(request):
+        return RedirectResponse("/login?next=/network", status_code=302)
     require_user(request)
-    if _topology is None:
-        raise HTTPException(503, "ecosystem map unavailable")
-    return HTMLResponse(_topology.ecosystem_map_html(focus))
+    return HTMLResponse(_neural_page(), headers={"Cache-Control":"private, no-store"})
+
+
+@app.get("/api/neural")
+def neural_status(request: Request):
+    from neural.graph import snapshot
+    user = _require_neural_owner(request)
+    try:
+        return JSONResponse(jsonable_encoder(snapshot(user, bool(_login.resolve_leadership(user)), True)),
+                            headers={"Cache-Control":"private, no-store"})
+    except Exception:
+        raise HTTPException(503, "The online knowledge network is temporarily unavailable. Please retry.")
+
+
+@app.get("/api/neural/network")
+def neural_network(request: Request):
+    from neural.graph import snapshot, projection
+    user = require_user(request)
+    leader = bool(_login.resolve_leadership(user))
+    try:
+        payload = snapshot(_login.resolve_user_email(user), leader)
+    except Exception:
+        payload = {**projection([], [], leader, False), "personal":False, "degraded":True,
+                   "counts":{}, "total":0, "loaded":0,
+                   "message":"The learning store is unavailable. Showing the curated product network only."}
+    return JSONResponse(jsonable_encoder(payload), headers={"Cache-Control":"private, no-store"})
+
+
+@app.post("/api/neural/inputs", status_code=202)
+async def neural_input(request: Request):
+    from neural.feeds import submit
+    user = _require_neural_owner(request)
+    _learning_write_guard(request)
+    raw = await request.body()
+    if len(raw)>60000:
+        raise HTTPException(413, "This source is too long. Paste up to 12,000 characters.")
+    try:
+        body=json.loads(raw)
+        result=await asyncio.to_thread(submit,user,body)
+    except (ValueError,TypeError,AttributeError):
+        # The source validator supplies useful, nonsecret errors.
+        import sys
+        raise HTTPException(400, str(sys.exception()) or "Invalid learning source.")
+    except Exception:
+        raise HTTPException(503, "The source could not be confirmed. Retry without changing the draft to prevent a duplicate.")
+    _learn_schedule.start()
+    return result
 
 
 # ---------------------------------------------------------------------------
