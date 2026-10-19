@@ -124,3 +124,10 @@ to timeless wording, so it does not keep saying
 Live result screenshot: `../../jerry-review-comments-live.jpg`. The verification
 comment is explicitly labelled as Codex verification and retains its signed-in
 author, timestamp, source reference and AI outcome.
+
+## Related neural dashboard and source learning
+
+- [Neural dashboard sub-memory](../neural/sub-memory.md) records the personal
+  evolution view, source queue and 2026-10-20 live source-to-active-card check.
+- Source submissions use the same hosted lease and shared daily allowance;
+  source IDs live in `knowledge_inputs`, never in chat `question_ids`.

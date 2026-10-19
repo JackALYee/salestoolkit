@@ -31,6 +31,12 @@ def redact(text):
     return re.sub(r'(?<!\w)(?:\+?\d[\d ()-]{9,}\d)(?!\w)', '[identifier removed]', text)
 
 
+def evidence_reason(value):
+    """Model prose cannot announce a permission change the server never made."""
+    text=redact(value)
+    return re.sub(r'(?is)(?:^|(?<=[.!?]))\s*(?:scope|visibility|access|sensitivity)\b[^.!?]*(?:downgrad|upgrad|reclassif|relax|chang)[^.!?]*(?:[.!?]|$)', '', text).strip()[:500]
+
+
 def public_url(url):
     try:
         p=urlsplit(str(url))
@@ -165,6 +171,7 @@ curated documentation. For external claims require web evidence; prefer primary 
 an opinion, forecast or sales suggestion into a fact. Correct a claim only when evidence explicitly
 supports the correction, and include scope, date, conditions and limits. Source IDs MUST refer to the
 provided evidence and support this specific claim. Paraphrase; do not quote passages. Max 600 characters; one independently supportable statement per card.
+Give evidence reasons only; do not announce visibility or access changes. The server enforces those.
 Privacy can only be tightened: classify owner for personal/customer data, leadership for confidential
 commercial terms, internal for general knowledge. Sensitive source conversations stay restricted.
 Use ttl_days 7 for news/prices/financial/regulatory conditions, 30 for changing product specs, at most180
@@ -262,8 +269,9 @@ def verified_cards(candidates, verdicts, evidence, allow_supplied=False):
         # retrieval date, not merely a URL invented in generated answer text.
         stored_sources=[{k:e[k] for k in ('type','title','url','locator','digest','text','scope') if k in e} for e in sources]
         title=redact(v.get('title') or candidate['title']).strip()[:180]
-        reason=redact(v.get('reason','No independent evidence verdict.'))[:500]
-        if scope=='internal' and SENSITIVE.search(title+' '+reason):
+        raw_reason=redact(v.get('reason','No independent evidence verdict.'))
+        reason=evidence_reason(raw_reason)
+        if scope=='internal' and SENSITIVE.search(title+' '+raw_reason):
             scope='leadership'
         if CONTROL.search(title):
             supported=False

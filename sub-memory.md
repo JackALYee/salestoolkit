@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry's neural dashboard | The owner dashboard, neural graph and hosted source queue are implemented; live deployment verification is in progress | neural/sub-memory.md | volatile |
+| W1 | state | platform | resuming Jerry's neural dashboard | The owner dashboard and neural graph are live; a real source completed hosted review and became restricted active knowledge | neural/sub-memory.md | volatile |
 
 ## Long-term memory
 

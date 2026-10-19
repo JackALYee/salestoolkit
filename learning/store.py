@@ -269,6 +269,7 @@ def fail(run, error):
 
 
 def status(is_leadership=False, user=''):
+    from .engine import evidence_reason
     with db() as c:
         c.execute('SELECT key,value FROM jerry_learning.settings')
         settings = {r['key']:r['value'] for r in c.fetchall()}
@@ -286,6 +287,7 @@ def status(is_leadership=False, user=''):
                      ORDER BY created_at DESC LIMIT 200''', (COMMERCIAL_PATTERN,is_leadership,user))
         cards=[dict(r) for r in c.fetchall()]
         for card in cards:
+            card['reason']=evidence_reason(card['reason'])
             card['sources']=[{k:v for k,v in source.items() if k!='text'} for source in card['sources']]
         c.execute('''SELECT status,COUNT(*) AS n FROM jerry_learning.knowledge
                      WHERE (scope='internal' AND NOT ((title||' '||content||' '||reason||' '||sources::text) ~* %s)) OR %s OR (scope='owner' AND owner_email=%s) GROUP BY status''', (COMMERCIAL_PATTERN,is_leadership,user))

@@ -61,6 +61,13 @@ class AccessAndEvidence(unittest.TestCase):
         with patch.object(G,'snapshot',side_effect=RuntimeError()):
             r=self.client('jimmy@streamax.com').get('/api/neural/network')
             self.assertTrue(r.json()['degraded']);self.assertNotIn('$20',r.text)
+    def test_evidence_reason_does_not_announce_a_rejected_permission_change(self):
+        reason='Two references support the mounting position. Scope downgraded from leadership to internal as both sources are public.'
+        self.assertEqual(E.evidence_reason(reason),'Two references support the mounting position.')
+        self.assertEqual(E.evidence_reason('The scope is limited to vehicles described in the source.'),'The scope is limited to vehicles described in the source.')
+        card=E.verified_cards([claim()],verdict(reason='Scope changed because of confidential context.'),[dict(WEB,type='curated')])[0]
+        self.assertEqual(card['scope'],'leadership')
+
     def test_supplied_evidence_is_only_accepted_for_source_pipeline(self):
         evidence=[dict(WEB,type='supplied',scope='leadership')]
         self.assertEqual(E.verified_cards([claim()],verdict(),evidence)[0]['status'],'pending')

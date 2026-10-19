@@ -91,6 +91,7 @@ def snapshot(user, leader=False, personal=False):
             FROM jerry_learning.knowledge k WHERE '''+visibility+state_filter+''' ORDER BY k.updated_at DESC,k.id DESC LIMIT 2000''',params)
         cards=[dict(r) for r in c.fetchall()]
         for card in cards:
+            card['reason']=engine.evidence_reason(card['reason'])
             for source in card['sources']:
                 source.pop('text',None)
         c.execute('''SELECT i.id,i.kind,i.title,i.url,i.scope,i.state,i.result,i.created_at,i.processed_at,
