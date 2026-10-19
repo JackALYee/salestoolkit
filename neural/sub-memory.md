@@ -60,3 +60,16 @@ submission, HTML escaping, draft preservation and no horizontal overflow.
 
 GitHub transport on this host needed the existing macOS system proxy
 `127.0.0.1:10808` passed per Git command; no global network setting was changed.
+
+The public website check also completed: source #2 (`https://www.streamax.com/`)
+yielded four active, company-visible cards. Entry 432, "Streamax core product
+categories", showed 95 percent evidence confidence and actual citations to
+`https://www.streamax.com/category/products.html`. Website provenance appeared in
+the graph. Version 10.2.5 / `ac883b4` verified the review-message refinement.
+
+A final mobile check of the Jerry launch links found that the existing history
+overlay opened by default and the expanded header was cramped. The final patch
+collapses history on phones, adds a reachable Close history control, and wraps
+header navigation; 390px browser checks confirmed readable links and no overflow.
+Repeated evidence excerpts from the same URL remain stored but display as one
+source link in the neural inspector.
