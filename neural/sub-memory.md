@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform,verification | resuming neural dashboard work | The neural dashboard is deployed; source #1 produced active leadership-only entry #430 from two curated citations; final wording refinement is being verified | README.md; scripts/test_neural.py | volatile |
+| W1 | state | platform,verification | resuming neural dashboard work | Version 10.2.6 / 2dd53d6 is live and verified; supplied information and public website runs produced five cited active entries, with enforced visibility retained | README.md; scripts/test_neural.py; live verification below | volatile |
 
 ## Long-term memory
 
@@ -73,3 +73,11 @@ collapses history on phones, adds a reachable Close history control, and wraps
 header navigation; 390px browser checks confirmed readable links and no overflow.
 Repeated evidence excerpts from the same URL remain stored but display as one
 source link in the neural inspector.
+
+Final release `2dd53d6` was verified by `/healthz` as version 10.2.6 with strict
+login, and the served neural JavaScript hash matched the committed source. The
+refreshed owner dashboard showed 160 active references, 271 awaiting review,
+812 questions reviewed and four website entries. All four source paths rendered
+in the live network. Screenshot: `../../jerry-neural-live.jpg` (outside the public
+site and repository). The temporary local preview and disposable test database
+were stopped after verification; production learning remains entirely hosted.
