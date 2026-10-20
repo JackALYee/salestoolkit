@@ -7,7 +7,7 @@ Parent: [Website memory](../sub-memory.md).
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | verifying the home-logo change | Login logo now links to the trucking homepage; production verification pending | login.html | volatile |
+| W1 | state | platform | verifying the home-logo change | Login logo is published in commit 65efddc; live HTML and health version 10.3.6 confirm it | login.html | volatile |
 
 ## Long-term memory
 

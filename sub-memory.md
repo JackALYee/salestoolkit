@@ -25,7 +25,7 @@ Query by trigger and domain. Working state must be verified each session.
 The owner requested return navigation from all sites linked on the trucking
 homepage. Both the login logo and signed-in toolkit header now link to
 `https://www.streamax-trucking.com/`. Version is 10.3.6 (2026); build and all
-33 resource/version checks pass. Unrelated i18n changes remain outside this commit.
+33 resource/version checks pass. Production health reports commit 65efddc and version 10.3.6; live login HTML has the home link. Unrelated i18n changes remain outside this commit.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
