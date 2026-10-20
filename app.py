@@ -1338,9 +1338,11 @@ __I18N_SWITCHER__
     <header>
         <div class="container">
             <div class="fade-up" style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
-                <img src="/assets/streamax%20logo.png" alt="Streamax"
-                     style="height:34px; width:auto; object-fit:contain;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='none';">
+                <a href="https://www.streamax-trucking.com/" aria-label="Streamax Trucking home" style="display:flex; align-items:center;">
+                    <img src="/assets/streamax%20logo.png" alt="Streamax"
+                         style="height:34px; width:auto; object-fit:contain;"
+                         onerror="this.parentElement.style.display='none'; this.parentElement.nextElementSibling.style.display='none';">
+                </a>
                 <span style="width:1px; height:26px; background:rgba(255,255,255,0.16);"></span>
                 <div class="header-subtitle" style="margin:0;">Streamax Sales Toolkit</div>
             </div>
@@ -1348,7 +1350,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 10.2.6 (2026) • 货运产品线 Trucking BU • October 2026</div>
+            <div class="header-meta fade-up">Version 10.3.6 (2026) • 货运产品线 Trucking BU • October 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

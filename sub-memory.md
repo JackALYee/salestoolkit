@@ -20,6 +20,18 @@ Query by trigger and domain. Working state must be verified each session.
 
 ## Short-term memory
 
+### E2 — Trucking homepage logo links, 2026-10-20
+
+The owner requested return navigation from all sites linked on the trucking
+homepage. Both the login logo and signed-in toolkit header now link to
+`https://www.streamax-trucking.com/`. Version is 10.3.6 (2026); build and all
+33 resource/version checks pass. Unrelated i18n changes remain outside this commit.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E2 | episode | product | verifying the Streamax logo destination | Login and toolkit logos return to the trucking homepage in the same tab | templates/sub-memory.md; app.py | consolidating |
+
+
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
 | E1 | episode | platform,verification | reviewing the October Jerry Log failure | Closed-connection failure reproduced in all three portal reads; recovery, explicit errors, and Jimmy's scoped permissions implemented | scripts/test_jerrylog_recovery.py; scripts/test_jerrylog_portal.py | consolidating |
@@ -54,6 +66,8 @@ string); all 33 resource/version checks passed. `/healthz` then confirmed
 attempted; his access is verified by the deployed resolver and local HTTP gate tests.
 
 ## Subtask memory
+
+- [Website templates](templates/sub-memory.md) — login logo returns to the trucking homepage.
 
 - [Jerry's online daily learning](learning/sub-memory.md) — evidence review, private
   reservoir, visibility, hosted schedule, checkpoints and production verification.
