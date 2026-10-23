@@ -362,6 +362,8 @@ def _load_system_blocks() -> list[dict]:
         return []
     sections = []
     for path in files:
+        if path.name in {"memory.md", "sub-memory.md"}:
+            continue  # Maintainer handoffs are not product evidence.
         text = path.read_text(encoding="utf-8")
         sections.append(f"<knowledge file=\"{path.name}\">\n{text}\n</knowledge>")
 

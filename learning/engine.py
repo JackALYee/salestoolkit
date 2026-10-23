@@ -67,6 +67,8 @@ def curated_evidence(rows):
         return result
     passages=[]
     for path in sorted((ROOT/'jerry_gpt_knowledge').glob('*.md')):
+        if path.name in {'memory.md', 'sub-memory.md'}:
+            continue
         if path.name.startswith(('00_','05_')):
             continue
         for i,paragraph in enumerate(path.read_text(encoding='utf-8').split('\n\n')):

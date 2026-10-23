@@ -89,7 +89,7 @@ if "streamlit" not in sys.modules:
 
 from fastapi import FastAPI, Request, Response, HTTPException           # noqa: E402
 from fastapi.responses import (                                          # noqa: E402
-    HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse,
+    HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, FileResponse,
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.staticfiles import StaticFiles                              # noqa: E402
@@ -148,7 +148,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "10.3.6 (2026)"
+APP_VERSION = "10.3.7 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -1075,6 +1075,19 @@ def _asset_url(path: str) -> str:
     return f"/assets/{p.parent.name}/{p.name}"
 
 
+@app.get("/api/jerry/documents/{asset_id}")
+def jerry_source_document(asset_id: str, request: Request):
+    """Signed-in download of an allowlisted original engineering reference."""
+    require_user(request)
+    document = _downloads.construction_document(asset_id) if _downloads else None
+    if not document:
+        raise HTTPException(404, "Document not found")
+    return FileResponse(document["path"], media_type=document["mime"],
+                        filename=document["filename"],
+                        headers={"Cache-Control": "private, no-store",
+                                 "X-Content-Type-Options": "nosniff"})
+
+
 def _response_extras(answer: str, question: str) -> dict:
     """Everything that hangs off a finished answer."""
     out: dict = {"images": [], "downloads": [], "artifacts": [],
@@ -1095,7 +1108,7 @@ def _response_extras(answer: str, question: str) -> dict:
             # Jerry's wording omits the keyword.
             out["downloads"] = [
                 {"label": d["label"], "blurb": d.get("blurb", ""),
-                 "url": _asset_url(d["path"])}
+                 "url": d.get("url") or _asset_url(d["path"])}
                 for d in _downloads.find_downloads(f"{question}\n{answer}")
             ]
         except Exception as exc:

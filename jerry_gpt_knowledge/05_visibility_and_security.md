@@ -2,6 +2,14 @@
 
 ## VISIBILITY — Blind Spot Safety
 
+**Construction-specific selection update, 23 October 2026:** use
+`27_construction_vehicle_solutions.md` and its three original source documents
+for construction machinery / jobsite visibility. Its current C01–C11 route,
+SKU, wiring and evidence rules take precedence over the broad segment pitches
+below. Local AHD is a project-reference option, not the automatic default for
+every construction customer; the five detailed routes C06–C10 use C46 IPC with
+M1N/M3N. Establish monitored zones, region and local/cloud requirements first.
+
 ### The threat (these are the numbers Jerry uses)
 
 | Threat | Data | Source |

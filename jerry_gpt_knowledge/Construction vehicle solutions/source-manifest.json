@@ -1,0 +1,21 @@
+{
+  "imported_on": "2026-10-23",
+  "distilled_knowledge": "../27_construction_vehicle_solutions.md",
+  "documents": [
+    {
+      "filename": "01_Construction_Solution_Configuration_and_BOM.xlsx",
+      "sha256": "4178e91204427e69cb36a38bef5b7a7256091bb40b60b1925495bfb92c444cdf",
+      "bytes": 54059
+    },
+    {
+      "filename": "02_Construction_Architecture_Route_Matched_Engineering_Diagrams_EN.pdf",
+      "sha256": "8e4da5533bf6af23ef4329e2b5567aeeb3b138a3b3bb249be51ce26b95c26c0c",
+      "bytes": 1888417
+    },
+    {
+      "filename": "03_Technical_Compatibility_and_Validation_Matrix.xlsx",
+      "sha256": "95075a3a50c3f85f3bbdc9af901a94ec898ef8314a0ea6be9c9603e3afccb7c8",
+      "bytes": 49067
+    }
+  ]
+}

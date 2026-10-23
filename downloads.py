@@ -14,6 +14,52 @@ import re
 from pathlib import Path
 
 _DOWNLOADS_DIR = Path(__file__).parent / "assets" / "downloads"
+_CONSTRUCTION_DIR = Path(__file__).parent / "jerry_gpt_knowledge" / "Construction vehicle solutions"
+
+# Original engineering references stay outside the public assets mount. All
+# signed-in Jerry users can download them through the allowlisted API route.
+CONSTRUCTION_ASSETS = [
+    {
+        "id": "construction_bom",
+        "filename": "01_Construction_Solution_Configuration_and_BOM.xlsx",
+        "label": "Download · Construction solution configuration and BOM (XLSX)",
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "blurb": "Original selection workbook: routes, regional SKUs, full BOM, cables and TCO. Internal reference; verify the assembled kit before customer release.",
+    },
+    {
+        "id": "construction_diagrams",
+        "filename": "02_Construction_Architecture_Route_Matched_Engineering_Diagrams_EN.pdf",
+        "label": "Download · Construction architecture and engineering diagrams (PDF)",
+        "mime": "application/pdf",
+        "blurb": "Original 12-page route-matched diagrams, including the direct and switched camera paths and legacy-drawing warnings. Internal engineering reference.",
+    },
+    {
+        "id": "construction_validation",
+        "filename": "03_Technical_Compatibility_and_Validation_Matrix.xlsx",
+        "label": "Download · Construction compatibility and validation matrix (XLSX)",
+        "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "blurb": "Original interface, software and validation matrix. Recorded configurations are separate from signed QA and regional approval.",
+    },
+]
+_CONSTRUCTION_TOPIC = re.compile(
+    r"(?<![A-Za-z0-9])(?:construction[ -]+(?:vehicles?|equipment|machinery|sites?|visibility|solutions?)|"
+    r"earthmoving|off[ -]highway|(?:jobsite|worksite)[ -]+vehicles?|excavators?|bulldozers?|"
+    r"wheel[ -]+loaders?|C0[6-9]|C10)(?![A-Za-z0-9])|"
+    r"工程机械|工程车辆|工程车|施工车辆|工地车辆|施工机械|挖掘机|推土机|装载机|"
+    r"0[123]_(?:Construction_|Technical_Compatibility_and_Validation_Matrix)",
+    re.IGNORECASE,
+)
+
+
+def construction_document(asset_id: str) -> dict | None:
+    """Resolve only the three registered originals, never a user-supplied path."""
+    for asset in CONSTRUCTION_ASSETS:
+        if asset["id"] == asset_id:
+            path = _CONSTRUCTION_DIR / asset["filename"]
+            if path.is_file():
+                return {**asset, "path": str(path),
+                        "url": f"/api/jerry/documents/{asset['id']}"}
+    return None
 
 # Each asset: trigger keywords (matched case-insensitively as substrings —
 # keep them distinctive so they don't fire on unrelated words), plus the file
@@ -117,7 +163,12 @@ def find_downloads(text: str) -> list[dict]:
     file-existence checked. Empty list if nothing matches."""
     if not text:
         return []
+    # Keep the original three-document set together even when the same answer
+    # mentions CAN/GDPR/eSIM. Ordinary visibility answers do not trigger it.
     out: list[dict] = []
+    if _CONSTRUCTION_TOPIC.search(text):
+        out = [d for a in CONSTRUCTION_ASSETS
+               if (d := construction_document(a["id"])) is not None]
     seen: set[str] = set()
     for asset in ASSETS:
         if asset["id"] in seen:
@@ -142,7 +193,18 @@ def find_downloads(text: str) -> list[dict]:
 # Injected into Jerry's system prompt so he names the topic (which is what
 # lets the scanner attach the file) and knows the download exists.
 DOWNLOAD_HINT = (
-    "Five Streamax documents can be offered to the user as downloads:\n"
+    "Streamax documents can be offered to the user as downloads:\n"
+    "- Construction vehicle solutions: use 27_construction_vehicle_solutions.md "
+    "for construction visibility, C46/M1N/M3N route selection, BOM and wiring. "
+    "First answer from the distilled guidance. For detailed or multi-part questions "
+    "about configurations, SKUs, wiring, installation, versions or validation, "
+    "offer all THREE original documents: configuration/BOM XLSX, route-matched "
+    "engineering-diagrams PDF, and compatibility/validation XLSX. Mention "
+    "'construction vehicle solutions' (工程车辆可视化方案 in Chinese) explicitly "
+    "so the interface attaches the complete set, including on follow-up download "
+    "requests. These are internal engineering references requiring sign-in, not "
+    "an approved customer kit. Give the relevant sheet or PDF page; preserve "
+    "the documented QA and release boundaries.\n"
     "- eSIM: when the user asks about eSIM, eUICC, MFF2, or SIM/connectivity, "
     "mention 'eSIM' explicitly in your answer.\n"
     "- Inherent CAN: when the user asks about CAN bus, the CAN license, OBD/"

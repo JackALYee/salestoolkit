@@ -3,11 +3,11 @@
 Parent: `../memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_method.md`.
 Query by trigger and domain. Working state must be verified each session.
 
-## Working memory — 2026-10-20
+## Working memory — 2026-10-23
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming Jerry's neural dashboard | The owner dashboard and neural graph are live; a real source completed hosted review and became restricted active knowledge | neural/sub-memory.md | volatile |
+| W1 | state | platform | resuming construction knowledge ingestion | Construction visibility sources distilled and original private downloads tested; production verification pending | jerry_gpt_knowledge/sub-memory.md | volatile |
 
 ## Long-term memory
 
@@ -66,6 +66,8 @@ string); all 33 resource/version checks passed. `/healthz` then confirmed
 attempted; his access is verified by the deployed resolver and local HTTP gate tests.
 
 ## Subtask memory
+
+- [Curated Jerry knowledge](jerry_gpt_knowledge/sub-memory.md) — construction vehicle source distillation and protected original downloads.
 
 - [Website templates](templates/sub-memory.md) — login logo returns to the trucking homepage.
 
