@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | product,verification | resuming construction knowledge ingestion | Three originals distilled into module 27; private downloads and local verification pass; production verification pending | Construction vehicle solutions/sub-memory.md | volatile |
+| W1 | state | product,verification | resuming construction knowledge ingestion | Three originals distilled into module 27; version 10.3.7 is live, with correct live answer and all three original download hashes verified | Construction vehicle solutions/sub-memory.md | volatile |
 
 ## Long-term memory
 

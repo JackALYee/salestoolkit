@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming construction knowledge ingestion | Construction visibility sources distilled and original private downloads tested; production verification pending | jerry_gpt_knowledge/sub-memory.md | volatile |
+| W1 | state | platform | resuming construction knowledge ingestion | Construction visibility knowledge is live in 10.3.7; live answer and all three original downloads verified | jerry_gpt_knowledge/sub-memory.md | volatile |
 
 ## Long-term memory
 

@@ -6,7 +6,7 @@ Parent: `../sub-memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform,verification | resuming the construction knowledge release | Distillation and private download code pass local tests; deployment and live-answer check pending | ../../scripts/test_construction_knowledge.py | volatile |
+| W1 | state | platform,verification | resuming the construction knowledge release | Version 10.3.7 / f8c62d9 is live; correct source-based answer and all three original browser-download hashes verified | ../../scripts/test_construction_knowledge.py | volatile |
 
 ## Long-term memory
 
@@ -46,3 +46,23 @@ Local verification: 8 construction tests (including byte hashes, attachment/MIME
 all-user access, absent public copies, EN/Chinese triggers, real prompt loading,
 and daily evidence retrieval), 19 existing download checks and 33 resource/version
 checks pass. Production verification is recorded after deployment below.
+
+
+### Production verification — 2026-10-23
+
+Render `/healthz` confirmed `10.3.7 (2026)`, commit `f8c62d9`, strict login.
+The signed-in owner asked Jerry to compare C06/C09, identify the included current
+20-pin harness, explain 0017 substitution and assess the DEBUG software record.
+The live answer correctly supplied the direct-vs-switched topology, 0539 inclusion,
+PoC-only camera boundary and lack of production-release proof, citing source
+sheets/pages. All three original download buttons appeared together.
+All three files were downloaded from that answer and SHA-256 matched the source
+manifest byte for byte. Safari's first PDF transfer lost its network connection;
+resuming completed successfully with the matching hash. Anonymous requests to all
+three live routes returned 401. Screenshot outside the public site/repository:
+`../../../jerry-construction-live.jpg`.
+
+The exact staged release built independently of the unrelated translation changes.
+Existing learning tests: 23 passed, 11 database-only tests skipped (no database
+logic changed). No synthetic test data was added to the production reservoir;
+the labelled real verification chat remains in the owner's ordinary chat history.
