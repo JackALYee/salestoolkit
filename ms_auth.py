@@ -35,12 +35,12 @@ Configuration (environment variables)
     MS_TENANT_ID       Directory (tenant) ID   — required
     MS_CLIENT_ID       Application (client) ID — required
     MS_CLIENT_SECRET   Client secret VALUE     — required
-    MS_REDIRECT_URI    Optional override; otherwise derived from the request
-                       (honouring X-Forwarded-Proto/Host behind Cloudflare).
+    MS_REDIRECT_URI    Optional explicit override; otherwise the canonical
+                       Sales Toolkit HTTPS callback.
     MS_ALLOWED_DOMAINS Optional CSV, default "streamax.com".
 
-Sign-in is simply hidden until all three required values are present, so
-deploying this file changes nothing until the tenant is configured.
+Sign-in is visible with a setup notice until the three Entra values and
+AUTH_SECRET are present. Unconfigured flows fail closed.
 """
 
 from __future__ import annotations
@@ -50,6 +50,8 @@ import hashlib
 import hmac
 import json
 import os
+import math
+import re
 import secrets
 import ssl
 import sys
@@ -92,7 +94,9 @@ def allowed_domains() -> list[str]:
 
 def is_configured() -> bool:
     """True once tenant + client id + secret are all present."""
-    return bool(tenant_id() and client_id() and _client_secret())
+    guid = r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+    return bool(re.fullmatch(guid, tenant_id()) and re.fullmatch(guid, client_id())
+                and _client_secret() and _env('AUTH_SECRET'))
 
 
 def _log(msg: str) -> None:
@@ -103,7 +107,10 @@ def _log(msg: str) -> None:
 # Shares AUTH_SECRET with the session cookie in server.py — one secret to set.
 
 def _secret() -> bytes:
-    return (_env("AUTH_SECRET") or "insecure-development-fallback").encode()
+    value = _env("AUTH_SECRET")
+    if not value:
+        raise ValueError('AUTH_SECRET is required for Microsoft sign-in')
+    return value.encode()
 
 
 def _b64e(raw: bytes) -> str:
@@ -121,7 +128,7 @@ def safe_next(path: str) -> str:
     protocol-relative URLs that browsers happily follow off-site.
     """
     p = (path or "").strip()
-    if not p.startswith("/") or p.startswith("//") or p.startswith("/\\"):
+    if not p.startswith("/") or p.startswith("//") or re.search(r'[\\\x00-\x20\x7f]', p):
         return "/"
     return p
 
@@ -228,9 +235,8 @@ def _claims(id_token: str) -> dict | None:
 
 
 def _email_from(claims: dict) -> str:
-    """Best available address. Work accounts normally carry `preferred_username`
-    (the UPN); `email` appears when the optional claim / mail attribute is set."""
-    for key in ("email", "preferred_username", "upn", "unique_name"):
+    """Use the tenant-managed sign-in address, not an arbitrary email claim."""
+    for key in ("preferred_username", "upn"):
         val = str(claims.get(key) or "").strip().lower()
         if "@" in val:
             return val
@@ -280,7 +286,11 @@ def complete(code: str, state_param: str, cookie_value: str,
         _log("nonce mismatch")
         return "", next_path, "Sign-in could not be verified. Please try again."
     try:
-        if time.time() > float(claims.get("exp") or 0):
+        exp = float(claims.get("exp") or 0)
+        nbf = float(claims.get("nbf") or 0)
+        if not math.isfinite(exp) or not math.isfinite(nbf) or nbf > time.time() + 60:
+            return "", next_path, "Sign-in could not be verified. Please try again."
+        if time.time() > exp:
             return "", next_path, "Microsoft sign-in expired. Please try again."
     except (TypeError, ValueError):
         return "", next_path, "Sign-in could not be verified. Please try again."
@@ -290,7 +300,7 @@ def complete(code: str, state_param: str, cookie_value: str,
         return "", next_path, "Microsoft did not return an email address for that account."
 
     domains = allowed_domains()
-    if domains and email.rsplit("@", 1)[-1] not in domains:
+    if not domains or email.rsplit("@", 1)[-1] not in domains or '#ext#' in email or claims.get('acct') == 1:
         _log(f"domain rejected: {email}")
         return "", next_path, "Please sign in with your Streamax account."
 

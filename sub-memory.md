@@ -3,11 +3,11 @@
 Parent: `../memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_method.md`.
 Query by trigger and domain. Working state must be verified each session.
 
-## Working memory — 2026-10-23
+## Working memory — 2026-10-27
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | resuming construction knowledge ingestion | Construction visibility knowledge is live in 10.3.7; live answer and all three original downloads verified | jerry_gpt_knowledge/sub-memory.md | volatile |
+| W-MS | state | platform,deploy | continuing Microsoft Authenticator rollout | Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | volatile |
 
 ## Long-term memory
 
@@ -76,3 +76,15 @@ attempted; his access is verified by the deployed resolver and local HTTP gate t
 
 - [Jerry neural dashboard](neural/sub-memory.md) — personal evolution view, four
   learning routes, original neural renderer and online source intake.
+
+## Short-term — Microsoft sign-in
+
+### E-MS — 2026-10-27
+
+Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E-MS | episode | platform,verification | enabling Microsoft Authenticator | Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | consolidating |
+
+- [Sign-in tests](scripts/sub-memory.md)

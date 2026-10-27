@@ -80,7 +80,7 @@ check("client secret posted server-side only", fake_ms.last_form.get("client_sec
 
 print("\n--- claim source fallbacks ---")
 (email, _, _), _, _ = run(preferred_username="x", email="Real.Person@streamax.com")
-check("prefers the email claim when present", email == "real.person@streamax.com", email)
+check("rejects arbitrary email without a tenant sign-in address", email == "", email)
 (email, _, _), _, _ = run(preferred_username=None, upn="upn.user@streamax.com")
 check("falls back to upn", email == "upn.user@streamax.com", email)
 (email, _, e), _, _ = run(preferred_username=None, upn=None, unique_name=None, email=None)
@@ -127,11 +127,21 @@ for bad in ["//evil.com", "/\\evil.com", "https://evil.com", "javascript:alert(1
 (_, nxt, _), _, _ = run(next_path="/jerry")
 check("keeps a legitimate next=/jerry", nxt == "/jerry", nxt)
 
+print("\n--- staff identity and invalid claims ---")
+for overrides in [dict(preferred_username="guest_other.com#EXT#@streamax.com"), dict(acct=1), dict(exp=float('nan')), dict(nbf=time.time()+3600), dict(preferred_username="guest@other.com", email="jcyi@streamax.com")]:
+    (email, _, e), _, _ = run(**overrides)
+    check("rejects unsafe identity/time claim " + str(overrides), email == "", e)
+for bad in ["/\\evil.com", "/foo\nbar", "/foo\tbar"]:
+    check("rejects control/backslash redirect " + repr(bad), ms.safe_next(bad) == "/")
+
 print("\n--- configuration gate ---")
 saved = os.environ.pop("MS_CLIENT_SECRET")
 check("hidden until fully configured", ms.is_configured() is False)
 os.environ["MS_CLIENT_SECRET"] = saved
 check("enabled once configured", ms.is_configured() is True)
 
+saved_auth = os.environ.pop("AUTH_SECRET")
+check("Microsoft sign-in fails closed without signing secret", ms.is_configured() is False)
+os.environ["AUTH_SECRET"] = saved_auth
 print(f"\n{ok} passed, {fail} failed")
 sys.exit(1 if fail else 0)

@@ -16,9 +16,10 @@
        display:flex;align-items:center;justify-content:center;padding:24px}
   .wrap{width:100%;max-width:420px}
   .marks{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:18px}
-  .marks img.logo{height:38px;width:auto;object-fit:contain}
+  .marks a{min-width:0;flex:1}
+  .marks img.logo{max-height:38px;max-width:100%;width:auto;object-fit:contain}
   .marks .sep{width:1px;height:38px;background:rgba(255,255,255,.14)}
-  .marks img.mascot{width:96px;height:96px;object-fit:contain;
+  .marks img.mascot{width:96px;height:96px;flex-shrink:0;object-fit:contain;
        animation:float 4s ease-in-out infinite;
        filter:drop-shadow(0 12px 18px rgba(42,245,152,.18))}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -86,7 +87,7 @@
   .msbtn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.28);
                transform:translateY(-2px)}
   .msbtn svg{flex:none}
-  .hint{text-align:center;color:#5c6880;font-size:.72rem;margin:10px 0 0}
+  .hint{text-align:center;color:var(--grey);font-size:.8rem;line-height:1.6;margin:10px 0 0}
 
   /* --- first-run: set a dedicated toolkit password ------------------------ */
   #setup{position:fixed;inset:0;z-index:10001;display:none;align-items:center;
@@ -152,6 +153,7 @@
     <h1><span class="g">Streamax</span> Sales Toolkit</h1>
     <p class="sub">Secure Access &bull; Trucking Division</p>
     <form id="f" autocomplete="on">
+      <!--MS_SIGNIN-->
       <label for="email">Streamax email</label>
       <!-- type="text", not "email": the browser's email validation rejects the
            easter-egg accounts (jerry_test, test_account …) before the form can
@@ -170,9 +172,8 @@
       <input id="password" name="password" type="password" placeholder="••••••••" required>
       <button id="btn" type="submit">Authenticate</button>
       <div class="err" id="err"></div>
-      <!--MS_SIGNIN-->
     </form>
-    <p class="foot">Verified against the Streamax mail server. Credentials are never stored.</p>
+    <p class="foot">Streamax staff access · Microsoft Authenticator is supported through Microsoft sign-in.</p>
   </div>
 
   <!-- Shown after repeated failures. Wording is the customer's, verbatim, in

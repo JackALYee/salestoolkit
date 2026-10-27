@@ -3,11 +3,11 @@
 Method: `/Users/jiachenyi/Documents/AI Skill/memory_method.md`.
 Parent: [Website memory](../sub-memory.md).
 
-## Working memory
+## Working memory — 2026-10-27
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W1 | state | platform | verifying the home-logo change | Login logo is published in commit 65efddc; live HTML and health version 10.3.6 confirm it | login.html | volatile |
+| W-MS | state | platform,deploy | continuing Microsoft Authenticator rollout | Microsoft entry appears before password form, with a pending company-setup notice when unconfigured. Mobile logo overflow fixed; 390px layout rechecked. | login.html | volatile |
 
 ## Long-term memory
 
@@ -27,3 +27,13 @@ landing-page logo is updated in app.py. Build and 33 resource/version checks pas
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
 | E1 | episode | product,verification | checking the login logo destination | Both entry surfaces now use the absolute trucking homepage URL | login.html; ../app.py | consolidating |
+
+## Short-term — Microsoft sign-in
+
+### E-MS — 2026-10-27
+
+Microsoft entry appears before password form, with a pending company-setup notice when unconfigured. Mobile logo overflow fixed; 390px layout rechecked.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E-MS | episode | platform,verification | enabling Microsoft Authenticator | Microsoft entry appears before password form, with a pending company-setup notice when unconfigured. Mobile logo overflow fixed; 390px layout rechecked. | login.html | consolidating |

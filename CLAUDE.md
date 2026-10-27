@@ -78,7 +78,7 @@ Six standalone suites — no pytest, no network except where noted. Run the ones
 python3 scripts/test_bootstrap_login.py      # sign-in policy + toolkit password
 python3 scripts/test_customized_login.py     # override list, hashing, precedence
 python3 scripts/test_identity_flags.py       # leadership/VIP, clearance, usage log
-python3 scripts/test_ms_auth.py              # Microsoft OIDC (31 checks)
+python3 scripts/test_ms_auth.py              # Microsoft OIDC (40 checks)
 python3 scripts/test_login_smtp_auth.py      # SMTP AUTH incl. non-ASCII passwords
 .scrape_venv/bin/python scripts/test_i18n.py # browser: language switcher + coverage
 python3 scripts/test_mailer.py               # needs `pip install aiosmtpd` in a venv
@@ -116,7 +116,7 @@ The launch button inside Streamaxpedia uses `<a target="_top" href="?view=jerry_
 
    **Non-ASCII passwords.** `smtplib.login()` hardcodes an **ASCII** encode of the credentials and raises `UnicodeEncodeError` before any network I/O — but RFC 4616 defines SASL PLAIN's password as **UTF-8**, so that limit is smtplib's, not the protocol's. A password containing e.g. a full-width `！` (U+FF01, what a Chinese IME emits for `!`) used to surface as *"Could not connect to the mail server: 'ascii' codec can't encode…"*, which is doubly wrong: nothing was ever sent. `_smtp_auth()` now routes non-ASCII passwords through `_auth_plain_utf8()`, which issues `AUTH PLAIN` by hand over `docmd()` with a UTF-8 payload — on a *fresh* connection, because smtplib tries CRAM-MD5 first and dies mid-SASL-exchange, leaving the session in a state where the next command reads as the challenge response. Failures are also classified positively now (`_looks_like_connection_error()`), so a client-side error can never again masquerade as a connection problem, and `_describe_non_ascii()` names the offending character in the user-facing message. Test: `python3 scripts/test_login_smtp_auth.py` (spins up a local SMTP server, no network).
 
-   **Sign in with Microsoft** (`ms_auth.py` + routes in `server.py`) — the supported path for M365 mailboxes, and the only one that survives MFA/Conditional Access. Standard OIDC authorization-code flow with PKCE (S256), `state` and `nonce`; all three plus the post-login destination ride in ONE short-lived HMAC-signed cookie (`stmx_oauth`, signed with the same `AUTH_SECRET`), so the flow is stateless across Render instances. Deliberately **stdlib-only** — no `msal`, no `cryptography`. The ID token arrives over the server-to-server token call, so per OIDC Core §3.1.3.7 TLS validation stands in for JWT signature verification; `iss`, `aud`, `tid`, `exp` and `nonce` are all still checked, plus a domain gate (`MS_ALLOWED_DOMAINS`, default `streamax.com`). **The button only renders once `MS_TENANT_ID` + `MS_CLIENT_ID` + `MS_CLIENT_SECRET` are all set** — deploying the code changes nothing until the tenant is configured. Entra needs the redirect URI `https://streamax-salestoolkit.com/auth/microsoft/callback` registered as a **Web** platform, byte-for-byte. HTML server only — the Streamlit path keeps password-only sign-in. Run `python3 scripts/test_ms_auth.py` (no network, no pytest) after touching any of it: 31 checks covering the happy path, cross-tenant/audience/issuer/nonce/expiry rejection, CSRF, cookie tampering and open-redirect clamping.
+   **Sign in with Microsoft** (`ms_auth.py` + routes in `server.py`) — the supported path for M365 mailboxes, and the only one that survives MFA/Conditional Access. Standard OIDC authorization-code flow with PKCE (S256), `state` and `nonce`; all three plus the post-login destination ride in ONE short-lived HMAC-signed cookie (`stmx_oauth`, signed with the same `AUTH_SECRET`), so the flow is stateless across Render instances. Deliberately **stdlib-only** — no `msal`, no `cryptography`. The ID token arrives over the server-to-server token call, so per OIDC Core §3.1.3.7 TLS validation stands in for JWT signature verification; `iss`, `aud`, `tid`, `exp` and `nonce` are all still checked, plus a domain gate (`MS_ALLOWED_DOMAINS`, default `streamax.com`). **The Microsoft entry appears first; it shows a pending-setup notice until `MS_TENANT_ID` + `MS_CLIENT_ID` + `MS_CLIENT_SECRET` and `AUTH_SECRET` are set** — deploying the code changes nothing until the tenant is configured. Entra needs the redirect URI `https://streamax-salestoolkit.com/auth/microsoft/callback` registered as a **Web** platform, byte-for-byte. HTML server only — the Streamlit path keeps password-only sign-in. Run `python3 scripts/test_ms_auth.py` (no network, no pytest) after touching any of it: 31 checks covering the happy path, cross-tenant/audience/issuer/nonce/expiry rejection, CSRF, cookie tampering and open-redirect clamping.
 
 2. **Cookie-based persistence** (`auth.py`): on successful login, `persist_login()` writes a signed cookie (`HMAC(user, expiry, AUTH_SECRET)`) via `extra-streamlit-components.CookieManager`. On every script run, `restore_session()` validates the cookie and rehydrates `st.session_state["authenticated"]`, `["user_name"]`, `["is_leadership"]`. Without this layer, every page reload or `?view=jerry_gpt` navigation forces re-login because Streamlit's session_state is per-WebSocket.
 
@@ -727,12 +727,12 @@ If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls t
 
 ### Microsoft sign-in (HTML server, environment variables)
 
-Set on the Render service, not in `secrets.toml`. Sign in with Microsoft stays hidden until all three required values are present.
+Set on the Render service, not in `secrets.toml`. The Microsoft entry shows a pending-setup notice until the three Entra values and the existing AUTH_SECRET are present.
 
 - `MS_TENANT_ID` — **required.** Entra *Directory (tenant) ID*.
 - `MS_CLIENT_ID` — **required.** Entra *Application (client) ID*.
 - `MS_CLIENT_SECRET` — **required.** The secret **Value** (not the Secret ID). Entra secrets expire — a 24-month secret must be rotated before it lapses or every Microsoft sign-in breaks at once.
-- `MS_REDIRECT_URI` — optional. Pin this if the auto-derived value is ever wrong; otherwise it is built from `X-Forwarded-Proto`/`X-Forwarded-Host` (correct behind Cloudflare → Render). It must equal the URI registered in Entra **exactly**, or Microsoft returns `AADSTS50011`.
+- `MS_REDIRECT_URI` — optional. Pin this if the auto-derived value is ever wrong; otherwise it is pinned to `https://streamax-salestoolkit.com/auth/microsoft/callback`. It must equal the URI registered in Entra **exactly**, or Microsoft returns `AADSTS50011`.
 - `MS_ALLOWED_DOMAINS` — optional CSV, default `streamax.com`.
 - `MS_SMTP_AUTH` — optional; set `0` to stop probing `smtp.office365.com` on the password path once OAuth is live.
 
@@ -741,3 +741,7 @@ Entra app registration: **single tenant**, platform **Web**, redirect URI `https
 ## Jack GPT — removed
 
 Jack GPT (the Emily-only private workspace: `jack_gpt.py`, `jack_chat_history.py`, `jack_usage_logger.py`, the `?view=jack_gpt` route, the Emily-card launch button, and the jhsun login easter egg / VIP grant) was **removed** in v5.8.14. Jerry GPT is the only AI chat surface now. The Emily terminology row (`jhsun_only`) and the jhsun-gated "Global Trucking" header rename still exist but no longer have a Jack GPT target — remove them too if jhsun-specific behavior is no longer wanted.
+
+### Microsoft Authenticator across internal sites (2026-10-27)
+
+The shared rollout includes customer onboarding staff preview, assigned portal administrators and the roadmap on the Trucking host. Setup guide: `../../customeronboarding/docs/microsoft-signin-setup.md`. The same Entra app can register both Web callbacks. Authenticator is handled at Microsoft, never as an SMTP password. Run `scripts/test_ms_auth.py` plus `scripts/test_ms_routes.py` after changing OIDC. The latter needs FastAPI/httpx. Sign-in selects the tenant-managed UPN, rejecting guest/arbitrary email claims; protected Jerry permissions are unchanged.
