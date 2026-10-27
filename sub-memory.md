@@ -7,7 +7,7 @@ Query by trigger and domain. Working state must be verified each session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W-MS | state | platform,deploy | continuing Microsoft Authenticator rollout | Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | volatile |
+| W-MS | state | platform,deploy | continuing Microsoft Authenticator rollout | Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking production 740102f5-37ab-4fca-a19d-c2e89429fd34. 136 Microsoft-specific local checks, 13 live access checks and desktop/mobile UI checks passed. Company Entra configuration and real-account Authenticator acceptance remain pending. Reverify live state next session. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | volatile |
 
 ## Long-term memory
 
@@ -81,10 +81,10 @@ attempted; his access is verified by the deployed resolver and local HTTP gate t
 
 ### E-MS — 2026-10-27
 
-Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live.
+Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking production 740102f5-37ab-4fca-a19d-c2e89429fd34. 136 Microsoft-specific local checks, 13 live access checks and desktop/mobile UI checks passed. Company Entra configuration and real-account Authenticator acceptance remain pending. Reverify live state next session.
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| E-MS | episode | platform,verification | enabling Microsoft Authenticator | Microsoft sign-in implementation passes local checks; Entra settings absent on both live hosts. Activation and real-account MFA test remain pending. Deployment in progress; reverify before claiming live. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | consolidating |
+| E-MS | episode | platform,verification | enabling Microsoft Authenticator | Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking production 740102f5-37ab-4fca-a19d-c2e89429fd34. 136 Microsoft-specific local checks, 13 live access checks and desktop/mobile UI checks passed. Company Entra configuration and real-account Authenticator acceptance remain pending. Reverify live state next session. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | consolidating |
 
 - [Sign-in tests](scripts/sub-memory.md)
