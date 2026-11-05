@@ -123,7 +123,7 @@ ok, msg = L.verify_streamax_credentials(NORM, "their-real-outlook-pw")
 check("policy-blocked mailbox -> rejected", ok, False)
 check("  message does NOT claim the password is wrong",
       "password incorrect" in msg.lower(), False)
-check("  message points at Microsoft sign-in", "Sign in with Microsoft" in msg, True)
+check("  message explains DingTalk setup is pending", "DingTalk QR sign-in is awaiting" in msg, True)
 
 print("\nOne SASL path for every password (the ASCII/non-ASCII split is gone)")
 src = Path("login.py").read_text(encoding="utf-8")

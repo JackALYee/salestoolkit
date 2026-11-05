@@ -80,13 +80,13 @@
   .or{display:flex;align-items:center;gap:12px;margin:20px 0 16px;
       color:#5c6880;font-size:.72rem;text-transform:uppercase;letter-spacing:1px}
   .or::before,.or::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.1)}
-  .msbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  .dtbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
          padding:11px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.92rem;
          color:var(--white);background:rgba(255,255,255,.05);
          border:1px solid rgba(255,255,255,.14);transition:.25s}
-  .msbtn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.28);
+  .dtbtn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.28);
                transform:translateY(-2px)}
-  .msbtn svg{flex:none}
+  .dtbtn svg{flex:none}
   .hint{text-align:center;color:var(--grey);font-size:.8rem;line-height:1.6;margin:10px 0 0}
 
   /* --- first-run: set a dedicated toolkit password ------------------------ */
@@ -153,7 +153,7 @@
     <h1><span class="g">Streamax</span> Sales Toolkit</h1>
     <p class="sub">Secure Access &bull; Trucking Division</p>
     <form id="f" autocomplete="on">
-      <!--MS_SIGNIN-->
+      <!--DINGTALK_SIGNIN-->
       <label for="email">Streamax email</label>
       <!-- type="text", not "email": the browser's email validation rejects the
            easter-egg accounts (jerry_test, test_account …) before the form can
@@ -173,7 +173,7 @@
       <button id="btn" type="submit">Authenticate</button>
       <div class="err" id="err"></div>
     </form>
-    <p class="foot">Streamax staff access · Microsoft Authenticator is supported through Microsoft sign-in.</p>
+    <p class="foot">Streamax staff access · DingTalk QR sign-in is coming soon.</p>
   </div>
 
   <!-- Shown after repeated failures. Wording is the customer's, verbatim, in
@@ -235,7 +235,7 @@
     return (p.charAt(0) === '/' && p.charAt(1) !== '/' && p.charAt(1) !== '\\') ? p : '/';
   })();
 
-  // Surface an error handed back by the Microsoft sign-in redirect (/login?err=…)
+  // Surface an error handed back by a sign-in redirect (/login?err=…)
   (function () {
     var m = /[?&]err=([^&]*)/.exec(window.location.search);
     if (!m) return;

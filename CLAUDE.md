@@ -713,6 +713,23 @@ Surfaced in three places: the **Sales Configurator** tab (`configurator_tab.py`,
 
 ## Required secrets
 
+### DingTalk QR entry (pending activation)
+
+The owner retired Microsoft OAuth login on 2026-11-05 and requested DingTalk QR
+login pages while IT configures the applications. `/auth/dingtalk/start` serves
+an honest waiting page; `/status` reports `available:false` and
+`integrationReady:false`; `/callback` always returns 503 and never creates a
+session. Environment variables alone cannot enable this UI-only release.
+Microsoft start redirects to DingTalk, callback returns 410 even if MS secrets
+exist, and old valid sessions retain their existing lifetime and restrictions.
+The local IAM draft is not wired into this release.
+
+Two-site Chinese handoff:
+`../../customeronboarding/docs/dingtalk-signin-setup-zh-CN.md`. Activation still
+requires a trusted Streamax membership/email mapping, provider integration and
+real employee acceptance. Preserve all existing password, leadership/VIP and
+log gates. Run `scripts/test_ms_routes.py` for retirement/pending-state checks.
+
 On the **website** these are Render environment variables; the retired Streamlit app reads the same names from `st.secrets` / `.streamlit/secrets.toml`.
 
 - `ANTHROPIC_API_KEY` — org Claude key for Jerry GPT. With Jerry's multi-provider routing this is the **leadership-only** key (Claude models). Optional if `DEEPSEEK_API_KEY` is set (non-leadership users can run on DeepSeek alone).
@@ -725,18 +742,14 @@ On the **website** these are Render environment variables; the retired Streamlit
 
 If `JERRY_GPT_SHEET_ID` is absent, the app still works — usage logging falls through to stdout-only.
 
-### Microsoft sign-in (HTML server, environment variables)
+### Retired Microsoft OAuth configuration
 
-Set on the Render service, not in `secrets.toml`. The Microsoft entry shows a pending-setup notice until the three Entra values and the existing AUTH_SECRET are present.
-
-- `MS_TENANT_ID` — **required.** Entra *Directory (tenant) ID*.
-- `MS_CLIENT_ID` — **required.** Entra *Application (client) ID*.
-- `MS_CLIENT_SECRET` — **required.** The secret **Value** (not the Secret ID). Entra secrets expire — a 24-month secret must be rotated before it lapses or every Microsoft sign-in breaks at once.
-- `MS_REDIRECT_URI` — optional. Pin this if the auto-derived value is ever wrong; otherwise it is pinned to `https://streamax-salestoolkit.com/auth/microsoft/callback`. It must equal the URI registered in Entra **exactly**, or Microsoft returns `AADSTS50011`.
-- `MS_ALLOWED_DOMAINS` — optional CSV, default `streamax.com`.
-- `MS_SMTP_AUTH` — optional; set `0` to stop probing `smtp.office365.com` on the password path once OAuth is live.
-
-Entra app registration: **single tenant**, platform **Web**, redirect URI `https://streamax-salestoolkit.com/auth/microsoft/callback`, delegated permissions `openid` + `profile` + `email` (all no-admin-consent). Nothing needs `Mail.*` — the app only reads who signed in.
+Existing `MS_*` settings must not re-enable sign-in. `ms_auth.py` is retained
+for safe-return-path handling and legacy protocol tests, but no active route
+calls `begin` or `complete`. SMTP mailbox verification remains a separate
+existing password path. Do not tell users to use Microsoft OAuth or paste an
+Authenticator code into the password form. The former Entra setup guide is
+historical; use the DingTalk guide above for new work.
 
 ## Jack GPT — removed
 

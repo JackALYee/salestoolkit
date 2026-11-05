@@ -3,11 +3,11 @@
 Parent: `../memory.md`. Method: `/Users/jiachenyi/Documents/AI Skill/memory_method.md`.
 Query by trigger and domain. Working state must be verified each session.
 
-## Working memory — 2026-10-27
+## Working memory — 2026-11-05
 
 | id | kind | domain | trigger | claim | evidence | decay |
 |---|---|---|---|---|---|---|
-| W-MS | state | platform,deploy | continuing Microsoft Authenticator rollout | Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking production 740102f5-37ab-4fca-a19d-c2e89429fd34. 136 Microsoft-specific local checks, 13 live access checks and desktop/mobile UI checks passed. Company Entra configuration and real-account Authenticator acceptance remain pending. Reverify live state next session. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | volatile |
+| W-DingTalkUI | state | platform,deploy | continuing the Microsoft-to-DingTalk replacement | Microsoft OAuth entry and new-session endpoints retired; DingTalk entry and waiting page prepared. Pending callback rejects authentication even with environment settings. Existing password access and role checks retained. Local security tests pass; publication and real provider activation must be checked separately. | templates/sub-memory.md; scripts/sub-memory.md | volatile |
 
 ## Long-term memory
 
@@ -19,6 +19,23 @@ Query by trigger and domain. Working state must be verified each session.
 | F2 | fact | deploy | publishing this website | Push to origin/main triggers Render; synchronize the app.py banner and server.py APP_VERSION, run scripts/test_resource_links.py, then verify /healthz | E1 | stable |
 
 ## Short-term memory
+
+### E-DingTalkUI — 2026-11-05
+
+The owner requested replacing Microsoft login with DingTalk QR and explicitly allowed a waiting page until IT is ready. This release implements the waiting UI, retires Microsoft start/callback, preserves safe return paths and existing account permissions, and does not implement DingTalk token exchange or member mapping. No QR success or authenticated DingTalk session is claimed. Older working-state deployment claims were not assumed current.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E-DingTalkUI | episode | platform,verification | replacing Microsoft sign-in before DingTalk is configured | Ship truthful pending UI and disable old callbacks; no configuration alone may activate unimplemented authentication. | templates/sub-memory.md; scripts/sub-memory.md | consolidating |
+
+
+### E-IAM — 2026-10-30 Company DingTalk sign-in
+
+User requested using the existing company IAM DingTalk QR method for Toolkit and Jerry. Inspected the provided page: Streamax IAM with DingTalk and Password. The OA context link cannot be reused as a Toolkit client. Implemented a separately configured, default-off OIDC bridge (RS256, PKCE S256, state/nonce, verified company email and active employee assertion), preserving current clearance and session lifetime. IT must confirm deployed protocol support and register the client. Chinese handoff and preview evidence are linked below; no live scan is claimed.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E-IAM | episode | platform,verification | adding company QR sign-in to Toolkit | Use IAM as identity provider with a dedicated application; default disabled until IT configures and validates the claim contract. | DINGTALK_IAM_SETUP_ZH.md; scripts/test_iam_auth.py | consolidating |
 
 ### E2 — Trucking homepage logo links, 2026-10-20
 
@@ -67,6 +84,8 @@ attempted; his access is verified by the deployed resolver and local HTTP gate t
 
 ## Subtask memory
 
+- [IAM sign-in verification](iam_verification/sub-memory.md) — protocol assumptions, local preview and release evidence.
+
 - [Curated Jerry knowledge](jerry_gpt_knowledge/sub-memory.md) — construction vehicle source distillation and protected original downloads.
 
 - [Website templates](templates/sub-memory.md) — login logo returns to the trucking homepage.
@@ -88,3 +107,13 @@ Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking producti
 | E-MS | episode | platform,verification | enabling Microsoft Authenticator | Microsoft integration deployed: Toolkit 10.4.7 commit 7fae814; Trucking production 740102f5-37ab-4fca-a19d-c2e89429fd34. 136 Microsoft-specific local checks, 13 live access checks and desktop/mobile UI checks passed. Company Entra configuration and real-account Authenticator acceptance remain pending. Reverify live state next session. | ms_auth.py; scripts/test_ms_auth.py; scripts/test_ms_routes.py | consolidating |
 
 - [Sign-in tests](scripts/sub-memory.md)
+
+### E-IAM-NoChange — 2026-10-30
+
+The owner selected research without changing IAM. Paused publication and unstaged only this task’s staged files. Direct DingTalk OAuth avoids IAM changes but still needs authorized DingTalk application configuration. A server-side browser broker is not verified because a supported identity-validation contract has not been established. No real employee scan or production change occurred.
+
+| id | kind | domain | trigger | claim | evidence | decay |
+|---|---|---|---|---|---|---|
+| E-IAM-NoChange | episode | platform | continuing DingTalk login after the no-IAM constraint | Research precedes activation; current OIDC code is an unpublished fallback, not the selected rollout. | DINGTALK_NO_IAM_FEASIBILITY_ZH.md | consolidating |
+
+DingTalk UI references: [templates/sub-memory.md](templates/sub-memory.md); [scripts/sub-memory.md](scripts/sub-memory.md).

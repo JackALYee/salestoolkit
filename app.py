@@ -308,9 +308,8 @@ if st.query_params.get("legacy") != "1":
         f"{_G}box-shadow:0 8px 24px rgba(42,245,152,0.28);\">"
         "Go to streamax-salestoolkit.com &rarr;</a>"
         "<p style=\"color:#5c6880;font-size:0.82rem;margin:26px 0 0;\">"
-        "Sign in with the same Streamax account &mdash; or use "
-        "<strong style=\"color:#8b97ad;\">Sign in with Microsoft</strong> if your "
-        "mailbox is on Outlook.</p>"
+        "Sign in with your existing account and password. "
+        "DingTalk QR sign-in is awaiting company setup.</p>"
         "<div style=\"margin:34px auto 0;padding:18px 22px;max-width:560px;"
         "text-align:left;border-radius:12px;background:rgba(255,255,255,0.03);"
         "border:1px solid rgba(255,255,255,0.08);\">"
@@ -1350,7 +1349,7 @@ __I18N_SWITCHER__
                 <span class="gradient-text">Global</span><br>
                 <span style="font-weight: 300;">Trucking Division</span>
             </h1>
-            <div class="header-meta fade-up">Version 10.4.7 (2026) • 货运产品线 Trucking BU • October 2026</div>
+            <div class="header-meta fade-up">Version 11.1.1 (2026) • 货运产品线 Trucking BU • November 2026</div>
             <div class="header-meta fade-up">建议使用Chrome浏览器。内容反馈请联系：jcyi@streamax.com</div>
         </div>
     </header>

@@ -26,6 +26,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import sys
 import time
@@ -148,7 +149,7 @@ TEMPLATES = ROOT / "templates"
 
 # Kept in step with the banner string in app.py by
 # scripts/test_resource_links.py, which fails if they drift.
-APP_VERSION = "10.4.7 (2026)"
+APP_VERSION = "11.1.1 (2026)"
 
 COOKIE_NAME = "stmx_session"
 SESSION_DAYS = 7
@@ -518,7 +519,7 @@ def toolkit(request: Request):
 def login_page(request: Request, next: str = "/"):
     if current_user(request):
         return RedirectResponse(_ms.safe_next(next) if _ms else "/", status_code=302)
-    page = _page("login.html").replace("<!--MS_SIGNIN-->", _ms_signin_block(next))
+    page = _page("login.html").replace("<!--DINGTALK_SIGNIN-->", _dingtalk_signin_block(next))
     return HTMLResponse(page, headers={"Cache-Control": "private, no-store"})
 
 
@@ -884,88 +885,82 @@ def api_logout(next: str = "/login"):
     return resp
 
 
-# ── Sign in with Microsoft (Entra ID / OIDC) ────────────────────────────────
-# Only wired up when MS_TENANT_ID / MS_CLIENT_ID / MS_CLIENT_SECRET are set;
-# until then the entry explains that company setup is pending and fails closed.
-
-_MS_BUTTON = """
-    <a class="msbtn" href="/auth/microsoft/start?next=__NEXT__">
-      <svg viewBox="0 0 23 23" width="18" height="18" aria-hidden="true">
-        <rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
-        <rect x="12" y="1"  width="10" height="10" fill="#7FBA00"/>
-        <rect x="1"  y="12" width="10" height="10" fill="#00A4EF"/>
-        <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
-      </svg>
-      <span>Sign in with Microsoft</span>
-    </a>
-    <p class="hint">__MS_HINT__</p>
-    <div class="or"><span>or use your website password</span></div>
-"""
+class _AuthCallbackLogFilter(logging.Filter):
+    def filter(self, record):
+        from urllib.parse import unquote
+        args = record.args
+        if isinstance(args, tuple) and len(args) == 5 and isinstance(args[2], str):
+            path = unquote(args[2].split("?", 1)[0])
+            if path in ("/auth/microsoft/callback", "/auth/dingtalk/callback"):
+                record.args = (*args[:2], path, *args[3:])
+        return True
 
 
-def _ms_signin_block(next_path: str = "/") -> str:
-    if not _ms:
-        return ""
+_access_logger = logging.getLogger("uvicorn.access")
+if not any(isinstance(f, _AuthCallbackLogFilter) for f in _access_logger.filters):
+    _access_logger.addFilter(_AuthCallbackLogFilter())
+
+
+# DingTalk UI is available while company setup and provider integration are pending.
+# No credentials or callback parameters can activate this placeholder release.
+_AUTH_HEADERS = {"Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer",
+                 "X-Robots-Tag": "noindex, nofollow", "X-Content-Type-Options": "nosniff",
+                 "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}
+
+
+def _signin_next(value: str = "/") -> str:
+    return _ms.safe_next(value) if _ms else "/"
+
+
+def _dingtalk_signin_block(next_path: str = "/") -> str:
     from urllib.parse import quote
-    hint = ("Use your Streamax Microsoft account. Approve the request or enter your Authenticator code on Microsoft’s sign-in page."
-            if _ms.is_configured() else "Microsoft sign-in is awaiting company setup. Your existing website password still works.")
-    return _MS_BUTTON.replace("__NEXT__", quote(_ms.safe_next(next_path), safe="/")).replace("__MS_HINT__", hint)
+    target = quote(_signin_next(next_path), safe="/")
+    return (f'<a class="dtbtn" href="/auth/dingtalk/start?next={target}">'
+            '<span aria-hidden="true">▣</span><span>钉钉扫码登录 · DingTalk</span></a>'
+            '<p class="hint" role="status">Awaiting IT setup · 等待 IT 配置<br>'
+            'Please use your existing account and password for now.</p>'
+            '<div class="or"><span>or use your website password</span></div>')
 
 
-def _ms_redirect_uri(request: Request) -> str:
-    """Use the registered canonical callback, never a forwarded Host header."""
-    return os.environ.get("MS_REDIRECT_URI", "").strip() or "https://streamax-salestoolkit.com/auth/microsoft/callback"
+@app.get("/auth/dingtalk/status")
+def dingtalk_status():
+    return JSONResponse({"configured": False, "available": False,
+                         "status": "pending_setup", "integrationReady": False}, headers=_AUTH_HEADERS)
 
 
-def _login_error(message: str, next_path: str = "/"):
-    """Bounce back to the login page with a readable reason, keeping the
-    original destination so a password retry still lands where they meant."""
+@app.get("/auth/dingtalk/start", response_class=HTMLResponse)
+def dingtalk_start(next: str = "/"):
     from urllib.parse import quote
-    url = f"/login?err={quote(message)}"
-    safe = _ms.safe_next(next_path) if _ms else "/"
-    if safe != "/":
-        url += f"&next={quote(safe, safe='/')}"
-    return RedirectResponse(url, status_code=302, headers={"Cache-Control": "private, no-store"})
+    back = "/login?next=" + quote(_signin_next(next), safe="/")
+    page = _page("dingtalk_pending.html").replace("__BACK_URL__", html_escape(back, quote=True))
+    return HTMLResponse(page, headers=_AUTH_HEADERS)
+
+
+@app.get("/auth/dingtalk/callback")
+def dingtalk_callback():
+    # Never trust a code, account ID or email sent to an unconfigured callback.
+    return JSONResponse({"error": "DingTalk sign-in is awaiting company setup and activation.",
+                         "status": "pending_setup"}, status_code=503, headers=_AUTH_HEADERS)
+
+
+@app.get("/auth/microsoft/status")
+def ms_status():
+    return JSONResponse({"configured": False, "available": False, "status": "retired"}, headers=_AUTH_HEADERS)
 
 
 @app.get("/auth/microsoft/start")
-def ms_start(request: Request, next: str = "/"):
-    if not (_ms and _ms.is_configured()):
-        return _login_error("Microsoft sign-in is awaiting company setup. Please contact Streamax IT or use your existing website password.", next)
-    url, state = _ms.begin(_ms_redirect_uri(request), _ms.safe_next(next))
-    resp = RedirectResponse(url, status_code=302, headers={"Cache-Control": "private, no-store"})
-    resp.set_cookie(_ms.STATE_COOKIE, state, max_age=_ms.STATE_TTL, httponly=True,
-                    samesite="lax", secure=_is_https(request), path="/")
-    return resp
+def ms_start(next: str = "/"):
+    from urllib.parse import quote
+    return RedirectResponse("/auth/dingtalk/start?next=" + quote(_signin_next(next), safe="/"),
+                            status_code=302, headers=_AUTH_HEADERS)
 
 
 @app.get("/auth/microsoft/callback")
-def ms_callback(request: Request, code: str = "", state: str = "",
-                error: str = "", error_description: str = ""):
-    if not (_ms and _ms.is_configured()):
-        return _login_error("Microsoft sign-in is not configured yet.")
-    if error:
-        log_auth(request, email="", ok=False, method="microsoft",
-                 reason=error[:80])
-        resp = _login_error("Microsoft sign-in was not completed. Please try again.")
-        resp.delete_cookie(_ms.STATE_COOKIE, path="/")
-        return resp
-
-    email, next_path, err = _ms.complete(
-        code, state, request.cookies.get(_ms.STATE_COOKIE) or "",
-        _ms_redirect_uri(request),
-    )
-    if err:
-        log_auth(request, email=email, ok=False, method="microsoft", reason=err)
-        resp = _login_error(err, next_path)
-        resp.delete_cookie(_ms.STATE_COOKIE, path="/")
-        return resp
-
-    log_auth(request, email=email, ok=True, user=email, method="microsoft")
-    resp = RedirectResponse(next_path, status_code=302, headers={"Cache-Control": "private, no-store"})
-    _set_session(resp, email, request)
-    resp.delete_cookie(_ms.STATE_COOKIE, path="/")
-    return resp
+def ms_callback():
+    response = JSONResponse({"error": "This sign-in method has been retired. Return to the sign-in page."},
+                            status_code=410, headers=_AUTH_HEADERS)
+    response.delete_cookie("stmx_oauth", path="/", secure=True, httponly=True, samesite="lax")
+    return response
 
 
 @app.get("/api/me")

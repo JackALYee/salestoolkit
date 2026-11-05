@@ -245,9 +245,9 @@ def _grant_vip(name_or_email: str) -> None:
 # tenant has it off, this check will reject real Outlook users (look for
 # "disabled=True" / 5.7.139 in the [LOGIN] stderr lines).
 #
-# ➜ The supported route for those users is "Sign in with Microsoft" — the OIDC
-#   flow in `ms_auth.py`, wired into the HTML server (`server.py`). It needs an
-#   Entra app registration; see the "Microsoft sign-in" section of CLAUDE.md.
+# Microsoft OAuth was retired on 2026-11-05. DingTalk QR setup is pending;
+# users with blocked mailbox AUTH should contact IT or use an already allowed
+# website-password path. Never weaken leadership proof to bridge this gap.
 #   This SMTP attempt is kept as a harmless fallback for any mailbox where basic
 #   auth does still work, and is skipped entirely when MS_SMTP_AUTH=0.
 # `timeout` is per server because they are not remotely comparable. Measured
@@ -322,7 +322,7 @@ _MAIL_SERVERS = (
 
 def _mail_servers():
     """Backends to try, in order. Set MS_SMTP_AUTH=0 to stop probing Microsoft
-    once "Sign in with Microsoft" is live — the probe is dead weight (and ~5s of
+    when mailbox password probing is no longer needed — the probe is dead weight (and ~5s of
     latency on every failed sign-in) on a tenant that blocks basic auth."""
     if (os.environ.get("MS_SMTP_AUTH", "1").strip().lower() in ("0", "false", "no", "off")):
         return tuple(s for s in _MAIL_SERVERS if s["label"] != "microsoft")
@@ -551,8 +551,7 @@ def verify_streamax_credentials(email, password):
     # These addresses unlock internal cost and margin data, so "knows the
     # address" must never be enough. Neither the toolkit password nor the
     # bootstrap door admits them — the only accepted proof is a live SMTP AUTH
-    # against Coremail or Outlook (or "Sign in with Microsoft", which is the
-    # same mailbox proved over OIDC instead of SMTP).
+    # against Coremail or Outlook. The retired OAuth route issues no new sessions.
     _is_leadership = resolve_leadership(email_lower)
 
     # 3. Toolkit password FIRST. It is the credential we want people using —
@@ -640,8 +639,8 @@ def verify_streamax_credentials(email, password):
         return False, (
             f"Sign-in failed, and your password contains a non-English character: {odd}. "
             "If you meant the normal English character, switch your keyboard to English "
-            "and retype the password. If your password really does contain it, use "
-            "“Sign in with Microsoft” instead — it never sends your password to the mail server."
+            "and retype the password. If your password really does contain it, contact IT "
+            "for help. DingTalk QR sign-in is awaiting company setup."
         )
     # Leadership never reaches the toolkit-password or bootstrap fallbacks, so a
     # failure here is the end of the road for them — say why, or they will keep
@@ -650,8 +649,8 @@ def verify_streamax_credentials(email, password):
         return False, (
             "Email or password incorrect. Leadership accounts must sign in with "
             "the Streamax mailbox password (Coremail or Outlook) — a Sales "
-            "Toolkit password is not accepted for these accounts. If your "
-            "mailbox is on Outlook, use “Sign in with Microsoft”."
+            "Toolkit password is not accepted for these accounts. If your mailbox blocks "
+            "password sign-in, contact IT. DingTalk QR sign-in is awaiting company setup."
         )
     # Strict mode: no bootstrap door to fall through to, so say what will work
     # instead of leaving someone retyping a password that was never checked.
@@ -672,8 +671,9 @@ def verify_streamax_credentials(email, password):
         return False, ("Sign-in could not be completed. Your mailbox appears to "
                        "block password sign-in from apps (common on Outlook / "
                        "Microsoft 365, where SMTP AUTH is off by default) — this "
-                       "is not necessarily a wrong password. Use “Sign in with "
-                       "Microsoft”, or ask IT to enable SMTP AUTH for your mailbox.")
+                       "is not necessarily a wrong password. Use an existing website password "
+                       "if your account permits it, or contact IT. "
+                       "DingTalk QR sign-in is awaiting company setup.")
     return False, "Email or password incorrect."
 
 def render_login():
